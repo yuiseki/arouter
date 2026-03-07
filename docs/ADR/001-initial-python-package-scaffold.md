@@ -36,6 +36,7 @@ The first migrated slice is limited to:
 - YouTube/VacuumTube-oriented contextual rewrite
 - deterministic text-command execution orchestration
 - deterministic command execution dispatch
+- ack timing and post-action voice-text policy
 
 ## Consequences
 

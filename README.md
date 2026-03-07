@@ -18,6 +18,7 @@ Current migrated slice:
 - `contextualize_command_with_vacuumtube_state()`
 - `TextCommandRouter.execute_text_command()`
 - `execute_command()` for deterministic intent dispatch
+- ack / post-action voice policy helpers
 
 ## Current Integration
 
@@ -30,6 +31,7 @@ Current migrated slice:
 - VacuumTube-aware contextual rewrites
 - one-shot text command routing
 - deterministic command execution dispatch
+- ack timing and post-action voice-text policy
 
 ## Development
 
