@@ -1,3 +1,4 @@
+from .execution import command_has_system_prefix, execute_command, execute_news_command
 from .models import VoiceCommand
 from .overlay import build_overlay_ipc_line, compose_overlay_notify_text, trim_notify_text
 from .parser import extract_password_unlock_secret, normalize_transcript, parse_command
@@ -13,9 +14,12 @@ __all__ = [
     "TextCommandRouter",
     "VoiceCommand",
     "build_overlay_ipc_line",
+    "command_has_system_prefix",
     "compose_overlay_notify_text",
     "contextualize_command_with_vacuumtube_state",
     "detect_non_command_reaction",
+    "execute_command",
+    "execute_news_command",
     "extract_password_unlock_secret",
     "normalize_transcript",
     "parse_command",

@@ -35,11 +35,12 @@ The first migrated slice is limited to:
 - reaction detection
 - YouTube/VacuumTube-oriented contextual rewrite
 - deterministic text-command execution orchestration
+- deterministic command execution dispatch
 
 ## Consequences
 
 - Existing `test_voice_command_loop.py` cases can be migrated incrementally
-- `tmp/whispercpp-listen/voice_command_loop.py` can later depend on `arouter`
-  without rewriting the routing layer in another language first
+- `tmp/whispercpp-listen/voice_command_loop.py` can delegate parser/router/dispatch
+  behavior to `arouter` without rewriting the routing layer in another language first
 - Low-level desktop execution remains eligible for later extraction to `adesk`
   once the orchestration boundary stabilizes

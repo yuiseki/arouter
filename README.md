@@ -17,6 +17,19 @@ Current migrated slice:
 - `detect_non_command_reaction()`
 - `contextualize_command_with_vacuumtube_state()`
 - `TextCommandRouter.execute_text_command()`
+- `execute_command()` for deterministic intent dispatch
+
+## Current Integration
+
+`tmp/whispercpp-listen/voice_command_loop.py` now delegates:
+
+- transcript normalization
+- password secret extraction
+- command parsing
+- non-command reaction detection
+- VacuumTube-aware contextual rewrites
+- one-shot text command routing
+- deterministic command execution dispatch
 
 ## Development
 
