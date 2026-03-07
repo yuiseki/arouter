@@ -32,6 +32,9 @@ The first migrated slice is limited to:
 - command-specific alias correction
 - intent parsing
 - overlay notify utility helpers
+- reaction detection
+- YouTube/VacuumTube-oriented contextual rewrite
+- deterministic text-command execution orchestration
 
 ## Consequences
 

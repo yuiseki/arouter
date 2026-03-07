@@ -14,6 +14,9 @@ Current migrated slice:
 - overlay notify helpers
 - password unlock secret extraction
 - `parse_command()` and related transcript alias correction
+- `detect_non_command_reaction()`
+- `contextualize_command_with_vacuumtube_state()`
+- `TextCommandRouter.execute_text_command()`
 
 ## Development
 
