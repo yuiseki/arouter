@@ -10,6 +10,7 @@ from .policy import (
     should_ack_before_action,
     should_wait_ack_before_action,
 )
+from .resolution import SegmentTranscriptResolution, resolve_segment_transcript
 from .router import (
     CommandExecutionPayload,
     TextCommandRouter,
@@ -37,6 +38,8 @@ __all__ = [
     "post_action_voice_text",
     "report_segment_error",
     "run_authorized_command_flow",
+    "resolve_segment_transcript",
+    "SegmentTranscriptResolution",
     "should_ack_before_action",
     "should_wait_ack_before_action",
     "store_authfail_wav",

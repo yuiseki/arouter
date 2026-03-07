@@ -40,6 +40,7 @@ The first migrated slice is limited to:
 - authorized-command execution flow
 - successful/auth-denied WAV storage handling
 - segment error reporting
+- transcript parse/contextualize/suppress/authorize resolution
 
 ## Consequences
 

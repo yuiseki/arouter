@@ -22,6 +22,7 @@ Current migrated slice:
 - authorized command execution flow helper
 - segment WAV storage and auth-denied handling helpers
 - segment error reporting helper
+- transcript resolution helper for mic-loop command gating
 
 ## Current Integration
 
@@ -38,6 +39,7 @@ Current migrated slice:
 - authorized-command execution flow for the mic loop
 - successful/auth-denied WAV retention handling
 - subprocess/runtime error reporting
+- transcript parse/contextualize/suppress/authorize resolution
 
 ## Development
 
