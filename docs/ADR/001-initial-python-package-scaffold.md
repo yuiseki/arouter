@@ -39,6 +39,7 @@ The first migrated slice is limited to:
 - ack timing and post-action voice-text policy
 - authorized-command execution flow
 - successful/auth-denied WAV storage handling
+- segment error reporting
 
 ## Consequences
 

@@ -21,6 +21,7 @@ Current migrated slice:
 - ack / post-action voice policy helpers
 - authorized command execution flow helper
 - segment WAV storage and auth-denied handling helpers
+- segment error reporting helper
 
 ## Current Integration
 
@@ -36,6 +37,7 @@ Current migrated slice:
 - ack timing and post-action voice-text policy
 - authorized-command execution flow for the mic loop
 - successful/auth-denied WAV retention handling
+- subprocess/runtime error reporting
 
 ## Development
 
