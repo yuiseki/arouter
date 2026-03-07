@@ -20,6 +20,7 @@ Current migrated slice:
 - `execute_command()` for deterministic intent dispatch
 - ack / post-action voice policy helpers
 - authorized command execution flow helper
+- segment WAV storage and auth-denied handling helpers
 
 ## Current Integration
 
@@ -34,6 +35,7 @@ Current migrated slice:
 - deterministic command execution dispatch
 - ack timing and post-action voice-text policy
 - authorized-command execution flow for the mic loop
+- successful/auth-denied WAV retention handling
 
 ## Development
 

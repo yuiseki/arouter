@@ -15,6 +15,7 @@ from .router import (
     contextualize_command_with_vacuumtube_state,
     detect_non_command_reaction,
 )
+from .storage import handle_authorization_denied, store_authfail_wav, store_authorized_wav
 
 __all__ = [
     "CommandExecutionPayload",
@@ -29,11 +30,14 @@ __all__ = [
     "execute_news_command",
     "extract_password_unlock_secret",
     "good_night_voice_text",
+    "handle_authorization_denied",
     "normalize_transcript",
     "parse_command",
     "post_action_voice_text",
     "run_authorized_command_flow",
     "should_ack_before_action",
     "should_wait_ack_before_action",
+    "store_authfail_wav",
+    "store_authorized_wav",
     "trim_notify_text",
 ]
