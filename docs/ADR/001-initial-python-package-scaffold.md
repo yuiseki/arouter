@@ -37,6 +37,7 @@ The first migrated slice is limited to:
 - deterministic text-command execution orchestration
 - deterministic command execution dispatch
 - ack timing and post-action voice-text policy
+- authorized-command execution flow
 
 ## Consequences
 

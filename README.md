@@ -19,6 +19,7 @@ Current migrated slice:
 - `TextCommandRouter.execute_text_command()`
 - `execute_command()` for deterministic intent dispatch
 - ack / post-action voice policy helpers
+- authorized command execution flow helper
 
 ## Current Integration
 
@@ -32,6 +33,7 @@ Current migrated slice:
 - one-shot text command routing
 - deterministic command execution dispatch
 - ack timing and post-action voice-text policy
+- authorized-command execution flow for the mic loop
 
 ## Development
 

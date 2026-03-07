@@ -1,4 +1,5 @@
 from .execution import command_has_system_prefix, execute_command, execute_news_command
+from .flow import run_authorized_command_flow
 from .models import VoiceCommand
 from .overlay import build_overlay_ipc_line, compose_overlay_notify_text, trim_notify_text
 from .parser import extract_password_unlock_secret, normalize_transcript, parse_command
@@ -31,6 +32,7 @@ __all__ = [
     "normalize_transcript",
     "parse_command",
     "post_action_voice_text",
+    "run_authorized_command_flow",
     "should_ack_before_action",
     "should_wait_ack_before_action",
     "trim_notify_text",
