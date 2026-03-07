@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+import os
+import tempfile
 import time
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any, Protocol
 
+from .errors import ErrorReportingRuntime, report_segment_error
 from .flow import CommandFlowRuntime, run_authorized_command_flow
 from .resolution import resolve_segment_transcript
 from .storage import (
@@ -15,6 +19,8 @@ from .storage import (
 
 class SegmentRuntime(AuthorizationFailureRuntime, CommandFlowRuntime, Protocol):
     _last_resolved_segment_command: Any
+
+    def debug(self, msg: str) -> None: ...
 
     def _contextualize_command_with_vacuumtube_state(self, text: str, cmd: Any) -> Any: ...
 
@@ -28,6 +34,69 @@ class SegmentRuntime(AuthorizationFailureRuntime, CommandFlowRuntime, Protocol):
         source: str,
         log_label: str,
     ) -> tuple[bool, str | None]: ...
+
+
+class PcmSegmentRuntime(SegmentRuntime, ErrorReportingRuntime, Protocol):
+    pass
+
+
+def process_pcm_segment(
+    runtime: PcmSegmentRuntime,
+    *,
+    raw_pcm: bytes,
+    reason: str,
+    seg_id: int,
+    min_segment_bytes: int,
+    bytes_per_sample: int,
+    sample_rate: int,
+    tmp_dir: Path,
+    wav_encoder: Callable[[bytes], bytes],
+    transcriber: Callable[[Path], str],
+    notify_progress: bool,
+) -> str:
+    if len(raw_pcm) < min_segment_bytes:
+        runtime.debug(f"segment skipped (too short): {len(raw_pcm)} bytes")
+        return "too_short"
+
+    now = time.localtime()
+    ts = time.strftime("%Y%m%d-%H%M%S", now)
+    dur_sec = len(raw_pcm) / bytes_per_sample / sample_rate
+
+    tmp_fd, tmp_str = tempfile.mkstemp(suffix=".wav", prefix=f"listen-seg-{ts}-{seg_id:04d}-")
+    os.close(tmp_fd)
+    tmp_wav = Path(tmp_str)
+    tmp_wav.write_bytes(wav_encoder(raw_pcm))
+    wav_path = tmp_wav
+
+    runtime.log(
+        f"speech segment #{seg_id} captured ({dur_sec:.2f}s, reason={reason}) -> transcribing ..."
+    )
+    cmd = None
+    try:
+        started_at = time.time()
+        text = transcriber(wav_path)
+        stt_elapsed = time.time() - started_at
+        outcome = process_transcribed_segment(
+            runtime,
+            seg_id=seg_id,
+            text=text,
+            stt_elapsed=stt_elapsed,
+            dur_sec=dur_sec,
+            wav_path=wav_path,
+            tmp_wav=tmp_wav,
+            datasets_root=tmp_dir,
+            now=now,
+            ts=ts,
+            notify_progress=notify_progress,
+        )
+        return outcome
+    except Exception as exc:
+        cmd = getattr(runtime, "_last_resolved_segment_command", None)
+        report_segment_error(runtime, seg_id=seg_id, exc=exc, cmd=cmd)
+        return "error"
+    finally:
+        runtime._last_resolved_segment_command = None
+        tmp_wav.unlink(missing_ok=True)
 
 
 def process_transcribed_segment(

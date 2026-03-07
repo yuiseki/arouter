@@ -24,6 +24,7 @@ Current migrated slice:
 - segment error reporting helper
 - transcript resolution helper for mic-loop command gating
 - transcribed segment orchestration helper for the mic loop
+- raw-PCM segment capture/transcription orchestration helper for the mic loop
 
 ## Current Integration
 
@@ -42,6 +43,7 @@ Current migrated slice:
 - subprocess/runtime error reporting
 - transcript parse/contextualize/suppress/authorize resolution
 - transcribed-segment orchestration after STT
+- raw-PCM segment capture/transcription orchestration before STT handoff
 
 ## Development
 

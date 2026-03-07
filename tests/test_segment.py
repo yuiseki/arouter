@@ -6,11 +6,12 @@ from tempfile import TemporaryDirectory
 from types import SimpleNamespace
 from unittest import mock
 
-from arouter import process_transcribed_segment
+from arouter import process_pcm_segment, process_transcribed_segment
 
 
 def _make_runtime() -> SimpleNamespace:
     runtime = SimpleNamespace()
+    runtime.debug = mock.Mock()
     runtime.log = mock.Mock()
     runtime.voice = SimpleNamespace(speak=mock.Mock(return_value=None))
     runtime.notifier = SimpleNamespace(notify=mock.Mock())
@@ -32,6 +33,84 @@ def _make_runtime() -> SimpleNamespace:
     runtime._wait_ack_if_requested = mock.Mock()
     runtime._last_ack_proc = None
     return runtime
+
+
+def test_process_pcm_segment_skips_too_short_segment() -> None:
+    runtime = _make_runtime()
+    transcriber = mock.Mock()
+
+    outcome = process_pcm_segment(
+        runtime,
+        raw_pcm=b"\x00" * 10,
+        reason="silence",
+        seg_id=1,
+        min_segment_bytes=11,
+        bytes_per_sample=2,
+        sample_rate=16000,
+        tmp_dir=Path("/tmp"),
+        wav_encoder=lambda raw_pcm: raw_pcm,
+        transcriber=transcriber,
+        notify_progress=False,
+    )
+
+    assert outcome == "too_short"
+    runtime.debug.assert_called_once()
+    transcriber.assert_not_called()
+
+
+def test_process_pcm_segment_creates_temp_wav_and_runs_transcriber() -> None:
+    runtime = _make_runtime()
+
+    def transcriber(wav_path: Path) -> str:
+        assert wav_path.exists()
+        assert wav_path.read_bytes() == b"wav-bytes"
+        return "システム 状況報告"
+
+    with TemporaryDirectory(prefix="arouter-pcm-test-") as tmp_dir:
+        outcome = process_pcm_segment(
+            runtime,
+            raw_pcm=b"\x00\x01" * 4000,
+            reason="silence",
+            seg_id=2,
+            min_segment_bytes=2,
+            bytes_per_sample=2,
+            sample_rate=16000,
+            tmp_dir=Path(tmp_dir),
+            wav_encoder=lambda _raw_pcm: b"wav-bytes",
+            transcriber=transcriber,
+            notify_progress=False,
+        )
+
+        assert outcome == "executed"
+        wavs = list(Path(tmp_dir).rglob("*.wav"))
+        assert len(wavs) == 1
+        assert wavs[0].name.startswith("listen-seg-")
+
+
+def test_process_pcm_segment_cleans_temp_file_after_transcriber_failure() -> None:
+    runtime = _make_runtime()
+
+    with TemporaryDirectory(prefix="arouter-pcm-test-") as tmp_dir:
+        temp_paths_before = set(Path("/tmp").glob("listen-seg-*.wav"))
+        outcome = process_pcm_segment(
+            runtime,
+            raw_pcm=b"\x00\x01" * 4000,
+            reason="silence",
+            seg_id=3,
+            min_segment_bytes=2,
+            bytes_per_sample=2,
+            sample_rate=16000,
+            tmp_dir=Path(tmp_dir),
+            wav_encoder=lambda _raw_pcm: b"wav-bytes",
+            transcriber=mock.Mock(side_effect=RuntimeError("transcriber failed")),
+            notify_progress=False,
+        )
+        temp_paths_after = set(Path("/tmp").glob("listen-seg-*.wav"))
+
+        assert outcome == "error"
+        assert temp_paths_after == temp_paths_before
+        runtime.notifier.notify.assert_called_once()
+        runtime._execute_command.assert_not_called()
 
 
 def test_process_transcribed_segment_ignores_empty_transcript() -> None:

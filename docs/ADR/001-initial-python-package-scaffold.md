@@ -42,6 +42,7 @@ The first migrated slice is limited to:
 - segment error reporting
 - transcript parse/contextualize/suppress/authorize resolution
 - transcribed-segment orchestration after STT
+- raw-PCM segment capture/transcription orchestration before STT handoff
 
 ## Consequences
 
