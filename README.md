@@ -20,6 +20,7 @@ Current migrated slice:
 - `execute_command()` for deterministic intent dispatch
 - ack / post-action voice policy helpers
 - authorized command execution flow helper
+- biometric/speaker/password command authorization helper
 - segment WAV storage and auth-denied handling helpers
 - segment error reporting helper
 - transcript resolution helper for mic-loop command gating
@@ -39,6 +40,7 @@ Current migrated slice:
 - deterministic command execution dispatch
 - ack timing and post-action voice-text policy
 - authorized-command execution flow for the mic loop
+- command authorization policy for locked/unlocked execution
 - successful/auth-denied WAV retention handling
 - subprocess/runtime error reporting
 - transcript parse/contextualize/suppress/authorize resolution

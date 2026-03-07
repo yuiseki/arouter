@@ -1,3 +1,4 @@
+from .authorization import authorize_command
 from .errors import report_segment_error
 from .execution import command_has_system_prefix, execute_command, execute_news_command
 from .flow import run_authorized_command_flow
@@ -24,6 +25,7 @@ __all__ = [
     "CommandExecutionPayload",
     "TextCommandRouter",
     "VoiceCommand",
+    "authorize_command",
     "build_overlay_ipc_line",
     "command_has_system_prefix",
     "compose_overlay_notify_text",
