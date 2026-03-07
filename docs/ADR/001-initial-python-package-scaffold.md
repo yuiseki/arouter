@@ -41,6 +41,7 @@ The first migrated slice is limited to:
 - successful/auth-denied WAV storage handling
 - segment error reporting
 - transcript parse/contextualize/suppress/authorize resolution
+- transcribed-segment orchestration after STT
 
 ## Consequences
 

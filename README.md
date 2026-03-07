@@ -23,6 +23,7 @@ Current migrated slice:
 - segment WAV storage and auth-denied handling helpers
 - segment error reporting helper
 - transcript resolution helper for mic-loop command gating
+- transcribed segment orchestration helper for the mic loop
 
 ## Current Integration
 
@@ -40,6 +41,7 @@ Current migrated slice:
 - successful/auth-denied WAV retention handling
 - subprocess/runtime error reporting
 - transcript parse/contextualize/suppress/authorize resolution
+- transcribed-segment orchestration after STT
 
 ## Development
 

@@ -17,6 +17,7 @@ from .router import (
     TextCommandRouter,
     contextualize_command_with_vacuumtube_state,
 )
+from .segment import process_transcribed_segment
 from .storage import handle_authorization_denied, store_authfail_wav, store_authorized_wav
 
 __all__ = [
@@ -36,6 +37,7 @@ __all__ = [
     "normalize_transcript",
     "parse_command",
     "post_action_voice_text",
+    "process_transcribed_segment",
     "report_segment_error",
     "run_authorized_command_flow",
     "resolve_segment_transcript",
