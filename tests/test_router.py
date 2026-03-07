@@ -39,6 +39,16 @@ def test_execute_text_command_raises_for_unmapped_text() -> None:
     executor.assert_not_called()
 
 
+def test_execute_text_command_raises_for_reaction_only_text() -> None:
+    executor = mock.Mock()
+    router = TextCommandRouter(executor=executor, logger=mock.Mock())
+
+    with pytest.raises(RuntimeError, match="reaction only: laugh"):
+        router.execute_text_command("はっはっ")
+
+    executor.assert_not_called()
+
+
 def test_contextualize_command_inferrs_youtube_fullscreen_from_ambiguous_play_phrase() -> None:
     context_provider = mock.Mock(
         return_value={

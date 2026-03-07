@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import json
-import re
 from collections.abc import Callable, Mapping
 from typing import TypedDict
 
 from .models import VoiceCommand
-from .parser import normalize_transcript, parse_command
+from .parser import normalize_transcript
+from .resolution import resolve_segment_transcript
 
 
 class CommandExecutionPayload(TypedDict):
@@ -24,17 +24,6 @@ Contextualizer = Callable[[str, VoiceCommand | None], VoiceCommand | None]
 ContextProvider = Callable[[], Mapping[str, object] | None]
 Logger = Callable[[str], None]
 SuccessRecorder = Callable[[], None]
-
-
-def detect_non_command_reaction(text: str) -> str | None:
-    raw = (text or "").strip()
-    if not raw:
-        return None
-    compact = re.sub(r"[\s、,。．!！?？・…]+", "", raw)
-    if re.search(r"(?:[はハ][っッ]){2,}", compact):
-        return "laugh"
-    return None
-
 
 def contextualize_command_with_vacuumtube_state(
     text: str,
@@ -175,17 +164,25 @@ class TextCommandRouter:
         if not raw:
             raise RuntimeError("command text is empty")
 
-        cmd = parse_command(raw)
-        cmd = self._contextualizer(raw, cmd)
-        if not cmd:
-            reaction = detect_non_command_reaction(raw)
-            if reaction:
-                raise RuntimeError(f"text resolved to reaction only: {reaction}")
+        resolution = resolve_segment_transcript(
+            raw,
+            wav_path=None,
+            dur_sec=0.0,
+            source="cli",
+            seg_label="cli command",
+            contextualizer=self._contextualizer,
+            suppressor=lambda _cmd, _dur_sec: None,
+            authorizer=lambda cmd, _wav_path, _source, _seg_label: self._authorizer(cmd),
+        )
+        cmd = resolution.cmd
+        if resolution.outcome == "reaction":
+            raise RuntimeError(f"text resolved to reaction only: {resolution.reaction}")
+        if resolution.outcome == "ignored":
             raise RuntimeError(f"no mapped command: {raw}")
-
-        ok, auth_error = self._authorizer(cmd)
-        if not ok:
-            raise RuntimeError(auth_error or "command authorization failed")
+        if resolution.outcome == "denied":
+            raise RuntimeError(resolution.auth_error or "command authorization failed")
+        if resolution.outcome != "ready" or cmd is None:
+            raise RuntimeError(f"unexpected transcript resolution outcome: {resolution.outcome}")
 
         result = self._executor(cmd)
         self._success_recorder()

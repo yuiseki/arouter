@@ -6,7 +6,7 @@ from pathlib import Path
 
 from .models import VoiceCommand
 from .parser import parse_command
-from .router import detect_non_command_reaction
+from .reactions import detect_non_command_reaction
 
 
 @dataclass(frozen=True, slots=True)

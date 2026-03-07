@@ -10,12 +10,12 @@ from .policy import (
     should_ack_before_action,
     should_wait_ack_before_action,
 )
+from .reactions import detect_non_command_reaction
 from .resolution import SegmentTranscriptResolution, resolve_segment_transcript
 from .router import (
     CommandExecutionPayload,
     TextCommandRouter,
     contextualize_command_with_vacuumtube_state,
-    detect_non_command_reaction,
 )
 from .storage import handle_authorization_denied, store_authfail_wav, store_authorized_wav
 
