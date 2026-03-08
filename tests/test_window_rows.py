@@ -8,6 +8,7 @@ from arouter import (
     find_window_geometry_from_wmctrl_lines,
     find_window_id_by_pid_and_title,
     find_window_id_by_title,
+    find_window_row_by_pid_and_title,
     looks_like_weather_chromium_title,
     select_weather_candidate_window_ids,
     wait_for_window_id,
@@ -211,6 +212,27 @@ def test_window_rows_for_pids_from_wmctrl_lines_filters_target_pids() -> None:
             "title": "VacuumTube Side",
         }
     ]
+
+
+def test_find_window_row_by_pid_and_title_returns_matching_row() -> None:
+    row = find_window_row_by_pid_and_title(
+        [
+            "0x001 0 101 10 20 30 40 host VacuumTube Main",
+            "0x002 0 202 11 21 31 41 host VacuumTube Side",
+        ],
+        pid=202,
+        title_hint="VacuumTube",
+    )
+
+    assert row == {
+        "id": "0x002",
+        "pid": 202,
+        "x": 11,
+        "y": 21,
+        "w": 31,
+        "h": 41,
+        "title": "VacuumTube Side",
+    }
 
 
 def test_wait_for_window_id_polls_until_window_appears() -> None:

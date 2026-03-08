@@ -157,6 +157,19 @@ def window_rows_for_pids_from_wmctrl_lines(
     return rows
 
 
+def find_window_row_by_pid_and_title(
+    lines: list[str],
+    *,
+    pid: int,
+    title_hint: str,
+) -> dict[str, Any] | None:
+    for row in window_rows_for_pids_from_wmctrl_lines(lines, pids=[pid]):
+        if title_hint not in str(row.get("title") or ""):
+            continue
+        return row
+    return None
+
+
 def wait_for_window_id(
     *,
     current_window_id: Callable[[], str | None],
