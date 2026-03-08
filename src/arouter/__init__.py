@@ -49,6 +49,8 @@ from .live_cam_layout import (
     build_live_cam_layout_targets_compact,
     build_live_cam_layout_targets_full,
     compact_live_cam_region_from_screen_and_work_area,
+    normalize_live_cam_work_area,
+    resolve_live_cam_layout_plan,
 )
 from .live_cam_runtime import (
     build_live_cam_hide_response,
@@ -226,6 +228,7 @@ __all__ = [
     "maybe_unlock_from_signal",
     "normalize_transcript",
     "normalize_live_cam_force_video_id",
+    "normalize_live_cam_work_area",
     "parse_command",
     "parse_desktop_size_from_wmctrl_output",
     "parse_screen_size_from_xrandr_output",
@@ -244,6 +247,7 @@ __all__ = [
     "select_live_cam_page_target",
     "select_live_cam_page_url",
     "resolve_expected_top_right_geometry",
+    "resolve_live_cam_layout_plan",
     "resolve_window_restore_plan",
     "resolve_biometric_poll_interval",
     "report_segment_error",

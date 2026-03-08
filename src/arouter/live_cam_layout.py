@@ -1,6 +1,23 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any
+
+
+def normalize_live_cam_work_area(
+    *,
+    screen_w: int,
+    screen_h: int,
+    work_area: tuple[int, int, int, int] | None,
+) -> tuple[int, int, int, int]:
+    if not work_area:
+        return (0, 0, int(screen_w), int(screen_h))
+    return (
+        int(work_area[0]),
+        int(work_area[1]),
+        int(work_area[2]),
+        int(work_area[3]),
+    )
 
 
 def build_live_cam_layout_targets_full(
@@ -79,3 +96,62 @@ def compact_live_cam_region_from_screen_and_work_area(
     if x1 <= x0 or y1 <= y0:
         return (qx, qy, max(1, qx2 - qx), max(1, qy2 - qy))
     return (x0, y0, max(1, x1 - x0), max(1, y1 - y0))
+
+
+def resolve_live_cam_layout_plan(
+    *,
+    mode: str,
+    screen_w: int,
+    screen_h: int,
+    work_area: tuple[int, int, int, int] | None,
+    pids_by_port: dict[int, int],
+    full_target_builder: Callable[..., list[dict[str, Any]]] | None = None,
+    compact_target_builder: Callable[..., list[dict[str, Any]]] | None = None,
+) -> dict[str, Any]:
+    full_builder = full_target_builder or build_live_cam_layout_targets_full
+    compact_builder = compact_target_builder or build_live_cam_layout_targets_compact
+    work_x, work_y, work_w, work_h = normalize_live_cam_work_area(
+        screen_w=screen_w,
+        screen_h=screen_h,
+        work_area=work_area,
+    )
+    plan: dict[str, Any] = {
+        "mode": mode,
+        "work_area": {"x": work_x, "y": work_y, "w": work_w, "h": work_h},
+    }
+    if mode == "full":
+        plan["plugin_name"] = "codex_live_cam_wall_full"
+        plan["keep_above"] = True
+        plan["targets"] = full_builder(
+            screen_w=work_w,
+            screen_h=work_h,
+            pids_by_port=pids_by_port,
+            origin_x=work_x,
+            origin_y=work_y,
+        )
+        return plan
+    if mode == "compact":
+        compact_x, compact_y, compact_w, compact_h = (
+            compact_live_cam_region_from_screen_and_work_area(
+                screen_w=screen_w,
+                screen_h=screen_h,
+                work_area=(work_x, work_y, work_w, work_h),
+            )
+        )
+        plan["plugin_name"] = "codex_live_cam_wall_compact"
+        plan["keep_above"] = False
+        plan["compact_region"] = {
+            "x": compact_x,
+            "y": compact_y,
+            "w": compact_w,
+            "h": compact_h,
+        }
+        plan["targets"] = compact_builder(
+            screen_w=compact_w,
+            screen_h=compact_h,
+            pids_by_port=pids_by_port,
+            origin_x=compact_x,
+            origin_y=compact_y,
+        )
+        return plan
+    raise RuntimeError(f"unsupported live camera wall mode: {mode}")

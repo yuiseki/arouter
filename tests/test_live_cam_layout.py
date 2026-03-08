@@ -6,6 +6,8 @@ from arouter import (
     build_live_cam_layout_targets_compact,
     build_live_cam_layout_targets_full,
     compact_live_cam_region_from_screen_and_work_area,
+    normalize_live_cam_work_area,
+    resolve_live_cam_layout_plan,
 )
 
 
@@ -72,3 +74,42 @@ def test_build_live_cam_layout_targets_compact_requires_all_ports() -> None:
             screen_h=1080,
             pids_by_port={9993: 1, 9994: 2, 9995: 3},
         )
+
+
+def test_normalize_live_cam_work_area_falls_back_to_full_screen() -> None:
+    assert normalize_live_cam_work_area(
+        screen_w=4096,
+        screen_h=2160,
+        work_area=None,
+    ) == (0, 0, 4096, 2160)
+
+
+def test_resolve_live_cam_layout_plan_for_full_mode_uses_work_area() -> None:
+    plan = resolve_live_cam_layout_plan(
+        mode="full",
+        screen_w=4096,
+        screen_h=2160,
+        work_area=(0, 0, 4096, 2116),
+        pids_by_port={9993: 1, 9994: 2, 9995: 3, 9996: 4},
+    )
+
+    assert plan["plugin_name"] == "codex_live_cam_wall_full"
+    assert plan["keep_above"] is True
+    assert plan["work_area"] == {"x": 0, "y": 0, "w": 4096, "h": 2116}
+    assert plan["targets"][0] == {"pid": 1, "x": 0, "y": 0, "w": 2048, "h": 1058}
+
+
+def test_resolve_live_cam_layout_plan_for_compact_mode_uses_compact_region() -> None:
+    plan = resolve_live_cam_layout_plan(
+        mode="compact",
+        screen_w=4096,
+        screen_h=2160,
+        work_area=(0, 0, 4096, 2116),
+        pids_by_port={9993: 1, 9994: 2, 9995: 3, 9996: 4},
+    )
+
+    assert plan["plugin_name"] == "codex_live_cam_wall_compact"
+    assert plan["keep_above"] is False
+    assert plan["work_area"] == {"x": 0, "y": 0, "w": 4096, "h": 2116}
+    assert plan["compact_region"] == {"x": 2048, "y": 1080, "w": 2048, "h": 1036}
+    assert plan["targets"][0] == {"pid": 1, "x": 2048, "y": 1080, "w": 1024, "h": 518}
