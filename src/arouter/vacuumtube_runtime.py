@@ -290,6 +290,20 @@ def run_vacuumtube_quadrant(
     return "youtube quadrant " + json.dumps(position, ensure_ascii=False)
 
 
+def run_vacuumtube_minimize(
+    *,
+    find_window_id: Callable[[], str | None],
+    build_minimize_command: Callable[[str], list[str]],
+    run_command: Callable[[list[str]], None],
+) -> str:
+    win_id = find_window_id()
+    if not win_id:
+        return "VacuumTube window not found (no-op)"
+
+    run_command(build_minimize_command(win_id))
+    return f"youtube minimize: ok (win_id={win_id})"
+
+
 def run_vacuumtube_stop_music(
     *,
     find_window_id: Callable[[], str | None],

@@ -14,6 +14,7 @@ from arouter import (
     merge_vacuumtube_window_snapshot,
     run_vacuumtube_fullscreen,
     run_vacuumtube_go_home,
+    run_vacuumtube_minimize,
     run_vacuumtube_play_bgm,
     run_vacuumtube_play_news,
     run_vacuumtube_quadrant,
@@ -546,3 +547,26 @@ def test_run_vacuumtube_play_news_nudges_account_selection() -> None:
 
     assert result == "opened watch route #/watch?v=morning"
     assert events == ["return", "sleep:0.6", "open:NEWS-MORNING"]
+
+
+def test_run_vacuumtube_minimize_is_noop_when_window_is_missing() -> None:
+    result = run_vacuumtube_minimize(
+        find_window_id=lambda: None,
+        build_minimize_command=lambda _: pytest.fail("builder should not be called"),
+        run_command=lambda _: pytest.fail("runner should not be called"),
+    )
+
+    assert result == "VacuumTube window not found (no-op)"
+
+
+def test_run_vacuumtube_minimize_runs_built_command() -> None:
+    commands: list[list[str]] = []
+
+    result = run_vacuumtube_minimize(
+        find_window_id=lambda: "0x123",
+        build_minimize_command=lambda win_id: ["xdotool", "windowminimize", win_id],
+        run_command=commands.append,
+    )
+
+    assert result == "youtube minimize: ok (win_id=0x123)"
+    assert commands == [["xdotool", "windowminimize", "0x123"]]
