@@ -33,6 +33,7 @@ from .biometric_signal import (
     seed_signal_seen_mtime,
     write_signal_file,
 )
+from .cdp_targets import require_cdp_target_list
 from .errors import report_segment_error
 from .execution import command_has_system_prefix, execute_command, execute_news_command
 from .flow import run_authorized_command_flow
@@ -218,6 +219,7 @@ __all__ = [
     "encrypt_password_file",
     "resolve_biometric_arg_path",
     "contextualize_command_with_vacuumtube_state",
+    "require_cdp_target_list",
     "detect_non_command_reaction",
     "execute_command",
     "execute_news_command",
