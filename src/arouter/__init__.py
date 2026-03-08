@@ -38,7 +38,7 @@ from .display_env import build_x11_env, resolve_x11_display
 from .errors import report_segment_error
 from .execution import command_has_system_prefix, execute_command, execute_news_command
 from .flow import run_authorized_command_flow
-from .kwin_runtime import run_kwin_temp_script
+from .kwin_runtime import run_kwin_temp_script, run_live_cam_layout_script
 from .kwin_scripts import (
     build_kwin_load_script_command,
     build_kwin_script_command_plan,
@@ -248,6 +248,7 @@ __all__ = [
     "build_minimize_other_windows_script",
     "build_window_frame_geometry_script",
     "run_kwin_temp_script",
+    "run_live_cam_layout_script",
     "build_tmux_has_session_command",
     "build_tmux_kill_session_command",
     "build_vacuumtube_tmux_start_command",

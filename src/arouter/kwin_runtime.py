@@ -36,3 +36,24 @@ def run_kwin_temp_script(
             cleanup(script_path)
         except Exception:
             pass
+
+
+def run_live_cam_layout_script(
+    targets: list[dict[str, object]],
+    *,
+    plugin_name: str,
+    keep_above: bool,
+    no_border: bool,
+    build_script: Callable[..., str],
+    run_script: Callable[..., None],
+) -> None:
+    run_script(
+        script_text=build_script(
+            targets,
+            keep_above=keep_above,
+            no_border=no_border,
+        ),
+        plugin_name=plugin_name,
+        file_prefix="codex-kwin-livecam-",
+        sleep_sec=0.8,
+    )

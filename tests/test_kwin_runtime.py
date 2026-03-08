@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from arouter import run_kwin_temp_script
+from arouter import run_kwin_temp_script, run_live_cam_layout_script
 
 
 def test_run_kwin_temp_script_runs_commands_then_unloads_and_cleans_up() -> None:
@@ -69,4 +69,29 @@ def test_run_kwin_temp_script_still_unloads_and_cleans_up_after_run_failure() ->
         "run:qdbus start",
         "run:qdbus unload plugin-name",
         "cleanup:/tmp/demo.js",
+    ]
+
+
+def test_run_live_cam_layout_script_builds_script_and_uses_kwin_runner() -> None:
+    events: list[object] = []
+
+    run_live_cam_layout_script(
+        [{"pid": 123, "x": 1, "y": 2, "w": 3, "h": 4}],
+        plugin_name="plugin-name",
+        keep_above=False,
+        no_border=True,
+        build_script=lambda targets, *, keep_above, no_border: (
+            events.append(("build", targets, keep_above, no_border)) or "SCRIPT"
+        ),
+        run_script=lambda **kwargs: events.append(kwargs),
+    )
+
+    assert events == [
+        ("build", [{"pid": 123, "x": 1, "y": 2, "w": 3, "h": 4}], False, True),
+        {
+            "script_text": "SCRIPT",
+            "plugin_name": "plugin-name",
+            "file_prefix": "codex-kwin-livecam-",
+            "sleep_sec": 0.8,
+        },
     ]
