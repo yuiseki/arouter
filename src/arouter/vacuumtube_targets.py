@@ -21,3 +21,12 @@ def select_vacuumtube_page_target(targets: Any) -> dict[str, Any] | None:
         if first_page is None:
             first_page = item
     return titled_candidate or first_page
+
+
+def select_vacuumtube_websocket_url(target: Any) -> str | None:
+    if not isinstance(target, dict):
+        return None
+    ws_url = target.get("webSocketDebuggerUrl")
+    if not isinstance(ws_url, str) or not ws_url:
+        return None
+    return ws_url

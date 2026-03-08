@@ -125,7 +125,10 @@ from .router import (
 )
 from .segment import process_pcm_segment, process_transcribed_segment
 from .storage import handle_authorization_denied, store_authfail_wav, store_authorized_wav
-from .vacuumtube_targets import select_vacuumtube_page_target
+from .vacuumtube_targets import (
+    select_vacuumtube_page_target,
+    select_vacuumtube_websocket_url,
+)
 from .window_actions import (
     build_window_activate_command,
     build_window_close_command,
@@ -292,12 +295,13 @@ __all__ = [
     "run_system_load_check_flow",
     "set_system_locked",
     "seed_signal_seen_mtime",
+    "select_vacuumtube_page_target",
+    "select_vacuumtube_websocket_url",
     "wait_for_window_id",
     "wait_for_new_window_row",
     "window_rows_for_pids_from_wmctrl_lines",
     "window_title_from_wmctrl_lines",
     "web_watch_retry_video_id",
-    "select_vacuumtube_page_target",
     "trim_notify_text",
     "top_right_region_from_screen_and_work_area",
     "verify_unlock_password",
