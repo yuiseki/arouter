@@ -50,6 +50,7 @@ from .live_cam_layout import (
     build_live_cam_layout_targets_full,
     compact_live_cam_region_from_screen_and_work_area,
 )
+from .live_cam_status import find_stuck_live_cam_specs, page_matches_live_camera_spec
 from .load_check import (
     build_load_check_wmctrl_commands,
     find_konsole_rows_for_tmux_client_pids,
@@ -141,6 +142,7 @@ __all__ = [
     "execute_command",
     "execute_news_command",
     "extract_password_unlock_secret",
+    "find_stuck_live_cam_specs",
     "find_window_geometry_from_wmctrl_lines",
     "find_window_id_by_pid_and_title",
     "find_window_id_by_title",
@@ -158,6 +160,7 @@ __all__ = [
     "post_action_voice_text",
     "process_pcm_segment",
     "process_transcribed_segment",
+    "page_matches_live_camera_spec",
     "parse_konsole_window_rows",
     "parse_tmux_client_pids",
     "pid_ancestor_chain",
