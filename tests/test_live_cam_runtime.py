@@ -28,6 +28,7 @@ from arouter import (
     run_live_cam_raise_windows,
     run_live_cam_start_flow,
     run_live_cam_window_action_flow,
+    run_minimize_other_windows_flow,
 )
 
 
@@ -494,6 +495,34 @@ def test_build_minimize_other_windows_response_includes_skip_pid_list() -> None:
         build_minimize_other_windows_response([101, 103])
         == "minimize other windows via KWin: ok (skipped live_cam pids=[101, 103])"
     )
+
+
+def test_run_minimize_other_windows_flow_collects_skip_pids_and_runs_script() -> None:
+    events: list[tuple[str, object]] = []
+
+    result = run_minimize_other_windows_flow(
+        instances=[{"port": "9993"}, {"port": "9994"}],
+        pid_lookup=lambda port: {9993: 101, 9994: 202}.get(port),
+        build_script=lambda skip_pids: events.append(("build", list(skip_pids))) or "SCRIPT",
+        run_script=lambda **kwargs: events.append(("run", kwargs)),
+        build_response=lambda skip_pids: events.append(("response", list(skip_pids))) or "done",
+        plugin_name="plugin-name",
+    )
+
+    assert result == "done"
+    assert events == [
+        ("build", [101, 202]),
+        (
+            "run",
+            {
+                "script_text": "SCRIPT",
+                "plugin_name": "plugin-name",
+                "file_prefix": "codex-kwin-minimize-",
+                "sleep_sec": 0.3,
+            },
+        ),
+        ("response", [101, 202]),
+    ]
 
 
 def test_run_live_cam_layout_flow_applies_layout_raises_windows_and_builds_response() -> None:

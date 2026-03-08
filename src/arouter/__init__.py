@@ -89,6 +89,7 @@ from .live_cam_runtime import (
     run_live_cam_raise_windows,
     run_live_cam_start_flow,
     run_live_cam_window_action_flow,
+    run_minimize_other_windows_flow,
 )
 from .live_cam_selection import (
     annotate_live_cam_payload_selection,
@@ -288,6 +289,7 @@ __all__ = [
     "build_live_cam_layout_response",
     "build_live_cam_minimize_response",
     "build_minimize_other_windows_response",
+    "run_minimize_other_windows_flow",
     "build_listen_pid_command",
     "build_live_cam_open_result",
     "build_live_cam_reopen_result",
