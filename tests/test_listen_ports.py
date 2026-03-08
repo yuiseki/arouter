@@ -1,0 +1,21 @@
+from __future__ import annotations
+
+from arouter import build_listen_pid_command, parse_listen_pid_output
+
+
+def test_build_listen_pid_command_returns_lsof_listen_query() -> None:
+    assert build_listen_pid_command(9992) == [
+        "lsof",
+        "-nP",
+        "-iTCP:9992",
+        "-sTCP:LISTEN",
+        "-t",
+    ]
+
+
+def test_parse_listen_pid_output_returns_first_valid_pid() -> None:
+    assert parse_listen_pid_output("oops\n12345\n67890\n") == 12345
+
+
+def test_parse_listen_pid_output_returns_none_when_no_valid_pid_exists() -> None:
+    assert parse_listen_pid_output("oops\n\n") is None

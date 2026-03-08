@@ -47,6 +47,7 @@ from .kwin_scripts import (
     build_minimize_other_windows_script,
     build_window_frame_geometry_script,
 )
+from .listen_ports import build_listen_pid_command, parse_listen_pid_output
 from .live_cam_layout import (
     build_live_cam_layout_targets_compact,
     build_live_cam_layout_targets_full,
@@ -189,6 +190,7 @@ __all__ = [
     "build_live_cam_layout_response",
     "build_live_cam_minimize_response",
     "build_minimize_other_windows_response",
+    "build_listen_pid_command",
     "build_live_cam_open_result",
     "build_live_cam_reopen_result",
     "collect_live_cam_pids",
@@ -259,6 +261,7 @@ __all__ = [
     "merge_live_cam_page_snapshot",
     "parse_command",
     "parse_desktop_size_from_wmctrl_output",
+    "parse_listen_pid_output",
     "parse_screen_size_from_xrandr_output",
     "parse_work_area_from_wmctrl_output",
     "post_action_voice_text",
