@@ -14,6 +14,7 @@ from arouter import (
     merge_vacuumtube_cdp_state,
     merge_vacuumtube_window_snapshot,
     recover_vacuumtube_unresponsive_state,
+    restart_vacuumtube_tmux_session,
     run_vacuumtube_fullscreen,
     run_vacuumtube_go_home,
     run_vacuumtube_minimize,
@@ -23,6 +24,7 @@ from arouter import (
     run_vacuumtube_quadrant,
     run_vacuumtube_resume_playback,
     run_vacuumtube_stop_music,
+    start_vacuumtube_tmux_session,
 )
 
 
@@ -230,6 +232,72 @@ def test_recover_vacuumtube_unresponsive_state_restarts_then_returns_positioned_
         "restart",
         "wait_cdp_ready:35.0",
         "ensure_started",
+    ]
+
+
+def test_start_vacuumtube_tmux_session_starts_when_session_missing() -> None:
+    events: list[object] = []
+
+    start_vacuumtube_tmux_session(
+        start_script="/opt/VacuumTube/start.sh",
+        tmux_session="vacuumtube-main",
+        path_exists=lambda path: events.append(("exists", path)) or True,
+        tmux_has=lambda: events.append("tmux_has") or False,
+        resolve_display=lambda: events.append("resolve_display") or ":0",
+        build_start_command=lambda display: (
+            events.append(("build", display)) or ["tmux", "new-session"]
+        ),
+        run_command=lambda command: events.append(("run", command)),
+        log=events.append,
+    )
+
+    assert events == [
+        ("exists", "/opt/VacuumTube/start.sh"),
+        "tmux_has",
+        "resolve_display",
+        ("build", ":0"),
+        ("run", ["tmux", "new-session"]),
+        "VacuumTube tmux start requested: vacuumtube-main",
+    ]
+
+
+def test_start_vacuumtube_tmux_session_noops_when_session_exists() -> None:
+    events: list[object] = []
+
+    start_vacuumtube_tmux_session(
+        start_script="/opt/VacuumTube/start.sh",
+        tmux_session="vacuumtube-main",
+        path_exists=lambda _path: True,
+        tmux_has=lambda: True,
+        resolve_display=lambda: (_ for _ in ()).throw(
+            AssertionError("unexpected resolve_display")
+        ),
+        build_start_command=lambda _display: (_ for _ in ()).throw(
+            AssertionError("unexpected build")
+        ),
+        run_command=lambda _command: (_ for _ in ()).throw(AssertionError("unexpected run")),
+        log=events.append,
+    )
+
+    assert events == ["VacuumTube tmux session already exists: vacuumtube-main"]
+
+
+def test_restart_vacuumtube_tmux_session_kills_then_restarts() -> None:
+    events: list[object] = []
+
+    restart_vacuumtube_tmux_session(
+        tmux_has=lambda: True,
+        build_kill_command=lambda: events.append("build_kill") or ["tmux", "kill-session"],
+        run_command=lambda command: events.append(("run", command)),
+        sleep=lambda seconds: events.append(("sleep", seconds)),
+        start_tmux_session=lambda: events.append("start"),
+    )
+
+    assert events == [
+        "build_kill",
+        ("run", ["tmux", "kill-session"]),
+        ("sleep", 0.25),
+        "start",
     ]
 
 

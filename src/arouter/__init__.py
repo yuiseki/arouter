@@ -164,6 +164,7 @@ from .vacuumtube_runtime import (
     merge_vacuumtube_cdp_state,
     merge_vacuumtube_window_snapshot,
     recover_vacuumtube_unresponsive_state,
+    restart_vacuumtube_tmux_session,
     run_vacuumtube_fullscreen,
     run_vacuumtube_go_home,
     run_vacuumtube_minimize,
@@ -173,6 +174,7 @@ from .vacuumtube_runtime import (
     run_vacuumtube_quadrant,
     run_vacuumtube_resume_playback,
     run_vacuumtube_stop_music,
+    start_vacuumtube_tmux_session,
 )
 from .vacuumtube_state import (
     vacuumtube_is_home_browse_state,
@@ -303,6 +305,8 @@ __all__ = [
     "run_vacuumtube_resume_playback",
     "run_vacuumtube_stop_music",
     "run_vacuumtube_play_news",
+    "start_vacuumtube_tmux_session",
+    "restart_vacuumtube_tmux_session",
     "build_weather_pages_closed_response",
     "build_weather_pages_tiled_response",
     "build_weather_tile_result",

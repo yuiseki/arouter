@@ -182,6 +182,42 @@ def recover_vacuumtube_unresponsive_state(
     return ensure_started_and_positioned()
 
 
+def start_vacuumtube_tmux_session(
+    *,
+    start_script: str,
+    tmux_session: str,
+    path_exists: Callable[[str], bool],
+    tmux_has: Callable[[], bool],
+    resolve_display: Callable[[], str],
+    build_start_command: Callable[[str], list[str]],
+    run_command: Callable[[list[str]], None],
+    log: Callable[[str], None],
+) -> None:
+    if not path_exists(start_script):
+        raise RuntimeError(f"VacuumTube start script not found: {start_script}")
+    if tmux_has():
+        log(f"VacuumTube tmux session already exists: {tmux_session}")
+        return
+
+    display = resolve_display()
+    run_command(build_start_command(display))
+    log(f"VacuumTube tmux start requested: {tmux_session}")
+
+
+def restart_vacuumtube_tmux_session(
+    *,
+    tmux_has: Callable[[], bool],
+    build_kill_command: Callable[[], list[str]],
+    run_command: Callable[[list[str]], None],
+    sleep: Callable[[float], None],
+    start_tmux_session: Callable[[], None],
+) -> None:
+    if tmux_has():
+        run_command(build_kill_command())
+        sleep(0.25)
+    start_tmux_session()
+
+
 def run_vacuumtube_resume_playback(
     *,
     find_window_id: Callable[[], str | None],
