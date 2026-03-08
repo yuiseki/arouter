@@ -22,6 +22,7 @@ from arouter import (
     resolve_live_cam_layout_bootstrap,
     run_live_cam_close_windows,
     run_live_cam_layout_flow,
+    run_live_cam_minimize_windows,
     run_live_cam_open_flow,
     run_live_cam_parallel,
     run_live_cam_raise_windows,
@@ -102,6 +103,36 @@ def test_run_live_cam_close_windows_returns_only_closed_window_ids() -> None:
 
     assert closed == ["0x10", "0x30"]
     assert commands == [["wmctrl", "-i", "-c", "0x10"], ["wmctrl", "-i", "-c", "0x30"]]
+
+
+def test_run_live_cam_minimize_windows_collects_window_ids_and_runs_kwin_script() -> None:
+    calls: list[object] = []
+
+    out = run_live_cam_minimize_windows(
+        [101, 102],
+        window_id_lookup=lambda pid: {101: "0x1", 102: None}[pid],
+        collect_window_ids=collect_window_ids_for_pids,
+        build_script=lambda pids: f"script:{','.join(str(pid) for pid in pids)}",
+        run_script=lambda *, script_text, plugin_name, file_prefix, sleep_sec: calls.append(
+            {
+                "script_text": script_text,
+                "plugin_name": plugin_name,
+                "file_prefix": file_prefix,
+                "sleep_sec": sleep_sec,
+            }
+        ),
+        plugin_name="codex_live_cam_minimize_123",
+    )
+
+    assert out == ["0x1"]
+    assert calls == [
+        {
+            "script_text": "script:101,102",
+            "plugin_name": "codex_live_cam_minimize_123",
+            "file_prefix": "codex-kwin-livecam-minimize-",
+            "sleep_sec": 0.4,
+        }
+    ]
 
 
 def test_parse_key_value_stdout_ignores_non_kv_lines() -> None:

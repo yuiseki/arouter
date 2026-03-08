@@ -4,7 +4,16 @@ import concurrent.futures
 import json
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol
+
+
+class LiveCamWindowIdCollector(Protocol):
+    def __call__(
+        self,
+        pids: list[int],
+        *,
+        window_id_lookup: Callable[[int], str | None],
+    ) -> list[str]: ...
 
 
 def run_live_cam_parallel(
@@ -261,6 +270,27 @@ def run_live_cam_close_windows(
         run_command(build_close_command(wid))
         closed.append(wid)
     return closed
+
+
+def run_live_cam_minimize_windows(
+    pids: list[int],
+    *,
+    window_id_lookup: Callable[[int], str | None],
+    collect_window_ids: LiveCamWindowIdCollector,
+    build_script: Callable[[list[int]], str],
+    run_script: Callable[..., None],
+    plugin_name: str,
+) -> list[str]:
+    window_ids = collect_window_ids(pids, window_id_lookup=window_id_lookup)
+    if not pids:
+        return window_ids
+    run_script(
+        script_text=build_script(pids),
+        plugin_name=plugin_name,
+        file_prefix="codex-kwin-livecam-minimize-",
+        sleep_sec=0.4,
+    )
+    return window_ids
 
 
 def parse_key_value_stdout(text: str) -> dict[str, str]:
