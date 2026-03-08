@@ -3,6 +3,7 @@ from __future__ import annotations
 from arouter import (
     run_kwin_temp_script,
     run_live_cam_layout_script,
+    run_live_cam_minimize_script,
     run_window_frame_geometry_script,
 )
 
@@ -122,5 +123,26 @@ def test_run_window_frame_geometry_script_builds_script_and_uses_kwin_runner() -
             "plugin_name": "plugin-name",
             "file_prefix": "codex-kwin-vacuumtube-main-",
             "sleep_sec": 0.5,
+        },
+    ]
+
+
+def test_run_live_cam_minimize_script_builds_script_and_uses_kwin_runner() -> None:
+    events: list[object] = []
+
+    run_live_cam_minimize_script(
+        pids=[123, 456],
+        plugin_name="plugin-name",
+        build_script=lambda pids: (events.append(("build", pids)) or "SCRIPT"),
+        run_script=lambda **kwargs: events.append(kwargs),
+    )
+
+    assert events == [
+        ("build", [123, 456]),
+        {
+            "script_text": "SCRIPT",
+            "plugin_name": "plugin-name",
+            "file_prefix": "codex-kwin-livecam-minimize-",
+            "sleep_sec": 0.4,
         },
     ]

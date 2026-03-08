@@ -113,13 +113,10 @@ def test_run_live_cam_minimize_windows_collects_window_ids_and_runs_kwin_script(
         [101, 102],
         window_id_lookup=lambda pid: {101: "0x1", 102: None}[pid],
         collect_window_ids=collect_window_ids_for_pids,
-        build_script=lambda pids: f"script:{','.join(str(pid) for pid in pids)}",
-        run_script=lambda *, script_text, plugin_name, file_prefix, sleep_sec: calls.append(
+        run_minimize_script=lambda *, pids, plugin_name: calls.append(
             {
-                "script_text": script_text,
+                "pids": pids,
                 "plugin_name": plugin_name,
-                "file_prefix": file_prefix,
-                "sleep_sec": sleep_sec,
             }
         ),
         plugin_name="codex_live_cam_minimize_123",
@@ -128,10 +125,8 @@ def test_run_live_cam_minimize_windows_collects_window_ids_and_runs_kwin_script(
     assert out == ["0x1"]
     assert calls == [
         {
-            "script_text": "script:101,102",
+            "pids": [101, 102],
             "plugin_name": "codex_live_cam_minimize_123",
-            "file_prefix": "codex-kwin-livecam-minimize-",
-            "sleep_sec": 0.4,
         }
     ]
 

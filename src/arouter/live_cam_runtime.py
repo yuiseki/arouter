@@ -277,18 +277,15 @@ def run_live_cam_minimize_windows(
     *,
     window_id_lookup: Callable[[int], str | None],
     collect_window_ids: LiveCamWindowIdCollector,
-    build_script: Callable[[list[int]], str],
-    run_script: Callable[..., None],
+    run_minimize_script: Callable[..., None],
     plugin_name: str,
 ) -> list[str]:
     window_ids = collect_window_ids(pids, window_id_lookup=window_id_lookup)
     if not pids:
         return window_ids
-    run_script(
-        script_text=build_script(pids),
+    run_minimize_script(
+        pids=pids,
         plugin_name=plugin_name,
-        file_prefix="codex-kwin-livecam-minimize-",
-        sleep_sec=0.4,
     )
     return window_ids
 

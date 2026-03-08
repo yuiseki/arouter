@@ -78,3 +78,18 @@ def run_window_frame_geometry_script(
         file_prefix="codex-kwin-vacuumtube-main-",
         sleep_sec=0.5,
     )
+
+
+def run_live_cam_minimize_script(
+    *,
+    pids: list[int],
+    plugin_name: str,
+    build_script: Callable[[list[int]], str],
+    run_script: Callable[..., None],
+) -> None:
+    run_script(
+        script_text=build_script(pids),
+        plugin_name=plugin_name,
+        file_prefix="codex-kwin-livecam-minimize-",
+        sleep_sec=0.4,
+    )
