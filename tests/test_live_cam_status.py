@@ -1,9 +1,40 @@
 from __future__ import annotations
 
 from arouter import (
+    build_live_cam_runtime_url_entry,
     find_stuck_live_cam_specs,
     page_matches_live_camera_spec,
+    select_live_cam_page_target,
+    select_live_cam_page_url,
 )
+
+
+def test_select_live_cam_page_url_prefers_youtube_tv_page() -> None:
+    assert (
+        select_live_cam_page_url(
+            [
+                {"type": "page", "url": "https://example.test/other"},
+                {"type": "page", "url": "https://www.youtube.com/tv#/watch?v=abc123DEF45"},
+            ]
+        )
+        == "https://www.youtube.com/tv#/watch?v=abc123DEF45"
+    )
+
+
+def test_select_live_cam_page_target_falls_back_to_first_page() -> None:
+    assert select_live_cam_page_target(
+        [
+            {"type": "service_worker", "url": "https://example.test/sw.js"},
+            {"type": "page", "url": "https://example.test/other", "title": "Other"},
+        ]
+    ) == {"type": "page", "url": "https://example.test/other", "title": "Other"}
+
+
+def test_build_live_cam_runtime_url_entry_returns_error_payload() -> None:
+    assert build_live_cam_runtime_url_entry(
+        port=9996,
+        targets_or_error=OSError("connection refused"),
+    ) == {"port": 9996, "error": "connection refused"}
 
 
 def test_page_matches_live_camera_spec_accepts_matching_watch_page() -> None:

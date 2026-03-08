@@ -4,6 +4,43 @@ import re
 from typing import Any
 
 
+def select_live_cam_page_url(targets: Any) -> str | None:
+    if not isinstance(targets, list):
+        return None
+    for item in targets:
+        if not isinstance(item, dict) or item.get("type") != "page":
+            continue
+        url = str(item.get("url") or "")
+        if "youtube.com/tv" in url:
+            return url
+    return None
+
+
+def select_live_cam_page_target(targets: Any) -> dict[str, Any] | None:
+    if not isinstance(targets, list):
+        return None
+    target: dict[str, Any] | None = None
+    for item in targets:
+        if not isinstance(item, dict) or item.get("type") != "page":
+            continue
+        url = str(item.get("url") or "")
+        if "youtube.com/tv" in url:
+            return item
+        if target is None:
+            target = item
+    return target
+
+
+def build_live_cam_runtime_url_entry(
+    *,
+    port: int,
+    targets_or_error: Any,
+) -> dict[str, Any]:
+    if isinstance(targets_or_error, Exception):
+        return {"port": int(port), "error": str(targets_or_error)}
+    return {"port": int(port), "url": select_live_cam_page_url(targets_or_error)}
+
+
 def page_matches_live_camera_spec(spec: dict[str, Any], page: dict[str, Any]) -> bool:
     url = str(page.get("url") or "")
     if "youtube.com/tv" not in url or "watch?v=" not in url:

@@ -75,7 +75,13 @@ from .live_cam_selection import (
     normalize_live_cam_force_video_id,
     web_watch_retry_video_id,
 )
-from .live_cam_status import find_stuck_live_cam_specs, page_matches_live_camera_spec
+from .live_cam_status import (
+    build_live_cam_runtime_url_entry,
+    find_stuck_live_cam_specs,
+    page_matches_live_camera_spec,
+    select_live_cam_page_target,
+    select_live_cam_page_url,
+)
 from .load_check import (
     build_load_check_wmctrl_commands,
     find_konsole_rows_for_tmux_client_pids,
@@ -192,6 +198,7 @@ __all__ = [
     "build_live_cam_json_parse_failure",
     "expand_live_cam_candidates",
     "format_live_cam_selection_error",
+    "build_live_cam_runtime_url_entry",
     "find_stuck_live_cam_specs",
     "find_window_geometry_from_wmctrl_lines",
     "find_window_id_by_pid_and_title",
@@ -220,6 +227,8 @@ __all__ = [
     "read_password_secret_lines",
     "reassert_lock_screen",
     "request_biometric_lock_payload",
+    "select_live_cam_page_target",
+    "select_live_cam_page_url",
     "resolve_expected_top_right_geometry",
     "resolve_window_restore_plan",
     "resolve_biometric_poll_interval",
