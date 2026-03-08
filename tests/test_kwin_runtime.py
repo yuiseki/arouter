@@ -4,6 +4,7 @@ from arouter import (
     run_kwin_temp_script,
     run_live_cam_layout_script,
     run_live_cam_minimize_script,
+    run_minimize_other_windows_script,
     run_window_frame_geometry_script,
 )
 
@@ -144,5 +145,26 @@ def test_run_live_cam_minimize_script_builds_script_and_uses_kwin_runner() -> No
             "plugin_name": "plugin-name",
             "file_prefix": "codex-kwin-livecam-minimize-",
             "sleep_sec": 0.4,
+        },
+    ]
+
+
+def test_run_minimize_other_windows_script_builds_script_and_uses_kwin_runner() -> None:
+    events: list[object] = []
+
+    run_minimize_other_windows_script(
+        skip_pids=[101, 202],
+        plugin_name="plugin-name",
+        build_script=lambda skip_pids: (events.append(("build", skip_pids)) or "SCRIPT"),
+        run_script=lambda **kwargs: events.append(kwargs),
+    )
+
+    assert events == [
+        ("build", [101, 202]),
+        {
+            "script_text": "SCRIPT",
+            "plugin_name": "plugin-name",
+            "file_prefix": "codex-kwin-minimize-",
+            "sleep_sec": 0.3,
         },
     ]

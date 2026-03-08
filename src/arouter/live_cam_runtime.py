@@ -457,20 +457,14 @@ def run_minimize_other_windows_flow(
     *,
     instances: list[dict[str, Any]],
     pid_lookup: Callable[[int], int | None],
-    build_script: Callable[[list[int]], str],
-    run_script: Callable[..., None],
+    run_minimize_script: Callable[..., None],
     build_response: Callable[[list[int]], str],
     plugin_name: str,
-    file_prefix: str = "codex-kwin-minimize-",
-    sleep_sec: float = 0.3,
 ) -> str:
     skip_pids = collect_live_cam_skip_pids(instances, pid_lookup=pid_lookup)
-    script_text = build_script(skip_pids)
-    run_script(
-        script_text=script_text,
+    run_minimize_script(
+        skip_pids=skip_pids,
         plugin_name=plugin_name,
-        file_prefix=file_prefix,
-        sleep_sec=sleep_sec,
     )
     return build_response(skip_pids)
 

@@ -93,3 +93,18 @@ def run_live_cam_minimize_script(
         file_prefix="codex-kwin-livecam-minimize-",
         sleep_sec=0.4,
     )
+
+
+def run_minimize_other_windows_script(
+    *,
+    skip_pids: list[int],
+    plugin_name: str,
+    build_script: Callable[[list[int]], str],
+    run_script: Callable[..., None],
+) -> None:
+    run_script(
+        script_text=build_script(skip_pids),
+        plugin_name=plugin_name,
+        file_prefix="codex-kwin-minimize-",
+        sleep_sec=0.3,
+    )

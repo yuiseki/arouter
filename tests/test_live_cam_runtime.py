@@ -498,22 +498,20 @@ def test_run_minimize_other_windows_flow_collects_skip_pids_and_runs_script() ->
     result = run_minimize_other_windows_flow(
         instances=[{"port": "9993"}, {"port": "9994"}],
         pid_lookup=lambda port: {9993: 101, 9994: 202}.get(port),
-        build_script=lambda skip_pids: events.append(("build", list(skip_pids))) or "SCRIPT",
-        run_script=lambda **kwargs: events.append(("run", kwargs)),
+        run_minimize_script=lambda *, skip_pids, plugin_name: events.append(
+            ("run", {"skip_pids": list(skip_pids), "plugin_name": plugin_name})
+        ),
         build_response=lambda skip_pids: events.append(("response", list(skip_pids))) or "done",
         plugin_name="plugin-name",
     )
 
     assert result == "done"
     assert events == [
-        ("build", [101, 202]),
         (
             "run",
             {
-                "script_text": "SCRIPT",
                 "plugin_name": "plugin-name",
-                "file_prefix": "codex-kwin-minimize-",
-                "sleep_sec": 0.3,
+                "skip_pids": [101, 202],
             },
         ),
         ("response", [101, 202]),
