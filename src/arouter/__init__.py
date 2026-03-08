@@ -121,7 +121,10 @@ from .window_actions import (
     build_window_move_resize_command,
 )
 from .window_presentation import (
+    build_top_right_position_attempt_plan,
+    build_top_right_position_result,
     build_window_presentation_snapshot,
+    finalize_top_right_position_result,
     geometry_close,
     is_window_fullscreenish,
     parse_desktop_size_from_wmctrl_output,
@@ -177,6 +180,8 @@ __all__ = [
     "build_window_key_command",
     "build_window_move_resize_command",
     "build_window_minimize_command",
+    "build_top_right_position_attempt_plan",
+    "build_top_right_position_result",
     "build_window_presentation_snapshot",
     "command_has_system_prefix",
     "chromium_window_ids_from_wmctrl_lines",
@@ -194,6 +199,7 @@ __all__ = [
     "execute_command",
     "execute_news_command",
     "extract_password_unlock_secret",
+    "finalize_top_right_position_result",
     "annotate_live_cam_payload_selection",
     "build_live_cam_browse_command",
     "build_live_cam_command_failure",

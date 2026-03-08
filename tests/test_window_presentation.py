@@ -3,7 +3,10 @@ from __future__ import annotations
 import pytest
 
 from arouter import (
+    build_top_right_position_attempt_plan,
+    build_top_right_position_result,
     build_window_presentation_snapshot,
+    finalize_top_right_position_result,
     geometry_close,
     is_window_fullscreenish,
     parse_desktop_size_from_wmctrl_output,
@@ -36,6 +39,89 @@ def test_build_window_presentation_snapshot_sets_fields() -> None:
         "window_id": "0x123",
         "fullscreen": True,
     }
+
+
+def test_build_top_right_position_result_sets_initial_fields() -> None:
+    assert build_top_right_position_result(
+        window_id="0x123",
+        target={"x": 2048, "y": 0, "w": 2048, "h": 1080},
+        before={"x": 10, "y": 20, "w": 300, "h": 400},
+        tolerance=24,
+    ) == {
+        "window_id": "0x123",
+        "target": {"x": 2048, "y": 0, "w": 2048, "h": 1080},
+        "before": {"x": 10, "y": 20, "w": 300, "h": 400},
+        "tolerance": 24,
+        "ok": False,
+        "method": None,
+    }
+
+
+def test_build_top_right_position_attempt_plan_prefers_kwin_then_tile_then_wmctrl() -> None:
+    plan = build_top_right_position_attempt_plan(retries=2, has_main_pid=True)
+
+    assert [step["method"] for step in plan] == [
+        "kwin_frame_noborder_attempt_1",
+        "kwin_frame_noborder_attempt_2",
+        "kwin_tile_attempt_1",
+        "kwin_tile_attempt_2",
+        "wmctrl_move_resize",
+        "kwin_frame_noborder_after_wmctrl",
+        "kwin_tile_after_wmctrl",
+    ]
+
+
+def test_build_top_right_position_attempt_plan_skips_kwin_when_pid_missing() -> None:
+    plan = build_top_right_position_attempt_plan(retries=2, has_main_pid=False)
+
+    assert [step["method"] for step in plan] == [
+        "kwin_tile_attempt_1",
+        "kwin_tile_attempt_2",
+        "wmctrl_move_resize",
+        "kwin_tile_after_wmctrl",
+    ]
+
+
+def test_finalize_top_right_position_result_marks_success_when_geometry_matches() -> None:
+    result = build_top_right_position_result(
+        window_id="0x123",
+        target={"x": 2048, "y": 0, "w": 2048, "h": 1080},
+        before=None,
+        tolerance=24,
+    )
+
+    updated = finalize_top_right_position_result(
+        result,
+        geom={"x": 2048, "y": 8, "w": 2040, "h": 1080},
+        expected={"x": 2048, "y": 0, "w": 2048, "h": 1080},
+        tol=24,
+        method="kwin_tile_attempt_1",
+    )
+
+    assert updated["ok"] is True
+    assert updated["method"] == "kwin_tile_attempt_1"
+    assert updated["after"] == {"x": 2048, "y": 8, "w": 2040, "h": 1080}
+
+
+def test_finalize_top_right_position_result_keeps_failure_and_records_last_geometry() -> None:
+    result = build_top_right_position_result(
+        window_id="0x123",
+        target={"x": 2048, "y": 0, "w": 2048, "h": 1080},
+        before=None,
+        tolerance=24,
+    )
+
+    updated = finalize_top_right_position_result(
+        result,
+        geom={"x": 100, "y": 100, "w": 800, "h": 600},
+        expected={"x": 2048, "y": 0, "w": 2048, "h": 1080},
+        tol=24,
+        method="wmctrl_move_resize",
+    )
+
+    assert updated["ok"] is False
+    assert updated["method"] == "wmctrl_move_resize"
+    assert updated["after"] == {"x": 100, "y": 100, "w": 800, "h": 600}
 
 
 def test_resolve_window_restore_plan_prefers_fullscreen() -> None:

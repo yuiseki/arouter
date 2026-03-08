@@ -25,6 +25,75 @@ def build_window_presentation_snapshot(
     }
 
 
+def build_top_right_position_result(
+    *,
+    window_id: str,
+    target: dict[str, Any],
+    before: dict[str, Any] | None,
+    tolerance: int,
+) -> dict[str, Any]:
+    return {
+        "window_id": window_id,
+        "target": dict(target),
+        "before": before,
+        "tolerance": int(tolerance),
+        "ok": False,
+        "method": None,
+    }
+
+
+def build_top_right_position_attempt_plan(
+    *,
+    retries: int,
+    has_main_pid: bool,
+) -> list[dict[str, Any]]:
+    attempt_count = max(1, int(retries))
+    plan: list[dict[str, Any]] = []
+    if has_main_pid:
+        for attempt in range(attempt_count):
+            plan.append(
+                {
+                    "action": "kwin_frame",
+                    "sleep": 0.25,
+                    "method": f"kwin_frame_noborder_attempt_{attempt + 1}",
+                }
+            )
+    for attempt in range(attempt_count):
+        plan.append(
+            {
+                "action": "kwin_tile",
+                "sleep": 0.35,
+                "method": f"kwin_tile_attempt_{attempt + 1}",
+            }
+        )
+    plan.append({"action": "wmctrl_move_resize", "sleep": 0.25, "method": "wmctrl_move_resize"})
+    if has_main_pid:
+        plan.append(
+            {
+                "action": "kwin_frame",
+                "sleep": 0.25,
+                "method": "kwin_frame_noborder_after_wmctrl",
+            }
+        )
+    plan.append({"action": "kwin_tile", "sleep": 0.35, "method": "kwin_tile_after_wmctrl"})
+    return plan
+
+
+def finalize_top_right_position_result(
+    result: dict[str, Any],
+    *,
+    geom: dict[str, Any] | None,
+    expected: dict[str, Any],
+    tol: int,
+    method: str,
+) -> dict[str, Any]:
+    updated = dict(result)
+    updated["after"] = geom
+    updated["method"] = method
+    updated["ok"] = bool(geom and geometry_close(geom, expected, tol=tol))
+    return updated
+
+
 def resolve_window_restore_plan(
     presentation: dict[str, Any] | None,
     *,
