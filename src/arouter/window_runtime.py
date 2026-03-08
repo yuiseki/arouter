@@ -1,7 +1,11 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Any
+from typing import Any, Protocol
+
+
+class WindowFullscreenCommandBuilder(Protocol):
+    def __call__(self, win_id: str, *, enabled: bool) -> list[str]: ...
 
 
 def run_window_activate(
@@ -46,7 +50,7 @@ def run_window_fullscreen(
     *,
     win_id: str,
     enabled: bool,
-    build_command: Callable[[str, bool], list[str]],
+    build_command: WindowFullscreenCommandBuilder,
     run_command: Callable[[list[str]], Any],
 ) -> None:
-    run_command(build_command(win_id, enabled))
+    run_command(build_command(win_id, enabled=enabled))

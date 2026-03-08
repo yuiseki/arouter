@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from arouter import (
+    build_window_fullscreen_command,
     run_window_activate,
     run_window_close,
     run_window_fullscreen,
@@ -91,3 +92,16 @@ def test_run_window_fullscreen_builds_and_runs_command() -> None:
     )
 
     assert commands == [["wmctrl", "-i", "-r", "0xabc", "-b", "remove,fullscreen"]]
+
+
+def test_run_window_fullscreen_supports_keyword_only_builder() -> None:
+    commands: list[list[str]] = []
+
+    run_window_fullscreen(
+        win_id="0xabc",
+        enabled=True,
+        build_command=build_window_fullscreen_command,
+        run_command=commands.append,
+    )
+
+    assert commands == [["wmctrl", "-i", "-r", "0xabc", "-b", "add,fullscreen"]]
