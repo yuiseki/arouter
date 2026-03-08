@@ -76,6 +76,20 @@ def run_window_id_query_by_pid_title(
     )
 
 
+def run_window_rows_query_for_pids(
+    *,
+    pids: list[int],
+    row_provider: Callable[[], list[str]],
+    select_rows: Callable[..., list[dict[str, object]]],
+) -> list[dict[str, object]]:
+    return list(
+        select_rows(
+            row_provider(),
+            pids=[int(pid) for pid in pids],
+        )
+    )
+
+
 def build_xprop_wm_state_command(win_id: str) -> list[str]:
     return ["xprop", "-id", win_id, "_NET_WM_STATE"]
 

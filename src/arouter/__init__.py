@@ -260,6 +260,7 @@ from .window_query_runtime import (
     run_screen_size_query,
     run_window_id_query_by_pid_title,
     run_window_row_by_listen_port,
+    run_window_rows_query_for_pids,
     run_wmctrl_list_query,
     run_work_area_query,
 )
@@ -356,6 +357,7 @@ __all__ = [
     "run_desktop_size_query",
     "run_screen_size_query",
     "run_window_id_query_by_pid_title",
+    "run_window_rows_query_for_pids",
     "run_window_row_by_listen_port",
     "run_work_area_query",
     "run_window_activate",

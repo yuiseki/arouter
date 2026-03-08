@@ -7,6 +7,7 @@ from arouter import (
     run_screen_size_query,
     run_window_id_query_by_pid_title,
     run_window_row_by_listen_port,
+    run_window_rows_query_for_pids,
     run_wmctrl_list_query,
     run_work_area_query,
 )
@@ -117,6 +118,24 @@ def test_run_window_id_query_by_pid_title_returns_matching_window_id() -> None:
     assert calls == [
         "rows",
         (["0x002 0 456 host VacuumTube"], 456, "VacuumTube"),
+    ]
+
+
+def test_run_window_rows_query_for_pids_returns_selected_rows() -> None:
+    calls: list[object] = []
+
+    rows = run_window_rows_query_for_pids(
+        pids=[123, 456],
+        row_provider=lambda: calls.append("rows")
+        or ["0x001 0 123 1 2 3 4 host VacuumTube"],
+        select_rows=lambda raw_rows, *, pids: calls.append((raw_rows, pids))
+        or [{"id": "0x001", "pid": 123}],
+    )
+
+    assert rows == [{"id": "0x001", "pid": 123}]
+    assert calls == [
+        "rows",
+        (["0x001 0 123 1 2 3 4 host VacuumTube"], [123, 456]),
     ]
 
 
