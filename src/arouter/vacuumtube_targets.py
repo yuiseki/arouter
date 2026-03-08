@@ -76,3 +76,19 @@ def run_vacuumtube_page_cdp_client(
         create_client=create_client,
         enable_client=enable_client,
     )
+
+
+def run_vacuumtube_page_cdp_runtime(
+    *,
+    fetch_targets: Callable[[], Any],
+    select_target: Callable[[Any], dict[str, Any] | None],
+    select_websocket_url: Callable[[Any], str | None],
+    create_client: Callable[[str], Any],
+) -> Any:
+    return run_vacuumtube_page_cdp_client(
+        fetch_targets=fetch_targets,
+        select_target=select_target,
+        select_websocket_url=select_websocket_url,
+        create_client=create_client,
+        enable_client=lambda client: client.enable_basics(),
+    )

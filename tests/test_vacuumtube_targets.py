@@ -5,6 +5,7 @@ import pytest
 from arouter import (
     run_vacuumtube_cdp_client,
     run_vacuumtube_page_cdp_client,
+    run_vacuumtube_page_cdp_runtime,
     run_vacuumtube_page_target_query,
     select_vacuumtube_page_target,
     select_vacuumtube_websocket_url,
@@ -119,6 +120,37 @@ def test_run_vacuumtube_page_cdp_client_queries_target_and_enables_client() -> N
     )
 
     assert client == {"ws_url": "ws://127.0.0.1:9992/devtools/page/1"}
+    assert events == [
+        ("create", "ws://127.0.0.1:9992/devtools/page/1"),
+        ("enable", "ws://127.0.0.1:9992/devtools/page/1"),
+    ]
+
+
+def test_run_vacuumtube_page_cdp_runtime_creates_client_and_enables_basics() -> None:
+    events: list[object] = []
+
+    class FakeClient:
+        def __init__(self, ws_url: str) -> None:
+            events.append(("create", ws_url))
+            self.ws_url = ws_url
+
+        def enable_basics(self) -> None:
+            events.append(("enable", self.ws_url))
+
+    client = run_vacuumtube_page_cdp_runtime(
+        fetch_targets=lambda: [
+            {
+                "type": "page",
+                "url": "https://www.youtube.com/tv#/",
+                "webSocketDebuggerUrl": "ws://127.0.0.1:9992/devtools/page/1",
+            }
+        ],
+        select_target=select_vacuumtube_page_target,
+        select_websocket_url=select_vacuumtube_websocket_url,
+        create_client=FakeClient,
+    )
+
+    assert isinstance(client, FakeClient)
     assert events == [
         ("create", "ws://127.0.0.1:9992/devtools/page/1"),
         ("enable", "ws://127.0.0.1:9992/devtools/page/1"),
