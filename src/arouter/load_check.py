@@ -67,6 +67,21 @@ def parse_tmux_client_pids(stdout: str, *, returncode: int) -> list[int]:
     return out
 
 
+def run_tmux_client_pid_query(
+    session_name: str,
+    *,
+    run_command: Callable[[list[str]], Any],
+    parse_output: Callable[[str, int], list[int]],
+) -> list[int]:
+    cp = run_command(
+        ["tmux", "list-clients", "-t", session_name, "-F", "#{client_pid}"]
+    )
+    return parse_output(
+        str(getattr(cp, "stdout", "") or ""),
+        int(getattr(cp, "returncode", 1)),
+    )
+
+
 def pid_ancestor_chain(
     pid: int,
     *,
@@ -182,6 +197,19 @@ def build_load_check_wmctrl_commands(
         ["wmctrl", "-i", "-r", window_id, "-e", spec],
         ["wmctrl", "-i", "-r", window_id, "-e", spec],
     ]
+
+
+def run_load_check_wmctrl_commands(
+    *,
+    window_id: str,
+    target: dict[str, int],
+    build_commands: Callable[..., list[list[str]]],
+    run_command: Callable[[list[str]], Any],
+) -> dict[str, Any]:
+    commands = build_commands(window_id=window_id, target=target)
+    for command in commands:
+        run_command(command)
+    return {"applied": True, "window_id": window_id, "target": target}
 
 
 def run_system_load_check_flow(

@@ -12,7 +12,9 @@ from arouter import (
     parse_tmux_client_pids,
     pid_ancestor_chain,
     prepare_load_check_konsole_placement,
+    run_load_check_wmctrl_commands,
     run_system_load_check_flow,
+    run_tmux_client_pid_query,
     wait_for_new_window_row,
 )
 
@@ -115,6 +117,22 @@ def test_parse_konsole_window_rows_filters_non_konsole_and_bad_rows() -> None:
 def test_parse_tmux_client_pids_ignores_invalid_lines_and_failures() -> None:
     assert parse_tmux_client_pids("123\nabc\n0\n456\n", returncode=0) == [123, 456]
     assert parse_tmux_client_pids("123\n", returncode=1) == []
+
+
+def test_run_tmux_client_pid_query_runs_tmux_and_parses_output() -> None:
+    commands: list[list[str]] = []
+
+    result = run_tmux_client_pid_query(
+        "sysmon",
+        run_command=lambda command: commands.append(command)
+        or SimpleNamespace(stdout="100\n200\n", returncode=0),
+        parse_output=lambda stdout, returncode: parse_tmux_client_pids(
+            stdout, returncode=returncode
+        ),
+    )
+
+    assert result == [100, 200]
+    assert commands == [["tmux", "list-clients", "-t", "sysmon", "-F", "#{client_pid}"]]
 
 
 def test_pid_ancestor_chain_walks_parent_lookup_without_loops() -> None:
@@ -272,6 +290,29 @@ def test_build_load_check_wmctrl_commands_returns_expected_sequence() -> None:
     )
 
     assert commands == [
+        ["wmctrl", "-i", "-r", "0x00a", "-b", "remove,maximized_vert,maximized_horz"],
+        ["wmctrl", "-i", "-r", "0x00a", "-b", "remove,fullscreen"],
+        ["wmctrl", "-i", "-r", "0x00a", "-e", "0,0,1080,2048,1080"],
+        ["wmctrl", "-i", "-r", "0x00a", "-e", "0,0,1080,2048,1080"],
+    ]
+
+
+def test_run_load_check_wmctrl_commands_executes_built_commands() -> None:
+    events: list[list[str]] = []
+
+    result = run_load_check_wmctrl_commands(
+        window_id="0x00a",
+        target={"x": 0, "y": 1080, "w": 2048, "h": 1080},
+        build_commands=build_load_check_wmctrl_commands,
+        run_command=events.append,
+    )
+
+    assert result == {
+        "applied": True,
+        "window_id": "0x00a",
+        "target": {"x": 0, "y": 1080, "w": 2048, "h": 1080},
+    }
+    assert events == [
         ["wmctrl", "-i", "-r", "0x00a", "-b", "remove,maximized_vert,maximized_horz"],
         ["wmctrl", "-i", "-r", "0x00a", "-b", "remove,fullscreen"],
         ["wmctrl", "-i", "-r", "0x00a", "-e", "0,0,1080,2048,1080"],

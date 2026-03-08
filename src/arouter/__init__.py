@@ -128,7 +128,9 @@ from .load_check import (
     parse_tmux_client_pids,
     pid_ancestor_chain,
     prepare_load_check_konsole_placement,
+    run_load_check_wmctrl_commands,
     run_system_load_check_flow,
+    run_tmux_client_pid_query,
     wait_for_new_window_row,
 )
 from .models import VoiceCommand
@@ -425,6 +427,8 @@ __all__ = [
     "parse_tmux_client_pids",
     "pid_ancestor_chain",
     "prepare_load_check_konsole_placement",
+    "run_load_check_wmctrl_commands",
+    "run_tmux_client_pid_query",
     "read_password_secret_lines",
     "reassert_lock_screen",
     "request_biometric_lock_payload",
