@@ -58,6 +58,21 @@ def collect_live_cam_runtime_urls(
     return urls
 
 
+def collect_live_cam_pages_by_port(
+    specs: list[dict[str, Any]],
+    *,
+    fetch_page_brief: Callable[[int], dict[str, Any]],
+) -> dict[int, dict[str, Any] | Exception]:
+    pages_by_port: dict[int, dict[str, Any] | Exception] = {}
+    for spec in specs:
+        port = int(spec["port"])
+        try:
+            pages_by_port[port] = fetch_page_brief(port)
+        except Exception as exc:
+            pages_by_port[port] = exc
+    return pages_by_port
+
+
 def build_live_cam_page_brief(target: dict[str, Any]) -> dict[str, Any]:
     return {
         "url": str(target.get("url") or ""),

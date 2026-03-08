@@ -81,6 +81,7 @@ from .live_cam_selection import (
 from .live_cam_status import (
     build_live_cam_page_brief,
     build_live_cam_runtime_url_entry,
+    collect_live_cam_pages_by_port,
     collect_live_cam_runtime_urls,
     find_stuck_live_cam_specs,
     merge_live_cam_page_snapshot,
@@ -214,6 +215,7 @@ __all__ = [
     "build_live_cam_force_video_command",
     "build_live_cam_json_parse_failure",
     "build_live_cam_page_brief",
+    "collect_live_cam_pages_by_port",
     "expand_live_cam_candidates",
     "format_live_cam_selection_error",
     "collect_live_cam_runtime_urls",
