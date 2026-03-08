@@ -15,6 +15,7 @@ from arouter import (
     merge_vacuumtube_window_snapshot,
     recover_vacuumtube_unresponsive_state,
     restart_vacuumtube_tmux_session,
+    run_vacuumtube_ensure_home,
     run_vacuumtube_fullscreen,
     run_vacuumtube_go_home,
     run_vacuumtube_hide_overlay,
@@ -110,6 +111,78 @@ def test_run_vacuumtube_hide_overlay_invokes_evaluate_with_overlay_selector() ->
 
     assert len(seen) == 1
     assert "vt-settings-overlay-root" in seen[0]
+
+
+def test_run_vacuumtube_ensure_home_recovers_from_account_select_after_hard_reload() -> None:
+    logs: list[str] = []
+    now_values = iter([100.0, 100.2, 100.4, 100.6, 100.8, 101.7, 101.9, 102.1])
+    snapshots = iter(
+        [
+            {
+                "hash": "#/watch?v=abc",
+                "tilesCount": 0,
+                "homeHint": False,
+                "watchUiHint": True,
+                "accountSelectHint": False,
+            },
+            {
+                "hash": "#/",
+                "tilesCount": 0,
+                "homeHint": False,
+                "watchUiHint": True,
+                "accountSelectHint": False,
+            },
+            {
+                "hash": "#/",
+                "tilesCount": 7,
+                "homeHint": False,
+                "watchUiHint": False,
+                "accountSelectHint": True,
+            },
+            {
+                "hash": "#/",
+                "tilesCount": 7,
+                "homeHint": False,
+                "watchUiHint": False,
+                "accountSelectHint": False,
+            },
+        ]
+    )
+    route_calls: list[str] = []
+    reload_calls: list[str] = []
+    select_calls: list[str] = []
+    sleep_calls: list[float] = []
+
+    out = run_vacuumtube_ensure_home(
+        snapshot_state=lambda: next(snapshots),
+        is_home_browse_state=lambda snap: (
+            snap.get("hash") == "#/"
+            and not snap.get("watchUiHint")
+            and not snap.get("accountSelectHint")
+            and int(snap.get("tilesCount") or 0) > 0
+        ),
+        route_to_home=lambda: route_calls.append("route"),
+        hard_reload_home=lambda: reload_calls.append("reload"),
+        select_account_if_needed=lambda: select_calls.append("select"),
+        needs_hard_reload_home=lambda snap: (
+            bool(snap.get("watchUiHint")) and not snap.get("homeHint")
+        ),
+        log=logs.append,
+        now=lambda: next(now_values),
+        sleep=lambda seconds: sleep_calls.append(seconds),
+        timeout_sec=5.0,
+    )
+
+    assert out["hash"] == "#/"
+    assert out["tilesCount"] == 7
+    assert route_calls == ["route"]
+    assert reload_calls == ["reload"]
+    assert select_calls == ["select"]
+    assert sleep_calls == [0.25]
+    assert logs[0].startswith("state before ensure_home: ")
+    assert any("forcing hard reload to home" in line for line in logs)
+    assert any("trying default account focus" in line for line in logs)
+    assert any(line.startswith("state after ensure_home: ") for line in logs)
 
 
 def test_finalize_vacuumtube_context_marks_available_from_window_or_hash() -> None:

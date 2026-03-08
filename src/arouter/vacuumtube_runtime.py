@@ -140,6 +140,69 @@ def run_vacuumtube_hide_overlay(
     evaluate(expr)
 
 
+def run_vacuumtube_ensure_home(
+    *,
+    snapshot_state: Callable[[], dict[str, Any]],
+    is_home_browse_state: Callable[[dict[str, Any]], bool],
+    route_to_home: Callable[[], None],
+    hard_reload_home: Callable[[], None],
+    select_account_if_needed: Callable[[], None],
+    needs_hard_reload_home: Callable[[dict[str, Any]], bool],
+    log: Callable[[str], None],
+    now: Callable[[], float],
+    sleep: Callable[[float], None],
+    timeout_sec: float = 8.0,
+) -> dict[str, Any]:
+    snapshot = snapshot_state()
+    log(f"state before ensure_home: {json.dumps(snapshot, ensure_ascii=False)}")
+    if is_home_browse_state(snapshot):
+        return snapshot
+
+    route_to_home()
+    deadline = now() + timeout_sec
+    last_snapshot = snapshot
+    did_hard_reload = False
+    last_account_select_attempt = 0.0
+    while now() < deadline:
+        try:
+            last_snapshot = snapshot_state()
+            if is_home_browse_state(last_snapshot):
+                log(f"state after ensure_home: {json.dumps(last_snapshot, ensure_ascii=False)}")
+                return last_snapshot
+            if bool(last_snapshot.get("accountSelectHint")):
+                current = now()
+                if (current - last_account_select_attempt) >= 0.8:
+                    log("ensure_home detected account selection; trying default account focus")
+                    select_account_if_needed()
+                    last_account_select_attempt = current
+                    continue
+            if (
+                not did_hard_reload
+                and needs_hard_reload_home(last_snapshot)
+                and (deadline - now()) > 2.0
+            ):
+                log(
+                    "ensure_home detected stale '#/' state; forcing hard reload to home: "
+                    + json.dumps(
+                        {
+                            "tiles": last_snapshot.get("tilesCount"),
+                            "watchUiHint": last_snapshot.get("watchUiHint"),
+                            "homeHint": last_snapshot.get("homeHint"),
+                        },
+                        ensure_ascii=False,
+                    )
+                )
+                hard_reload_home()
+                did_hard_reload = True
+        except Exception:
+            pass
+        sleep(0.25)
+    raise RuntimeError(
+        "failed to reach verified home browse state: "
+        + json.dumps(last_snapshot, ensure_ascii=False)
+    )
+
+
 def finalize_vacuumtube_context(context: dict[str, Any]) -> dict[str, Any]:
     finalized = dict(context)
     finalized["available"] = bool(finalized.get("windowFound")) or bool(finalized.get("hash"))
