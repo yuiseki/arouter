@@ -74,6 +74,7 @@ from .live_cam_runtime import (
     resolve_live_cam_action_state,
     resolve_live_cam_layout_bootstrap,
     run_live_cam_parallel,
+    run_live_cam_window_action_flow,
 )
 from .live_cam_selection import (
     annotate_live_cam_payload_selection,
@@ -247,6 +248,7 @@ __all__ = [
     "resolve_live_cam_action_state",
     "resolve_live_cam_layout_bootstrap",
     "resolve_existing_live_cam_windowed_pids",
+    "run_live_cam_window_action_flow",
     "build_load_check_wmctrl_commands",
     "build_window_activate_command",
     "build_window_close_command",

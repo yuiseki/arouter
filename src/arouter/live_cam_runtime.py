@@ -210,6 +210,28 @@ def resolve_live_cam_action_state(
     }
 
 
+def run_live_cam_window_action_flow(
+    instances: list[dict[str, Any]],
+    *,
+    pid_lookup: Callable[[int], int | None],
+    state_fetcher: Callable[[dict[int, int]], dict[str, Any]],
+    perform_window_action: Callable[[list[int]], list[str]],
+    build_response: Callable[[list[str], list[int], dict[str, Any]], str],
+    after_action: Callable[[], None] | None = None,
+) -> str:
+    action_state = resolve_live_cam_action_state(
+        instances,
+        pid_lookup=pid_lookup,
+        state_fetcher=state_fetcher,
+    )
+    pids_by_port = dict(action_state["pids_by_port"])
+    state = dict(action_state["state"])
+    window_ids = perform_window_action(list(pids_by_port.values()))
+    if after_action is not None:
+        after_action()
+    return build_response(window_ids, sorted(pids_by_port.keys()), state)
+
+
 def parse_key_value_stdout(text: str) -> dict[str, str]:
     out: dict[str, str] = {}
     for line in (text or "").splitlines():

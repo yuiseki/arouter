@@ -21,6 +21,7 @@ from arouter import (
     resolve_live_cam_action_state,
     resolve_live_cam_layout_bootstrap,
     run_live_cam_parallel,
+    run_live_cam_window_action_flow,
 )
 
 
@@ -265,6 +266,26 @@ def test_resolve_live_cam_layout_bootstrap_cold_start_collects_pids_and_open_err
         "open_errors": ["live_cam_open failed (shinjuku:9994): timed out after 45.0 seconds"],
         "pids_by_port": {9993: 601, 9994: 602},
     }
+
+
+def test_run_live_cam_window_action_flow_uses_action_state_and_response_builder() -> None:
+    acted_on: list[int] = []
+    after_action_calls: list[str] = []
+
+    result = run_live_cam_window_action_flow(
+        [{"port": 9993}, {"port": 9994}],
+        pid_lookup=lambda port: {9993: 101, 9994: 102}.get(port),
+        state_fetcher=lambda pids: {"windows": [], "urls": [], "ports": sorted(pids)},
+        perform_window_action=lambda pids: acted_on.extend(pids) or ["0x1", "0x2"],
+        build_response=lambda window_ids, ports, state: (
+            f"ids={window_ids};ports={ports};state_ports={state['ports']}"
+        ),
+        after_action=lambda: after_action_calls.append("done"),
+    )
+
+    assert acted_on == [101, 102]
+    assert after_action_calls == ["done"]
+    assert result == "ids=['0x1', '0x2'];ports=[9993, 9994];state_ports=[9993, 9994]"
 
 
 def test_collect_window_ids_for_pids_skips_missing_window_ids() -> None:
