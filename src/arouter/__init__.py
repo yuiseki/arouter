@@ -6,6 +6,14 @@ from .biometric_password import (
     verify_unlock_password,
 )
 from .biometric_poller import resolve_biometric_poll_interval, run_biometric_poll_iteration
+from .biometric_runtime import (
+    default_lock_screen_text,
+    default_locked_denied_text,
+    maybe_auto_lock,
+    maybe_lock_from_signal,
+    maybe_unlock_from_signal,
+    set_system_locked,
+)
 from .biometric_signal import consume_signal_file, write_signal_file
 from .errors import report_segment_error
 from .execution import command_has_system_prefix, execute_command, execute_news_command
@@ -38,6 +46,8 @@ __all__ = [
     "command_has_system_prefix",
     "consume_signal_file",
     "compose_overlay_notify_text",
+    "default_lock_screen_text",
+    "default_locked_denied_text",
     "encrypt_password_file",
     "contextualize_command_with_vacuumtube_state",
     "detect_non_command_reaction",
@@ -47,6 +57,9 @@ __all__ = [
     "good_night_voice_text",
     "handle_authorization_denied",
     "load_password_candidates",
+    "maybe_auto_lock",
+    "maybe_lock_from_signal",
+    "maybe_unlock_from_signal",
     "normalize_transcript",
     "parse_command",
     "post_action_voice_text",
@@ -63,6 +76,7 @@ __all__ = [
     "should_wait_ack_before_action",
     "store_authfail_wav",
     "store_authorized_wav",
+    "set_system_locked",
     "trim_notify_text",
     "verify_unlock_password",
     "write_signal_file",

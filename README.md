@@ -24,6 +24,7 @@ Current migrated slice:
 - biometric signal-file helpers for manual lock/unlock edge triggers
 - biometric password fallback helpers for encrypt/load/verify flows
 - biometric poll interval and single-cycle poller helpers
+- biometric lock-state transition helpers for lock/unlock/auto-lock flows
 - segment WAV storage and auth-denied handling helpers
 - segment error reporting helper
 - transcript resolution helper for mic-loop command gating
@@ -47,6 +48,7 @@ Current migrated slice:
 - signal-file consume/write helpers for biometric lock runtime glue
 - password fallback helpers for biometric lock runtime glue
 - biometric poller helpers for lock runtime orchestration
+- lock-state transition helpers for overlay-backed biometric runtime
 - successful/auth-denied WAV retention handling
 - subprocess/runtime error reporting
 - transcript parse/contextualize/suppress/authorize resolution

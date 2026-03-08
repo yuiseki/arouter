@@ -42,6 +42,7 @@ The first migrated slice is limited to:
 - biometric signal-file consume/write helpers
 - biometric password fallback helpers
 - biometric poller helpers
+- biometric lock-state transition helpers
 - successful/auth-denied WAV storage handling
 - segment error reporting
 - transcript parse/contextualize/suppress/authorize resolution
