@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from arouter import (
+    build_kwin_invoke_shortcut_command,
     build_kwin_load_script_command,
     build_kwin_script_command_plan,
     build_kwin_start_script_command,
@@ -36,6 +37,17 @@ def test_build_kwin_start_and_unload_commands_match_qdbus_contract() -> None:
         "/Scripting",
         "org.kde.kwin.Scripting.unloadScript",
         "plugin-name",
+    ]
+
+
+def test_build_kwin_invoke_shortcut_command_matches_qdbus_contract() -> None:
+    assert build_kwin_invoke_shortcut_command("Window Quick Tile Top Right") == [
+        "qdbus",
+        "org.kde.kglobalaccel",
+        "/component/kwin",
+        "org.kde.kglobalaccel.Component.invokeShortcut",
+        "Window Quick Tile Top Right",
+        "default",
     ]
 
 

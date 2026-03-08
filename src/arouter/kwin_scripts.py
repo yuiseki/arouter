@@ -33,6 +33,17 @@ def build_kwin_unload_script_command(plugin_name: str) -> list[str]:
     ]
 
 
+def build_kwin_invoke_shortcut_command(shortcut_name: str) -> list[str]:
+    return [
+        "qdbus",
+        "org.kde.kglobalaccel",
+        "/component/kwin",
+        "org.kde.kglobalaccel.Component.invokeShortcut",
+        shortcut_name,
+        "default",
+    ]
+
+
 def build_kwin_script_command_plan(
     script_path: str, plugin_name: str
 ) -> dict[str, list[list[str]] | list[str]]:

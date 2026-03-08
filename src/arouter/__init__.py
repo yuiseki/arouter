@@ -34,12 +34,18 @@ from .biometric_signal import (
     write_signal_file,
 )
 from .cdp_targets import require_cdp_target_list
+from .desktop_runtime import (
+    launch_chromium_new_window,
+    read_active_window_id,
+    run_kwin_shortcut,
+)
 from .display_env import build_x11_env, resolve_x11_display
 from .errors import report_segment_error
 from .execution import command_has_system_prefix, execute_command, execute_news_command
 from .flow import run_authorized_command_flow
 from .kwin_runtime import run_kwin_temp_script, run_live_cam_layout_script
 from .kwin_scripts import (
+    build_kwin_invoke_shortcut_command,
     build_kwin_load_script_command,
     build_kwin_script_command_plan,
     build_kwin_start_script_command,
@@ -250,7 +256,11 @@ __all__ = [
     "ensure_biometric_runtime_attrs",
     "build_overlay_ipc_line",
     "build_x11_env",
+    "launch_chromium_new_window",
+    "read_active_window_id",
+    "run_kwin_shortcut",
     "build_kwin_load_script_command",
+    "build_kwin_invoke_shortcut_command",
     "build_kwin_script_command_plan",
     "build_kwin_start_script_command",
     "build_kwin_unload_script_command",
