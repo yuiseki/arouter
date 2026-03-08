@@ -7,7 +7,7 @@ import tempfile
 from collections.abc import Callable, Iterable
 from pathlib import Path
 
-type RunCmd = Callable[..., subprocess.CompletedProcess[str]]
+RunCmd = Callable[..., subprocess.CompletedProcess[str]]
 
 
 def read_password_secret_lines(raw: str) -> list[str]:

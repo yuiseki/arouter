@@ -14,7 +14,12 @@ from .biometric_runtime import (
     maybe_unlock_from_signal,
     set_system_locked,
 )
-from .biometric_signal import consume_signal_file, write_signal_file
+from .biometric_signal import (
+    consume_signal_file,
+    current_signal_mtime,
+    seed_signal_seen_mtime,
+    write_signal_file,
+)
 from .errors import report_segment_error
 from .execution import command_has_system_prefix, execute_command, execute_news_command
 from .flow import run_authorized_command_flow
@@ -46,6 +51,7 @@ __all__ = [
     "command_has_system_prefix",
     "consume_signal_file",
     "compose_overlay_notify_text",
+    "current_signal_mtime",
     "default_lock_screen_text",
     "default_locked_denied_text",
     "encrypt_password_file",
@@ -77,6 +83,7 @@ __all__ = [
     "store_authfail_wav",
     "store_authorized_wav",
     "set_system_locked",
+    "seed_signal_seen_mtime",
     "trim_notify_text",
     "verify_unlock_password",
     "write_signal_file",

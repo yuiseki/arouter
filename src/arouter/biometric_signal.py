@@ -23,6 +23,17 @@ def write_signal_file(
     return signal_path
 
 
+def current_signal_mtime(*, signal_path: Path) -> float:
+    try:
+        return float(signal_path.stat().st_mtime)
+    except OSError:
+        return 0.0
+
+
+def seed_signal_seen_mtime(*, signal_path: Path, seen_mtime: float = 0.0) -> float:
+    return max(float(seen_mtime), current_signal_mtime(signal_path=signal_path))
+
+
 def consume_signal_file(
     *,
     signal_path: Path,
