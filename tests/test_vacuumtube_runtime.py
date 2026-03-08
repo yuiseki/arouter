@@ -15,6 +15,7 @@ from arouter import (
     run_vacuumtube_fullscreen,
     run_vacuumtube_go_home,
     run_vacuumtube_minimize,
+    run_vacuumtube_open_from_home,
     run_vacuumtube_play_bgm,
     run_vacuumtube_play_news,
     run_vacuumtube_quadrant,
@@ -570,3 +571,82 @@ def test_run_vacuumtube_minimize_runs_built_command() -> None:
 
     assert result == "youtube minimize: ok (win_id=0x123)"
     assert commands == [["xdotool", "windowminimize", "0x123"]]
+
+
+def test_run_vacuumtube_open_from_home_uses_return_fallback_and_restores_presentation() -> None:
+    events: list[str] = []
+    wait_results = iter([False, False, True])
+    tile = {"title": "Best Tile", "text": "Best Tile", "hasJaLiveBadge": True}
+
+    result = run_vacuumtube_open_from_home(
+        label="NEWS",
+        scorer=lambda candidate: 9.5 if candidate is tile else 0.0,
+        filter_fn=lambda candidate: True,
+        allow_soft_playback_confirm=True,
+        hide_overlay_if_needed=lambda: events.append("hide_overlay"),
+        capture_window_presentation=lambda: {"fullscreen": True},
+        ensure_home=lambda: {"hash": "#/", "tilesCount": 3},
+        log=events.append,
+        enumerate_tiles=lambda: [tile],
+        click_tile_center=lambda candidate: events.append(f"click:{candidate['title']}"),
+        wait_watch_route=lambda timeout: events.append(f"wait:{timeout}") or next(wait_results),
+        dom_click_tile=lambda candidate: events.append(f"dom:{candidate['title']}") or False,
+        send_return_key=lambda: events.append("return"),
+        try_resume_current_video=lambda: events.append("resume"),
+        wait_confirmed_watch_playback=lambda timeout, allow_soft: (
+            events.append(f"confirm:{timeout}:{allow_soft}")
+            or {"hash": "#/watch?v=abc", "title": "Video", "video": {"paused": False}}
+        ),
+        restore_window_presentation=lambda presentation, label: events.append(
+            f"restore:{label}:{presentation['fullscreen']}"
+        ),
+    )
+
+    assert result == "opened watch route #/watch?v=abc"
+    assert events == [
+        "hide_overlay",
+        "NEWS precondition home verified: hash=#/ tiles=3",
+        "NEWS filtered candidates: 1/1",
+        "NEWS tile candidates: 9.5:Best Tile [ライブ]",
+        "NEWS tile selected attempt=1: Best Tile",
+        "click:Best Tile",
+        "wait:2.5",
+        "click:Best Tile",
+        "wait:2.5",
+        "dom:Best Tile",
+        "return",
+        "wait:2.0",
+        "resume",
+        "confirm:8.0:True",
+        (
+            'NEWS post-click state: {"hash": "#/watch?v=abc", "title": "Video", '
+            '"video": {"paused": false}}'
+        ),
+        "restore:NEWS:True",
+    ]
+
+
+def test_run_vacuumtube_open_from_home_raises_when_filter_removes_all_candidates() -> None:
+    try:
+        run_vacuumtube_open_from_home(
+            label="BGM",
+            scorer=lambda candidate: 1.0,
+            filter_fn=lambda candidate: False,
+            allow_soft_playback_confirm=False,
+            hide_overlay_if_needed=lambda: None,
+            capture_window_presentation=lambda: {"fullscreen": False},
+            ensure_home=lambda: {"hash": "#/", "tilesCount": 1},
+            log=lambda _message: None,
+            enumerate_tiles=lambda: [{"title": "Nope"}],
+            click_tile_center=lambda candidate: None,
+            wait_watch_route=lambda timeout: False,
+            dom_click_tile=lambda candidate: False,
+            send_return_key=lambda: None,
+            try_resume_current_video=lambda: None,
+            wait_confirmed_watch_playback=lambda timeout, allow_soft: {"hash": "#/watch?v=abc"},
+            restore_window_presentation=lambda presentation, label: None,
+        )
+    except RuntimeError as exc:
+        assert str(exc) == "BGM candidates not found on home screen"
+    else:
+        raise AssertionError("expected RuntimeError")

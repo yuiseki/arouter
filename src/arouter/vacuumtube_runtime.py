@@ -258,6 +258,99 @@ def run_vacuumtube_play_bgm(
     return open_from_home()
 
 
+def run_vacuumtube_open_from_home(
+    *,
+    label: str,
+    scorer: Callable[[dict[str, Any]], float],
+    filter_fn: Callable[[dict[str, Any]], bool] | None,
+    allow_soft_playback_confirm: bool,
+    hide_overlay_if_needed: Callable[[], None],
+    capture_window_presentation: Callable[[], dict[str, Any]],
+    ensure_home: Callable[[], dict[str, Any]],
+    log: Callable[[str], None],
+    enumerate_tiles: Callable[[], list[dict[str, Any]]],
+    click_tile_center: Callable[[dict[str, Any]], None],
+    wait_watch_route: Callable[[float], bool],
+    dom_click_tile: Callable[[dict[str, Any]], bool],
+    send_return_key: Callable[[], None],
+    try_resume_current_video: Callable[[], None],
+    wait_confirmed_watch_playback: Callable[[float, bool], dict[str, Any]],
+    restore_window_presentation: Callable[[dict[str, Any], str], None],
+) -> str:
+    hide_overlay_if_needed()
+    presentation_before = capture_window_presentation()
+    snap = ensure_home()
+    log(
+        f"{label} precondition home verified: "
+        f"hash={snap.get('hash')} tiles={snap.get('tilesCount')}"
+    )
+    tiles = enumerate_tiles()
+    if not tiles:
+        raise RuntimeError("no home tiles found")
+
+    if filter_fn is not None:
+        filtered = [tile for tile in tiles if filter_fn(tile)]
+        log(f"{label} filtered candidates: {len(filtered)}/{len(tiles)}")
+        if filtered:
+            tiles = filtered
+        else:
+            raise RuntimeError(f"{label} candidates not found on home screen")
+
+    ranked = sorted(tiles, key=scorer, reverse=True)
+    preview: list[str] = []
+    for tile in ranked[: min(3, len(ranked))]:
+        try:
+            score = scorer(tile)
+        except Exception:
+            score = 0.0
+        title = str(tile.get("title") or tile.get("text") or "<no title>")
+        badge = " [ライブ]" if tile.get("hasJaLiveBadge") else ""
+        preview.append(f"{score:.1f}:{title[:80]}{badge}")
+    if preview:
+        log(f"{label} tile candidates: " + " | ".join(preview))
+
+    selected_title = "<none>"
+    routed = False
+    for idx, best in enumerate(ranked[: min(3, len(ranked))], start=1):
+        selected_title = str(best.get("title") or best.get("text") or "<no title>")
+        log(f"{label} tile selected attempt={idx}: {selected_title}")
+        click_tile_center(best)
+        if wait_watch_route(2.5):
+            routed = True
+            break
+        click_tile_center(best)
+        if wait_watch_route(2.5):
+            routed = True
+            break
+        if dom_click_tile(best) and wait_watch_route(2.5):
+            routed = True
+            break
+        send_return_key()
+        if wait_watch_route(2.0):
+            routed = True
+            break
+    if not routed:
+        raise RuntimeError(
+            "route did not change to watch after tile click "
+            "(all fallback attempts failed)"
+        )
+
+    try_resume_current_video()
+    state = wait_confirmed_watch_playback(8.0, allow_soft_playback_confirm)
+    log(
+        f"{label} post-click state: "
+        + json.dumps(
+            {"hash": state.get("hash"), "title": state.get("title"), "video": state.get("video")},
+            ensure_ascii=False,
+        )
+    )
+    try:
+        restore_window_presentation(presentation_before, label)
+    except Exception as err:
+        log(f"{label} post-action presentation restore skipped: {err}")
+    return f"opened watch route {state.get('hash') or ''}".strip()
+
+
 def run_vacuumtube_fullscreen(
     *,
     ensure_started_and_positioned: Callable[[], Any],
