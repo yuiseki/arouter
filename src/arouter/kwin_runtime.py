@@ -110,6 +110,36 @@ def run_window_frame_geometry_script(
     )
 
 
+def run_window_frame_geometry_runtime(
+    *,
+    pid: int,
+    geom: dict[str, int],
+    no_border: bool,
+    plugin_name: str,
+    build_script: Callable[..., str],
+    write_temp_script: Callable[[str, str], str],
+    command_plan_builder: Callable[[str, str], KWinScriptCommandPlan],
+    run_command: Callable[[list[str]], None],
+    sleep: Callable[[float], None],
+    cleanup: Callable[[str], None],
+) -> None:
+    run_kwin_temp_script(
+        script_text=build_script(
+            pid=pid,
+            geom=geom,
+            no_border=no_border,
+        ),
+        plugin_name=plugin_name,
+        file_prefix="codex-kwin-vacuumtube-main-",
+        write_temp_script=write_temp_script,
+        command_plan_builder=command_plan_builder,
+        run_command=run_command,
+        sleep=sleep,
+        sleep_sec=0.5,
+        cleanup=cleanup,
+    )
+
+
 def run_live_cam_minimize_script(
     *,
     pids: list[int],

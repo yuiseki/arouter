@@ -55,6 +55,7 @@ from .kwin_runtime import (
     run_live_cam_layout_script,
     run_live_cam_minimize_script,
     run_minimize_other_windows_script,
+    run_window_frame_geometry_runtime,
     run_window_frame_geometry_script,
 )
 from .kwin_scripts import (
@@ -330,6 +331,7 @@ __all__ = [
     "run_live_cam_layout_script",
     "run_live_cam_minimize_script",
     "run_minimize_other_windows_script",
+    "run_window_frame_geometry_runtime",
     "run_window_frame_geometry_script",
     "build_tmux_has_session_command",
     "build_tmux_kill_session_command",
