@@ -332,3 +332,19 @@ def run_vacuumtube_stop_music(
 
     payload = json.dumps(last, ensure_ascii=False)
     return f"sent Space toggle to VacuumTube ({win_id}); pause not confirmed ({payload})"
+
+
+def run_vacuumtube_play_news(
+    *,
+    slot: str,
+    get_state: Callable[[], dict[str, Any]],
+    send_return_key: Callable[[], None],
+    sleep: Callable[[float], None],
+    open_from_home: Callable[[str], str],
+) -> str:
+    state = get_state()
+    if state.get("accountSelectHint"):
+        send_return_key()
+        sleep(0.6)
+    label = "NEWS" if slot == "generic" else f"NEWS-{slot.upper()}"
+    return open_from_home(label)

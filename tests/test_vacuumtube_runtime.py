@@ -15,6 +15,7 @@ from arouter import (
     run_vacuumtube_fullscreen,
     run_vacuumtube_go_home,
     run_vacuumtube_play_bgm,
+    run_vacuumtube_play_news,
     run_vacuumtube_quadrant,
     run_vacuumtube_resume_playback,
     run_vacuumtube_stop_music,
@@ -501,3 +502,47 @@ def test_run_vacuumtube_stop_music_returns_last_snapshot_when_pause_not_confirme
         '"video": {"paused": false}})'
     )
     assert events == ["space", "sleep:0.25"]
+
+
+def test_run_vacuumtube_play_news_opens_with_expected_label() -> None:
+    events: list[str] = []
+
+    def open_from_home(label: str) -> str:
+        events.append(f"open:{label}")
+        return "opened watch route #/watch?v=abc"
+
+    result = run_vacuumtube_play_news(
+        slot="generic",
+        get_state=lambda: {"accountSelectHint": False},
+        send_return_key=lambda: events.append("return"),
+        sleep=lambda seconds: events.append(f"sleep:{seconds}"),
+        open_from_home=open_from_home,
+    )
+
+    assert result == "opened watch route #/watch?v=abc"
+    assert events == ["open:NEWS"]
+
+
+def test_run_vacuumtube_play_news_nudges_account_selection() -> None:
+    events: list[str] = []
+    states = iter(
+        [
+            {"accountSelectHint": True},
+            {"accountSelectHint": False},
+        ]
+    )
+
+    def open_from_home(label: str) -> str:
+        events.append(f"open:{label}")
+        return "opened watch route #/watch?v=morning"
+
+    result = run_vacuumtube_play_news(
+        slot="morning",
+        get_state=lambda: next(states),
+        send_return_key=lambda: events.append("return"),
+        sleep=lambda seconds: events.append(f"sleep:{seconds}"),
+        open_from_home=open_from_home,
+    )
+
+    assert result == "opened watch route #/watch?v=morning"
+    assert events == ["return", "sleep:0.6", "open:NEWS-MORNING"]
