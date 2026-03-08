@@ -1,4 +1,8 @@
 from .authorization import authorize_command
+from .biometric_admin import (
+    encrypt_biometric_password_payload,
+    request_biometric_lock_payload,
+)
 from .biometric_bootstrap import ensure_biometric_runtime_attrs
 from .biometric_password import (
     encrypt_password_file,
@@ -55,6 +59,7 @@ __all__ = [
     "TextCommandRouter",
     "VoiceCommand",
     "authorize_command",
+    "encrypt_biometric_password_payload",
     "ensure_biometric_runtime_attrs",
     "build_overlay_ipc_line",
     "command_has_system_prefix",
@@ -82,6 +87,7 @@ __all__ = [
     "process_pcm_segment",
     "process_transcribed_segment",
     "read_password_secret_lines",
+    "request_biometric_lock_payload",
     "resolve_biometric_poll_interval",
     "report_segment_error",
     "run_biometric_poll_iteration",
