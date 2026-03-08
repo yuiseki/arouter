@@ -58,6 +58,8 @@ from .live_cam_runtime import (
     build_live_cam_reopen_result,
     build_live_cam_start_command,
     build_live_cam_started_result,
+    collect_live_cam_pids,
+    find_missing_live_cam_window_ports,
     parse_key_value_stdout,
     run_live_cam_parallel,
 )
@@ -149,6 +151,8 @@ __all__ = [
     "build_live_cam_minimize_response",
     "build_live_cam_open_result",
     "build_live_cam_reopen_result",
+    "collect_live_cam_pids",
+    "find_missing_live_cam_window_ports",
     "build_load_check_wmctrl_commands",
     "build_window_activate_command",
     "build_window_close_command",

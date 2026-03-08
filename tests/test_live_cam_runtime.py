@@ -11,6 +11,8 @@ from arouter import (
     build_live_cam_reopen_result,
     build_live_cam_start_command,
     build_live_cam_started_result,
+    collect_live_cam_pids,
+    find_missing_live_cam_window_ports,
     parse_key_value_stdout,
     run_live_cam_parallel,
 )
@@ -99,6 +101,24 @@ def test_build_live_cam_started_result_merges_runtime_fields() -> None:
         "port": "9996",
         "session_name": "vacuumtube-bg-5",
     }
+
+
+def test_collect_live_cam_pids_returns_none_when_any_pid_missing() -> None:
+    out = collect_live_cam_pids(
+        [{"port": 9993}, {"port": 9994}],
+        pid_lookup=lambda port: {9993: 101}.get(port),
+    )
+
+    assert out is None
+
+
+def test_find_missing_live_cam_window_ports_uses_visible_window_ids() -> None:
+    missing = find_missing_live_cam_window_ports(
+        {9993: 101, 9994: 102, 9995: 103},
+        [{"id": "0x1", "pid": 101}, {"id": "0x2", "pid": 103}, {"pid": 102}],
+    )
+
+    assert missing == [9994]
 
 
 def test_build_live_cam_open_result_extracts_final_href() -> None:

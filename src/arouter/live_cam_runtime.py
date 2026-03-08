@@ -56,6 +56,36 @@ def run_live_cam_parallel(
     return out
 
 
+def collect_live_cam_pids(
+    instances: list[dict[str, Any]],
+    *,
+    pid_lookup: Callable[[int], int | None],
+) -> dict[int, int] | None:
+    pids_by_port: dict[int, int] = {}
+    for spec in instances:
+        port = int(spec["port"])
+        pid = pid_lookup(port)
+        if not pid:
+            return None
+        pids_by_port[port] = int(pid)
+    return pids_by_port
+
+
+def find_missing_live_cam_window_ports(
+    pids_by_port: dict[int, int],
+    rows: list[dict[str, Any]],
+) -> list[int]:
+    visible_pids: set[int] = set()
+    for row in rows:
+        if not isinstance(row, dict) or not row.get("id"):
+            continue
+        pid = row.get("pid")
+        if pid is None:
+            continue
+        visible_pids.add(int(pid))
+    return [port for port, pid in pids_by_port.items() if int(pid) not in visible_pids]
+
+
 def parse_key_value_stdout(text: str) -> dict[str, str]:
     out: dict[str, str] = {}
     for line in (text or "").splitlines():
