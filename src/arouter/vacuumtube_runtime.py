@@ -256,3 +256,35 @@ def run_vacuumtube_play_bgm(
             return "watch page detected; sent Space toggle and confirmed playback"
 
     return open_from_home()
+
+
+def run_vacuumtube_fullscreen(
+    *,
+    ensure_started_and_positioned: Callable[[], Any],
+    wait_window: Callable[[], str],
+    activate_window: Callable[[str], None],
+    get_window_geometry: Callable[[str], dict[str, Any] | None],
+    set_fullscreen: Callable[..., None],
+    wait_fullscreen: Callable[..., bool],
+) -> str:
+    ensure_started_and_positioned()
+    win_id = wait_window()
+    activate_window(win_id)
+    before = get_window_geometry(win_id)
+    set_fullscreen(win_id, enabled=True)
+    ok = wait_fullscreen(win_id, enabled=True, timeout_sec=3.0)
+    after = get_window_geometry(win_id)
+    return "youtube fullscreen " + json.dumps(
+        {"fullscreen": ok, "before": before, "after": after},
+        ensure_ascii=False,
+    )
+
+
+def run_vacuumtube_quadrant(
+    *,
+    ensure_started_and_positioned: Callable[[], Any],
+    ensure_top_right_position: Callable[[], dict[str, Any]],
+) -> str:
+    ensure_started_and_positioned()
+    position = ensure_top_right_position()
+    return "youtube quadrant " + json.dumps(position, ensure_ascii=False)

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from typing import Any
 
 import pytest
@@ -11,8 +12,10 @@ from arouter import (
     is_recoverable_vacuumtube_error,
     merge_vacuumtube_cdp_state,
     merge_vacuumtube_window_snapshot,
+    run_vacuumtube_fullscreen,
     run_vacuumtube_go_home,
     run_vacuumtube_play_bgm,
+    run_vacuumtube_quadrant,
     run_vacuumtube_resume_playback,
 )
 
@@ -366,3 +369,52 @@ def test_run_vacuumtube_play_bgm_nudges_account_selection_before_home_open() -> 
 
     assert result == "opened watch route #/watch?v=bgm"
     assert events == ["return", "sleep:0.6", "open_home"]
+
+
+def test_run_vacuumtube_fullscreen_returns_before_after_geometry() -> None:
+    events: list[str] = []
+    geometries = iter(
+        [
+            {"x": 100, "y": 100, "w": 1280, "h": 720},
+            {"x": 0, "y": 0, "w": 1920, "h": 1080},
+        ]
+    )
+
+    result = run_vacuumtube_fullscreen(
+        ensure_started_and_positioned=lambda: events.append("ensure_started"),
+        wait_window=lambda: events.append("wait_window") or "0x123",
+        activate_window=lambda win_id: events.append(f"activate:{win_id}"),
+        get_window_geometry=lambda _win_id: next(geometries),
+        set_fullscreen=lambda win_id, *, enabled: events.append(
+            f"fullscreen:{win_id}:{enabled}"
+        ),
+        wait_fullscreen=lambda win_id, *, enabled, timeout_sec: (
+            events.append(f"wait_fullscreen:{win_id}:{enabled}:{timeout_sec}") or True
+        ),
+    )
+
+    assert json.loads(result.removeprefix("youtube fullscreen ")) == {
+        "fullscreen": True,
+        "before": {"x": 100, "y": 100, "w": 1280, "h": 720},
+        "after": {"x": 0, "y": 0, "w": 1920, "h": 1080},
+    }
+    assert events == [
+        "ensure_started",
+        "wait_window",
+        "activate:0x123",
+        "fullscreen:0x123:True",
+        "wait_fullscreen:0x123:True:3.0",
+    ]
+
+
+def test_run_vacuumtube_quadrant_wraps_position_result() -> None:
+    events: list[str] = []
+
+    result = run_vacuumtube_quadrant(
+        ensure_started_and_positioned=lambda: events.append("ensure_started"),
+        ensure_top_right_position=lambda: events.append("ensure_top_right")
+        or {"ok": True, "window_id": "0x123"},
+    )
+
+    assert result == 'youtube quadrant {"ok": true, "window_id": "0x123"}'
+    assert events == ["ensure_started", "ensure_top_right"]
