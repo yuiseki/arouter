@@ -50,6 +50,7 @@ from .live_cam_layout import (
     build_live_cam_layout_targets_full,
     compact_live_cam_region_from_screen_and_work_area,
 )
+from .live_cam_runtime import build_live_cam_open_result, run_live_cam_parallel
 from .live_cam_selection import (
     annotate_live_cam_payload_selection,
     build_live_cam_browse_command,
@@ -131,6 +132,7 @@ __all__ = [
     "build_window_frame_geometry_script",
     "build_live_cam_layout_targets_compact",
     "build_live_cam_layout_targets_full",
+    "build_live_cam_open_result",
     "build_load_check_wmctrl_commands",
     "build_window_activate_command",
     "build_window_close_command",
@@ -194,6 +196,7 @@ __all__ = [
     "run_biometric_poll_iteration",
     "run_biometric_poller_loop",
     "run_authorized_command_flow",
+    "run_live_cam_parallel",
     "resolve_segment_transcript",
     "SegmentTranscriptResolution",
     "looks_like_weather_chromium_title",
