@@ -10,6 +10,7 @@ from arouter import (
     parse_konsole_window_rows,
     parse_tmux_client_pids,
     pid_ancestor_chain,
+    prepare_load_check_konsole_placement,
     wait_for_new_window_row,
 )
 
@@ -187,3 +188,76 @@ def test_wait_for_new_window_row_returns_none_on_timeout() -> None:
     )
 
     assert row is None
+
+
+def test_prepare_load_check_konsole_placement_rejects_non_quadrant_mode() -> None:
+    result = prepare_load_check_konsole_placement(
+        quadrant_mode=False,
+        screen=(4096, 2160),
+        row={"id": "0x00a"},
+        before_konsole_ids=None,
+        wait_for_row=lambda: None,
+        target_geom=load_check_bottom_left_geom,
+    )
+
+    assert result == {"applied": False, "reason": "vacuumtube_not_quadrant"}
+
+
+def test_prepare_load_check_konsole_placement_requires_screen_size() -> None:
+    result = prepare_load_check_konsole_placement(
+        quadrant_mode=True,
+        screen=None,
+        row={"id": "0x00a"},
+        before_konsole_ids=None,
+        wait_for_row=lambda: None,
+        target_geom=load_check_bottom_left_geom,
+    )
+
+    assert result == {"applied": False, "reason": "screen_size_unknown"}
+
+
+def test_prepare_load_check_konsole_placement_requires_before_ids_when_row_missing() -> None:
+    result = prepare_load_check_konsole_placement(
+        quadrant_mode=True,
+        screen=(4096, 2160),
+        row=None,
+        before_konsole_ids=None,
+        wait_for_row=lambda: None,
+        target_geom=load_check_bottom_left_geom,
+    )
+
+    assert result == {"applied": False, "reason": "konsole_window_not_specified"}
+
+
+def test_prepare_load_check_konsole_placement_waits_for_new_window_when_row_missing() -> None:
+    wait_for_row = mock.Mock(return_value={"id": "0x00b"})
+
+    result = prepare_load_check_konsole_placement(
+        quadrant_mode=True,
+        screen=(4096, 2160),
+        row=None,
+        before_konsole_ids={"0x00a"},
+        wait_for_row=wait_for_row,
+        target_geom=load_check_bottom_left_geom,
+    )
+
+    assert result == {
+        "applied": False,
+        "ready": True,
+        "window_id": "0x00b",
+        "target": {"x": 0, "y": 1080, "w": 2048, "h": 1080},
+    }
+    wait_for_row.assert_called_once_with()
+
+
+def test_prepare_load_check_konsole_placement_reports_missing_window_after_wait() -> None:
+    result = prepare_load_check_konsole_placement(
+        quadrant_mode=True,
+        screen=(4096, 2160),
+        row=None,
+        before_konsole_ids={"0x00a"},
+        wait_for_row=lambda: None,
+        target_geom=load_check_bottom_left_geom,
+    )
+
+    assert result == {"applied": False, "reason": "konsole_window_not_found"}

@@ -136,7 +136,7 @@ def wait_for_new_window_row(
     now: Callable[[], float],
     sleep: Callable[[float], None],
     poll_interval_sec: float = 0.15,
-) -> dict[str, Any] | None:
+    ) -> dict[str, Any] | None:
     deadline = now() + timeout_sec
     while now() < deadline:
         rows = row_provider()
@@ -145,6 +145,37 @@ def wait_for_new_window_row(
             return new_rows[-1]
         sleep(poll_interval_sec)
     return None
+
+
+def prepare_load_check_konsole_placement(
+    *,
+    quadrant_mode: bool,
+    screen: tuple[int, int] | None,
+    row: dict[str, Any] | None,
+    before_konsole_ids: set[str] | None,
+    wait_for_row: Callable[[], dict[str, Any] | None],
+    target_geom: Callable[..., dict[str, int]],
+) -> dict[str, Any]:
+    if not quadrant_mode:
+        return {"applied": False, "reason": "vacuumtube_not_quadrant"}
+    if not screen:
+        return {"applied": False, "reason": "screen_size_unknown"}
+
+    selected_row = row
+    if selected_row is None:
+        if before_konsole_ids is None:
+            return {"applied": False, "reason": "konsole_window_not_specified"}
+        selected_row = wait_for_row()
+    if not selected_row:
+        return {"applied": False, "reason": "konsole_window_not_found"}
+
+    geom = target_geom(screen_w=int(screen[0]), screen_h=int(screen[1]))
+    return {
+        "applied": False,
+        "ready": True,
+        "window_id": str(selected_row["id"]),
+        "target": geom,
+    }
 
 
 def is_vacuumtube_quadrant_mode_for_load_check(

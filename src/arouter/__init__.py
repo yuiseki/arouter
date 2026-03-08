@@ -43,6 +43,7 @@ from .load_check import (
     parse_konsole_window_rows,
     parse_tmux_client_pids,
     pid_ancestor_chain,
+    prepare_load_check_konsole_placement,
     wait_for_new_window_row,
 )
 from .models import VoiceCommand
@@ -102,6 +103,7 @@ __all__ = [
     "parse_konsole_window_rows",
     "parse_tmux_client_pids",
     "pid_ancestor_chain",
+    "prepare_load_check_konsole_placement",
     "read_password_secret_lines",
     "reassert_lock_screen",
     "request_biometric_lock_payload",
