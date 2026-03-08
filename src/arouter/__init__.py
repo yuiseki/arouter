@@ -40,6 +40,7 @@ from .desktop_runtime import (
     run_kwin_shortcut,
 )
 from .display_env import build_x11_env, resolve_x11_display
+from .display_runtime import probe_x11_display
 from .errors import report_segment_error
 from .execution import command_has_system_prefix, execute_command, execute_news_command
 from .flow import run_authorized_command_flow
@@ -261,6 +262,7 @@ __all__ = [
     "ensure_biometric_runtime_attrs",
     "build_overlay_ipc_line",
     "build_x11_env",
+    "probe_x11_display",
     "launch_chromium_new_window",
     "read_active_window_id",
     "run_kwin_shortcut",
