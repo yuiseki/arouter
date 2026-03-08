@@ -35,6 +35,99 @@ def load_check_bottom_left_geom(*, screen_w: int, screen_h: int) -> dict[str, in
     }
 
 
+def parse_konsole_window_rows(wmctrl_output: str) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for line in (wmctrl_output or "").splitlines():
+        parts = line.split(None, 8)
+        if len(parts) < 9:
+            continue
+        title = parts[8]
+        if "Konsole" not in title:
+            continue
+        try:
+            rows.append(
+                {
+                    "id": parts[0],
+                    "pid": int(parts[2]),
+                    "x": int(parts[3]),
+                    "y": int(parts[4]),
+                    "w": int(parts[5]),
+                    "h": int(parts[6]),
+                    "title": title,
+                }
+            )
+        except Exception:
+            continue
+    return rows
+
+
+def parse_tmux_client_pids(stdout: str, *, returncode: int) -> list[int]:
+    if returncode != 0:
+        return []
+    out: list[int] = []
+    for line in (stdout or "").splitlines():
+        try:
+            pid = int(line.strip())
+        except Exception:
+            continue
+        if pid > 0:
+            out.append(pid)
+    return out
+
+
+def pid_ancestor_chain(
+    pid: int,
+    *,
+    parent_pid_for_pid: Callable[[int], int | None],
+    max_depth: int = 32,
+) -> list[int]:
+    out: list[int] = []
+    seen: set[int] = set()
+    cur = int(pid)
+    for _ in range(max_depth):
+        if cur <= 1 or cur in seen:
+            break
+        seen.add(cur)
+        out.append(cur)
+        ppid = parent_pid_for_pid(cur)
+        if not ppid:
+            break
+        cur = int(ppid)
+    return out
+
+
+def find_konsole_rows_for_tmux_client_pids(
+    rows: list[dict[str, Any]],
+    client_pids: list[int],
+    *,
+    parent_pid_for_pid: Callable[[int], int | None],
+) -> list[dict[str, Any]]:
+    if not rows:
+        return []
+    by_pid: dict[int, dict[str, Any]] = {}
+    for row in rows:
+        try:
+            by_pid[int(row["pid"])] = row
+        except Exception:
+            continue
+    matched: list[dict[str, Any]] = []
+    seen_ids: set[str] = set()
+    for client_pid in client_pids:
+        for ancestor_pid in pid_ancestor_chain(
+            client_pid,
+            parent_pid_for_pid=parent_pid_for_pid,
+        ):
+            matched_row: dict[str, Any] | None = by_pid.get(int(ancestor_pid))
+            if not matched_row:
+                continue
+            wid = str(matched_row.get("id") or "")
+            if wid and wid not in seen_ids:
+                matched.append(matched_row)
+                seen_ids.add(wid)
+            break
+    return matched
+
+
 def is_vacuumtube_quadrant_mode_for_load_check(
     runtime: VacuumTubeLoadCheckRuntime,
     *,
