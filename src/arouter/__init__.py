@@ -149,6 +149,7 @@ from .vacuumtube_poller import (
 )
 from .vacuumtube_runtime import (
     build_vacuumtube_context_base,
+    ensure_vacuumtube_started_and_positioned,
     finalize_vacuumtube_context,
     is_recoverable_vacuumtube_error,
     merge_vacuumtube_cdp_state,
@@ -263,6 +264,7 @@ __all__ = [
     "build_top_right_position_result",
     "build_vacuumtube_context_error",
     "build_vacuumtube_context_base",
+    "ensure_vacuumtube_started_and_positioned",
     "build_weather_pages_closed_response",
     "build_weather_pages_tiled_response",
     "build_weather_tile_result",

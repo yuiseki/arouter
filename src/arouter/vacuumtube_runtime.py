@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import json
 import socket
+from collections.abc import Callable
 from typing import Any
 
 from .vacuumtube_state import vacuumtube_is_watch_state
@@ -100,3 +102,41 @@ def is_recoverable_vacuumtube_error(
             "connection refused",
         )
     )
+
+
+def ensure_vacuumtube_started_and_positioned(
+    *,
+    ensure_running: Callable[[], None],
+    wait_window: Callable[[float], str],
+    restart_tmux_session: Callable[[], None],
+    wait_cdp_ready: Callable[[float], bool],
+    select_account_if_needed: Callable[[], None],
+    capture_window_presentation: Callable[[str], dict[str, Any]],
+    ensure_top_right_position: Callable[[], dict[str, Any]],
+    log: Callable[[str], None],
+    base_url: str,
+) -> dict[str, Any]:
+    ensure_running()
+    try:
+        win_id = wait_window(20.0)
+    except Exception as err:
+        log(f"VacuumTube window missing after startup; restarting session: {err}")
+        restart_tmux_session()
+        if not wait_cdp_ready(35.0):
+            raise RuntimeError(f"VacuumTube CDP not ready at {base_url}") from err
+        win_id = wait_window(20.0)
+
+    select_account_if_needed()
+    presentation = capture_window_presentation(win_id)
+    if bool(presentation.get("fullscreen")):
+        payload = json.dumps(presentation, ensure_ascii=False)
+        log(f"VacuumTube window position preserved (fullscreen): {payload}")
+        return presentation
+
+    try:
+        position = ensure_top_right_position()
+        log(f"VacuumTube window position check: {json.dumps(position, ensure_ascii=False)}")
+    except Exception as err:
+        log(f"tile top-right skipped: {err}")
+
+    return capture_window_presentation(win_id)
