@@ -38,6 +38,7 @@ from .execution import command_has_system_prefix, execute_command, execute_news_
 from .flow import run_authorized_command_flow
 from .kwin_scripts import (
     build_kwin_load_script_command,
+    build_kwin_script_command_plan,
     build_kwin_start_script_command,
     build_kwin_unload_script_command,
     build_live_cam_layout_script,
@@ -166,6 +167,7 @@ __all__ = [
     "ensure_biometric_runtime_attrs",
     "build_overlay_ipc_line",
     "build_kwin_load_script_command",
+    "build_kwin_script_command_plan",
     "build_kwin_start_script_command",
     "build_kwin_unload_script_command",
     "build_live_cam_layout_script",

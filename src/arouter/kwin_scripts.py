@@ -33,6 +33,18 @@ def build_kwin_unload_script_command(plugin_name: str) -> list[str]:
     ]
 
 
+def build_kwin_script_command_plan(
+    script_path: str, plugin_name: str
+) -> dict[str, list[list[str]] | list[str]]:
+    return {
+        "run": [
+            build_kwin_load_script_command(script_path, plugin_name),
+            build_kwin_start_script_command(),
+        ],
+        "unload": build_kwin_unload_script_command(plugin_name),
+    }
+
+
 def build_live_cam_layout_script(
     targets: list[dict[str, Any]],
     *,

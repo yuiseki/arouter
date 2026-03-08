@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from arouter import (
     build_kwin_load_script_command,
+    build_kwin_script_command_plan,
     build_kwin_start_script_command,
     build_kwin_unload_script_command,
     build_live_cam_layout_script,
@@ -36,6 +37,34 @@ def test_build_kwin_start_and_unload_commands_match_qdbus_contract() -> None:
         "org.kde.kwin.Scripting.unloadScript",
         "plugin-name",
     ]
+
+
+def test_build_kwin_script_command_plan_wraps_load_start_and_unload() -> None:
+    assert build_kwin_script_command_plan("/tmp/demo.js", "plugin-name") == {
+        "run": [
+            [
+                "qdbus",
+                "org.kde.KWin",
+                "/Scripting",
+                "org.kde.kwin.Scripting.loadScript",
+                "/tmp/demo.js",
+                "plugin-name",
+            ],
+            [
+                "qdbus",
+                "org.kde.KWin",
+                "/Scripting",
+                "org.kde.kwin.Scripting.start",
+            ],
+        ],
+        "unload": [
+            "qdbus",
+            "org.kde.KWin",
+            "/Scripting",
+            "org.kde.kwin.Scripting.unloadScript",
+            "plugin-name",
+        ],
+    }
 
 
 def test_build_live_cam_layout_script_embeds_targets_and_flags() -> None:
