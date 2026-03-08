@@ -342,6 +342,86 @@ def run_vacuumtube_enumerate_tiles(
     return [row for row in data if isinstance(row, dict)]
 
 
+def run_vacuumtube_dom_click_tile(
+    *,
+    title: str,
+    text: str,
+    evaluate: Callable[[str], Any],
+) -> Any:
+    expr = f"""
+(() => {{
+  const wantTitle = {json.dumps(title)};
+  const wantText = {json.dumps(text)};
+  const norm = (s) => (s || '').replace(/\\s+/g, ' ').trim();
+  const wantTitleN = norm(wantTitle);
+  const wantTextN = norm(wantText);
+  const rootsSeen = new Set();
+  const elemsSeen = new Set();
+  const tiles = [];
+  function walk(root) {{
+    if (!root || rootsSeen.has(root)) return;
+    rootsSeen.add(root);
+    if (!root.querySelectorAll) return;
+    for (const el of root.querySelectorAll('ytlr-tile-renderer')) {{
+      if (elemsSeen.has(el)) continue;
+      elemsSeen.add(el);
+      let longest = '';
+      for (const c of el.querySelectorAll('*')) {{
+        const t = norm(c.innerText || c.textContent || '');
+        if (t.length > longest.length) longest = t;
+      }}
+      tiles.push({{
+        el,
+        title: longest,
+        text: norm(el.innerText || el.textContent || ''),
+      }});
+    }}
+    for (const node of root.querySelectorAll('*')) {{
+      if (node.shadowRoot) walk(node.shadowRoot);
+    }}
+  }}
+  walk(document);
+  let best = null;
+  let bestScore = -1;
+  for (const t of tiles) {{
+    let score = 0;
+    if (wantTitleN && t.title === wantTitleN) score += 100;
+    if (wantTitleN && t.text.includes(wantTitleN)) score += 40;
+    if (wantTextN && t.text === wantTextN) score += 80;
+    if (
+      wantTextN &&
+      t.text &&
+      (wantTextN.includes(t.text) || t.text.includes(wantTextN))
+    ) score += 20;
+    if (score > bestScore) {{
+      best = t;
+      bestScore = score;
+    }}
+  }}
+  if (!best || bestScore <= 0) return {{ok:false, reason:'no-match', bestScore}};
+  try {{
+    best.el.scrollIntoView({{block:'center', inline:'center'}});
+  }} catch (e) {{}}
+  const target = best.el.querySelector('a, button, [role="button"]') || best.el;
+  try {{
+    for (const type of ['pointerdown', 'mousedown', 'mouseup', 'pointerup', 'click']) {{
+      const ev = new MouseEvent(type, {{
+        bubbles:true,
+        cancelable:true,
+        composed:true,
+        view:window
+      }});
+      target.dispatchEvent(ev);
+    }}
+  }} catch (e) {{
+    try {{ target.click(); }} catch (_e) {{}}
+  }}
+  return {{ok:true, bestScore, title: best.title.slice(0, 200), text: best.text.slice(0, 200)}};
+}})()
+"""
+    return evaluate(expr)
+
+
 def finalize_vacuumtube_context(context: dict[str, Any]) -> dict[str, Any]:
     finalized = dict(context)
     finalized["available"] = bool(finalized.get("windowFound")) or bool(finalized.get("hash"))

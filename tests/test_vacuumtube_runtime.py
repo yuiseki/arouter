@@ -16,6 +16,7 @@ from arouter import (
     recover_vacuumtube_unresponsive_state,
     restart_vacuumtube_tmux_session,
     run_vacuumtube_click_tile_center,
+    run_vacuumtube_dom_click_tile,
     run_vacuumtube_ensure_home,
     run_vacuumtube_enumerate_tiles,
     run_vacuumtube_fullscreen,
@@ -292,6 +293,21 @@ def test_run_vacuumtube_enumerate_tiles_returns_empty_list_for_non_list_payload(
     out = run_vacuumtube_enumerate_tiles(evaluate=lambda _expr: {"title": "Tile 1"})
 
     assert out == []
+
+
+def test_run_vacuumtube_dom_click_tile_passes_title_and_text_to_expression() -> None:
+    seen: list[str] = []
+
+    out = run_vacuumtube_dom_click_tile(
+        title="Best Tile",
+        text="Best Tile Text",
+        evaluate=lambda expr: seen.append(expr) or {"ok": True},
+    )
+
+    assert out == {"ok": True}
+    assert len(seen) == 1
+    assert '"Best Tile"' in seen[0]
+    assert '"Best Tile Text"' in seen[0]
 
 
 def test_finalize_vacuumtube_context_marks_available_from_window_or_hash() -> None:
