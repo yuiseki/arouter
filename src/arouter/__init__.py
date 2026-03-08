@@ -6,6 +6,7 @@ from .biometric_password import (
     read_password_secret_lines,
     verify_unlock_password,
 )
+from .biometric_paths import resolve_biometric_arg_path
 from .biometric_poller import (
     resolve_biometric_poll_interval,
     run_biometric_poll_iteration,
@@ -63,6 +64,7 @@ __all__ = [
     "default_lock_screen_text",
     "default_locked_denied_text",
     "encrypt_password_file",
+    "resolve_biometric_arg_path",
     "contextualize_command_with_vacuumtube_state",
     "detect_non_command_reaction",
     "execute_command",
