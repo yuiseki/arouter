@@ -22,6 +22,7 @@ from arouter import (
     resolve_live_cam_layout_bootstrap,
     run_live_cam_close_windows,
     run_live_cam_layout_flow,
+    run_live_cam_open_flow,
     run_live_cam_parallel,
     run_live_cam_raise_windows,
     run_live_cam_window_action_flow,
@@ -146,6 +147,36 @@ def test_build_live_cam_started_result_merges_runtime_fields() -> None:
         "port": "9996",
         "session_name": "vacuumtube-bg-5",
     }
+
+
+def test_run_live_cam_open_flow_builds_results_via_parallel_runner() -> None:
+    calls: list[dict[str, object]] = []
+
+    def fake_parallel_runner(
+        specs: list[dict[str, object]],
+        *,
+        worker,
+        label: str,
+    ) -> list[dict[str, object]]:
+        calls.append({"specs": specs, "label": label})
+        return [worker(spec) for spec in specs]
+
+    specs = [{"label": "akihabara", "port": 9994}]
+
+    out = run_live_cam_open_flow(
+        specs,
+        assign_live_camera=lambda spec: {"videoId": f"vid-{spec['port']}", "method": "direct-id"},
+        build_result=lambda spec, payload: {
+            "label": spec["label"],
+            "port": spec["port"],
+            "videoId": payload["videoId"],
+        },
+        label="live_cam_open",
+        parallel_runner=fake_parallel_runner,
+    )
+
+    assert out == [{"label": "akihabara", "port": 9994, "videoId": "vid-9994"}]
+    assert calls == [{"specs": specs, "label": "live_cam_open"}]
 
 
 def test_collect_live_cam_pids_returns_none_when_any_pid_missing() -> None:

@@ -9,6 +9,7 @@ from arouter import (
     find_stuck_live_cam_specs,
     merge_live_cam_page_snapshot,
     page_matches_live_camera_spec,
+    run_live_cam_page_brief_flow,
     select_live_cam_page_target,
     select_live_cam_page_url,
 )
@@ -229,3 +230,52 @@ def test_find_stuck_live_cam_specs_skips_matching_watch_pages() -> None:
     stuck = find_stuck_live_cam_specs(specs, pages_by_port=pages_by_port)
 
     assert stuck == []
+
+
+def test_run_live_cam_page_brief_flow_merges_snapshot_from_inspector() -> None:
+    out = run_live_cam_page_brief_flow(
+        port=9993,
+        fetch_targets=lambda port: [
+            {
+                "type": "page",
+                "url": f"https://www.youtube.com/tv#/watch?v=abc{port}",
+                "title": "Shibuya",
+                "webSocketDebuggerUrl": "ws://127.0.0.1:9993/devtools/page/1",
+            }
+        ],
+        validate_target_list=lambda data, _message: data,
+        select_target=select_live_cam_page_target,
+        build_brief=build_live_cam_page_brief,
+        inspect_target=lambda target: {"watchText": f"watch:{target['title']}"},
+        merge_snapshot=merge_live_cam_page_snapshot,
+    )
+
+    assert out == {
+        "url": "https://www.youtube.com/tv#/watch?v=abc9993",
+        "title": "Shibuya",
+        "watchText": "watch:Shibuya",
+    }
+
+
+def test_run_live_cam_page_brief_flow_records_inspect_error() -> None:
+    out = run_live_cam_page_brief_flow(
+        port=9994,
+        fetch_targets=lambda _port: [
+            {
+                "type": "page",
+                "url": "https://www.youtube.com/tv#/watch?v=abc9994",
+                "title": "Akihabara",
+            }
+        ],
+        validate_target_list=None,
+        select_target=select_live_cam_page_target,
+        build_brief=build_live_cam_page_brief,
+        inspect_target=lambda _target: (_ for _ in ()).throw(RuntimeError("cdp failed")),
+        merge_snapshot=merge_live_cam_page_snapshot,
+    )
+
+    assert out == {
+        "url": "https://www.youtube.com/tv#/watch?v=abc9994",
+        "title": "Akihabara",
+        "inspectError": "cdp failed",
+    }

@@ -111,6 +111,34 @@ def merge_live_cam_page_snapshot(
     return out
 
 
+def run_live_cam_page_brief_flow(
+    *,
+    port: int,
+    fetch_targets: Callable[[int], Any],
+    validate_target_list: Callable[[Any, str], Any] | None,
+    select_target: Callable[[Any], dict[str, Any] | None],
+    build_brief: Callable[[dict[str, Any]], dict[str, Any]],
+    inspect_target: Callable[[dict[str, Any]], dict[str, Any] | None],
+    merge_snapshot: Callable[..., dict[str, Any]],
+) -> dict[str, Any]:
+    data = fetch_targets(int(port))
+    if validate_target_list is not None:
+        data = validate_target_list(data, f"unexpected CDP target list on port {int(port)}")
+    elif not isinstance(data, list):
+        raise RuntimeError(f"unexpected CDP target list on port {int(port)}")
+
+    target = select_target(data)
+    if not target:
+        raise RuntimeError(f"no page target on port {int(port)}")
+
+    brief = build_brief(target)
+    try:
+        snapshot = inspect_target(target)
+    except Exception as exc:
+        return merge_snapshot(brief, inspect_error=exc)
+    return merge_snapshot(brief, snapshot=snapshot if isinstance(snapshot, dict) else None)
+
+
 def page_matches_live_camera_spec(spec: dict[str, Any], page: dict[str, Any]) -> bool:
     url = str(page.get("url") or "")
     if "youtube.com/tv" not in url or "watch?v=" not in url:
