@@ -66,6 +66,11 @@ from .router import (
 )
 from .segment import process_pcm_segment, process_transcribed_segment
 from .storage import handle_authorization_denied, store_authfail_wav, store_authorized_wav
+from .window_actions import (
+    build_window_activate_command,
+    build_window_key_command,
+    build_window_minimize_command,
+)
 from .window_rows import (
     chromium_window_ids_from_wmctrl_lines,
     detect_new_window_id,
@@ -85,6 +90,9 @@ __all__ = [
     "ensure_biometric_runtime_attrs",
     "build_overlay_ipc_line",
     "build_load_check_wmctrl_commands",
+    "build_window_activate_command",
+    "build_window_key_command",
+    "build_window_minimize_command",
     "command_has_system_prefix",
     "chromium_window_ids_from_wmctrl_lines",
     "consume_signal_file",
