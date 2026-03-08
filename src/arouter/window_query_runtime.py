@@ -90,6 +90,39 @@ def run_window_rows_query_for_pids(
     )
 
 
+def run_vacuumtube_window_id_query(
+    *,
+    listen_port: int,
+    pid_lookup: Callable[[int], int | None],
+    rows_with_pid_provider: Callable[[], list[str]],
+    rows_provider: Callable[[], list[str]],
+    find_by_pid_title: Callable[..., str | None],
+    find_by_title: Callable[..., str | None],
+) -> str | None:
+    main_pid = pid_lookup(int(listen_port))
+    if main_pid:
+        try:
+            win_id = find_by_pid_title(
+                rows_with_pid_provider(),
+                pid=int(main_pid),
+                title_hint="VacuumTube",
+            )
+            if win_id:
+                return win_id
+        except Exception:
+            pass
+    return find_by_title(rows_provider(), title_hint="VacuumTube")
+
+
+def run_window_geometry_query(
+    *,
+    win_id: str,
+    row_provider: Callable[[], list[str]],
+    find_geometry: Callable[[list[str], str], dict[str, object] | None],
+) -> dict[str, object] | None:
+    return find_geometry(row_provider(), str(win_id).lower())
+
+
 def build_xprop_wm_state_command(win_id: str) -> list[str]:
     return ["xprop", "-id", win_id, "_NET_WM_STATE"]
 

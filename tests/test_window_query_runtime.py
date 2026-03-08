@@ -5,6 +5,8 @@ from arouter import (
     read_window_fullscreen_state,
     run_desktop_size_query,
     run_screen_size_query,
+    run_vacuumtube_window_id_query,
+    run_window_geometry_query,
     run_window_id_query_by_pid_title,
     run_window_row_by_listen_port,
     run_window_rows_query_for_pids,
@@ -136,6 +138,71 @@ def test_run_window_rows_query_for_pids_returns_selected_rows() -> None:
     assert calls == [
         "rows",
         (["0x001 0 123 1 2 3 4 host VacuumTube"], [123, 456]),
+    ]
+
+
+def test_run_vacuumtube_window_id_query_prefers_pid_title_match() -> None:
+    calls: list[object] = []
+
+    win_id = run_vacuumtube_window_id_query(
+        listen_port=9992,
+        pid_lookup=lambda port: 456 if port == 9992 else None,
+        rows_with_pid_provider=lambda: calls.append("pid_rows")
+        or ["0x002 0 456 host VacuumTube"],
+        rows_provider=lambda: calls.append("rows") or ["0x003 0 host VacuumTube"],
+        find_by_pid_title=lambda rows, *, pid, title_hint: calls.append(
+            ("pid", rows, pid, title_hint)
+        )
+        or "0x002",
+        find_by_title=lambda rows, *, title_hint: calls.append(("title", rows, title_hint))
+        or "0x003",
+    )
+
+    assert win_id == "0x002"
+    assert calls == [
+        "pid_rows",
+        ("pid", ["0x002 0 456 host VacuumTube"], 456, "VacuumTube"),
+    ]
+
+
+def test_run_vacuumtube_window_id_query_falls_back_to_title_lookup() -> None:
+    calls: list[object] = []
+
+    win_id = run_vacuumtube_window_id_query(
+        listen_port=9992,
+        pid_lookup=lambda _port: None,
+        rows_with_pid_provider=lambda: calls.append("pid_rows") or ["unused"],
+        rows_provider=lambda: calls.append("rows") or ["0x003 0 host VacuumTube"],
+        find_by_pid_title=lambda rows, *, pid, title_hint: calls.append(
+            ("pid", rows, pid, title_hint)
+        )
+        or "0x002",
+        find_by_title=lambda rows, *, title_hint: calls.append(("title", rows, title_hint))
+        or "0x003",
+    )
+
+    assert win_id == "0x003"
+    assert calls == [
+        "rows",
+        ("title", ["0x003 0 host VacuumTube"], "VacuumTube"),
+    ]
+
+
+def test_run_window_geometry_query_returns_geometry() -> None:
+    calls: list[object] = []
+
+    geometry = run_window_geometry_query(
+        win_id="0xABC",
+        row_provider=lambda: calls.append("rows")
+        or ["0xabc 0 10 20 30 40 host VacuumTube"],
+        find_geometry=lambda rows, target: calls.append((rows, target))
+        or {"x": 10, "y": 20, "w": 30, "h": 40},
+    )
+
+    assert geometry == {"x": 10, "y": 20, "w": 30, "h": 40}
+    assert calls == [
+        "rows",
+        (["0xabc 0 10 20 30 40 host VacuumTube"], "0xabc"),
     ]
 
 
