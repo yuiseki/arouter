@@ -142,6 +142,19 @@ def run_live_cam_page_snapshot_query(
     return data if isinstance(data, dict) else {}
 
 
+def run_live_cam_page_snapshot_via_websocket(
+    *,
+    ws_url: str,
+    create_client: Callable[[str], Any],
+    enable_client: Callable[[Any], None],
+    query_snapshot: Callable[[Any], dict[str, Any] | None],
+) -> dict[str, Any] | None:
+    client = create_client(ws_url)
+    enable_client(client)
+    snapshot = query_snapshot(client)
+    return snapshot if isinstance(snapshot, dict) else None
+
+
 def run_live_cam_target_inspection(
     *,
     target: dict[str, Any],

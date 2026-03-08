@@ -11,6 +11,7 @@ from arouter import (
     page_matches_live_camera_spec,
     run_live_cam_page_brief_flow,
     run_live_cam_page_snapshot_query,
+    run_live_cam_page_snapshot_via_websocket,
     run_live_cam_target_inspection,
     select_live_cam_page_target,
     select_live_cam_page_url,
@@ -158,6 +159,20 @@ def test_run_live_cam_page_snapshot_query_returns_empty_dict_for_non_dict_payloa
     out = run_live_cam_page_snapshot_query(evaluate=lambda _expr: ["not", "dict"])
 
     assert out == {}
+
+
+def test_run_live_cam_page_snapshot_via_websocket_opens_client_and_queries_snapshot() -> None:
+    events: list[str] = []
+
+    out = run_live_cam_page_snapshot_via_websocket(
+        ws_url="ws://127.0.0.1:9993/devtools/page/1",
+        create_client=lambda ws_url: {"ws_url": ws_url},
+        enable_client=lambda client: events.append(f"enable:{client['ws_url']}"),
+        query_snapshot=lambda client: {"watchText": client["ws_url"]},
+    )
+
+    assert out == {"watchText": "ws://127.0.0.1:9993/devtools/page/1"}
+    assert events == ["enable:ws://127.0.0.1:9993/devtools/page/1"]
 
 
 def test_page_matches_live_camera_spec_accepts_matching_watch_page() -> None:
