@@ -6,6 +6,12 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any, Protocol
 
+from .kwin_runtime import (
+    KWinScriptCommandPlan,
+    run_live_cam_minimize_runtime,
+    run_minimize_other_windows_runtime,
+)
+
 
 class LiveCamWindowIdCollector(Protocol):
     def __call__(
@@ -277,15 +283,26 @@ def run_live_cam_minimize_windows(
     *,
     window_id_lookup: Callable[[int], str | None],
     collect_window_ids: LiveCamWindowIdCollector,
-    run_minimize_script: Callable[..., None],
+    build_script: Callable[[list[int]], str],
+    write_temp_script: Callable[[str, str], str],
+    command_plan_builder: Callable[[str, str], KWinScriptCommandPlan],
+    run_command: Callable[[list[str]], None],
+    sleep: Callable[[float], None],
+    cleanup: Callable[[str], None],
     plugin_name: str,
 ) -> list[str]:
     window_ids = collect_window_ids(pids, window_id_lookup=window_id_lookup)
     if not pids:
         return window_ids
-    run_minimize_script(
+    run_live_cam_minimize_runtime(
         pids=pids,
         plugin_name=plugin_name,
+        build_script=build_script,
+        write_temp_script=write_temp_script,
+        command_plan_builder=command_plan_builder,
+        run_command=run_command,
+        sleep=sleep,
+        cleanup=cleanup,
     )
     return window_ids
 
@@ -457,14 +474,25 @@ def run_minimize_other_windows_flow(
     *,
     instances: list[dict[str, Any]],
     pid_lookup: Callable[[int], int | None],
-    run_minimize_script: Callable[..., None],
+    build_script: Callable[[list[int]], str],
+    write_temp_script: Callable[[str, str], str],
+    command_plan_builder: Callable[[str, str], KWinScriptCommandPlan],
+    run_command: Callable[[list[str]], None],
+    sleep: Callable[[float], None],
+    cleanup: Callable[[str], None],
     build_response: Callable[[list[int]], str],
     plugin_name: str,
 ) -> str:
     skip_pids = collect_live_cam_skip_pids(instances, pid_lookup=pid_lookup)
-    run_minimize_script(
+    run_minimize_other_windows_runtime(
         skip_pids=skip_pids,
         plugin_name=plugin_name,
+        build_script=build_script,
+        write_temp_script=write_temp_script,
+        command_plan_builder=command_plan_builder,
+        run_command=run_command,
+        sleep=sleep,
+        cleanup=cleanup,
     )
     return build_response(skip_pids)
 

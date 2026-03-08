@@ -113,21 +113,29 @@ def test_run_live_cam_minimize_windows_collects_window_ids_and_runs_kwin_script(
         [101, 102],
         window_id_lookup=lambda pid: {101: "0x1", 102: None}[pid],
         collect_window_ids=collect_window_ids_for_pids,
-        run_minimize_script=lambda *, pids, plugin_name: calls.append(
-            {
-                "pids": pids,
-                "plugin_name": plugin_name,
-            }
+        build_script=lambda pids: (calls.append(("build", pids)) or "SCRIPT"),
+        write_temp_script=lambda text, prefix: (
+            calls.append(("write", text, prefix)) or "/tmp/demo.js"
         ),
+        command_plan_builder=lambda path, plugin: {
+            "run": [["qdbus", "load", path, plugin], ["qdbus", "start"]],
+            "unload": ["qdbus", "unload", plugin],
+        },
+        run_command=lambda command: calls.append(("run", command)),
+        sleep=lambda seconds: calls.append(("sleep", seconds)),
+        cleanup=lambda path: calls.append(("cleanup", path)),
         plugin_name="codex_live_cam_minimize_123",
     )
 
     assert out == ["0x1"]
     assert calls == [
-        {
-            "pids": [101, 102],
-            "plugin_name": "codex_live_cam_minimize_123",
-        }
+        ("build", [101, 102]),
+        ("write", "SCRIPT", "codex-kwin-livecam-minimize-"),
+        ("run", ["qdbus", "load", "/tmp/demo.js", "codex_live_cam_minimize_123"]),
+        ("run", ["qdbus", "start"]),
+        ("sleep", 0.4),
+        ("run", ["qdbus", "unload", "codex_live_cam_minimize_123"]),
+        ("cleanup", "/tmp/demo.js"),
     ]
 
 
@@ -498,22 +506,36 @@ def test_run_minimize_other_windows_flow_collects_skip_pids_and_runs_script() ->
     result = run_minimize_other_windows_flow(
         instances=[{"port": "9993"}, {"port": "9994"}],
         pid_lookup=lambda port: {9993: 101, 9994: 202}.get(port),
-        run_minimize_script=lambda *, skip_pids, plugin_name: events.append(
-            ("run", {"skip_pids": list(skip_pids), "plugin_name": plugin_name})
+        build_script=lambda skip_pids: events.append(("build", list(skip_pids))) or "SCRIPT",
+        write_temp_script=lambda text, prefix: (
+            events.append(("write", {"text": text, "prefix": prefix})) or "/tmp/demo.js"
         ),
+        command_plan_builder=lambda path, plugin: {
+            "run": [["qdbus", "load", path, plugin], ["qdbus", "start"]],
+            "unload": ["qdbus", "unload", plugin],
+        },
+        run_command=lambda command: events.append(("run", command)),
+        sleep=lambda seconds: events.append(("sleep", seconds)),
+        cleanup=lambda path: events.append(("cleanup", path)),
         build_response=lambda skip_pids: events.append(("response", list(skip_pids))) or "done",
         plugin_name="plugin-name",
     )
 
     assert result == "done"
     assert events == [
+        ("build", [101, 202]),
         (
-            "run",
+            "write",
             {
-                "plugin_name": "plugin-name",
-                "skip_pids": [101, 202],
+                "text": "SCRIPT",
+                "prefix": "codex-kwin-minimize-",
             },
         ),
+        ("run", ["qdbus", "load", "/tmp/demo.js", "plugin-name"]),
+        ("run", ["qdbus", "start"]),
+        ("sleep", 0.3),
+        ("run", ["qdbus", "unload", "plugin-name"]),
+        ("cleanup", "/tmp/demo.js"),
         ("response", [101, 202]),
     ]
 
