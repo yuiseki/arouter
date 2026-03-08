@@ -45,6 +45,7 @@ from .load_check import (
     parse_tmux_client_pids,
     pid_ancestor_chain,
     prepare_load_check_konsole_placement,
+    run_system_load_check_flow,
     wait_for_new_window_row,
 )
 from .models import VoiceCommand
@@ -122,6 +123,7 @@ __all__ = [
     "store_authfail_wav",
     "store_authorized_wav",
     "stop_biometric_poller",
+    "run_system_load_check_flow",
     "set_system_locked",
     "seed_signal_seen_mtime",
     "wait_for_new_window_row",

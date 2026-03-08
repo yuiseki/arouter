@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from collections.abc import Callable
 from typing import Any, Protocol
 
@@ -190,6 +191,40 @@ def build_load_check_wmctrl_commands(
         ["wmctrl", "-i", "-r", window_id, "-e", spec],
         ["wmctrl", "-i", "-r", window_id, "-e", spec],
     ]
+
+
+def run_system_load_check_flow(
+    *,
+    existing_rows: list[dict[str, Any]],
+    get_before_konsole_ids: Callable[[], set[str]],
+    raise_window_by_id: Callable[[str], None],
+    apply_placement_for_existing: Callable[[dict[str, Any]], dict[str, Any]],
+    open_monitor: Callable[[], str],
+    apply_placement_for_new: Callable[[set[str]], dict[str, Any]],
+    logger: Callable[[str], None],
+) -> str:
+    if existing_rows:
+        row = existing_rows[-1]
+        wid = str(row.get("id") or "")
+        if wid:
+            raise_window_by_id(wid)
+        try:
+            placement = apply_placement_for_existing(row)
+            logger(f"system_load_check placement: {json.dumps(placement, ensure_ascii=False)}")
+        except Exception as exc:
+            logger(f"system_load_check placement skipped: {exc}")
+        return "system load monitor reused (tmux=sysmon)"
+
+    before_konsole_ids = get_before_konsole_ids()
+    out = open_monitor()
+    if out:
+        logger(f"system_load_check: {out}")
+    try:
+        placement = apply_placement_for_new(before_konsole_ids)
+        logger(f"system_load_check placement: {json.dumps(placement, ensure_ascii=False)}")
+    except Exception as exc:
+        logger(f"system_load_check placement skipped: {exc}")
+    return "system load monitor opened (tmux=sysmon)"
 
 
 def is_vacuumtube_quadrant_mode_for_load_check(

@@ -12,6 +12,7 @@ from arouter import (
     parse_tmux_client_pids,
     pid_ancestor_chain,
     prepare_load_check_konsole_placement,
+    run_system_load_check_flow,
     wait_for_new_window_row,
 )
 
@@ -276,3 +277,52 @@ def test_build_load_check_wmctrl_commands_returns_expected_sequence() -> None:
         ["wmctrl", "-i", "-r", "0x00a", "-e", "0,0,1080,2048,1080"],
         ["wmctrl", "-i", "-r", "0x00a", "-e", "0,0,1080,2048,1080"],
     ]
+
+
+def test_run_system_load_check_flow_reuses_existing_session() -> None:
+    logger = mock.Mock()
+    raise_window_by_id = mock.Mock()
+    apply_existing = mock.Mock(return_value={"applied": False})
+    get_before_ids = mock.Mock()
+    open_monitor = mock.Mock()
+    apply_new = mock.Mock()
+
+    result = run_system_load_check_flow(
+        existing_rows=[{"id": "0x00c000aa"}],
+        get_before_konsole_ids=get_before_ids,
+        raise_window_by_id=raise_window_by_id,
+        apply_placement_for_existing=apply_existing,
+        open_monitor=open_monitor,
+        apply_placement_for_new=apply_new,
+        logger=logger,
+    )
+
+    assert result == "system load monitor reused (tmux=sysmon)"
+    raise_window_by_id.assert_called_once_with("0x00c000aa")
+    apply_existing.assert_called_once_with({"id": "0x00c000aa"})
+    get_before_ids.assert_not_called()
+    open_monitor.assert_not_called()
+    apply_new.assert_not_called()
+
+
+def test_run_system_load_check_flow_opens_new_session() -> None:
+    logger = mock.Mock()
+    get_before_ids = mock.Mock(return_value={"0x00a"})
+    open_monitor = mock.Mock(return_value="tmux opened")
+    apply_new = mock.Mock(return_value={"applied": True})
+
+    result = run_system_load_check_flow(
+        existing_rows=[],
+        get_before_konsole_ids=get_before_ids,
+        raise_window_by_id=mock.Mock(),
+        apply_placement_for_existing=mock.Mock(),
+        open_monitor=open_monitor,
+        apply_placement_for_new=apply_new,
+        logger=logger,
+    )
+
+    assert result == "system load monitor opened (tmux=sysmon)"
+    get_before_ids.assert_called_once_with()
+    open_monitor.assert_called_once_with()
+    apply_new.assert_called_once_with({"0x00a"})
+    logger.assert_any_call("system_load_check: tmux opened")
