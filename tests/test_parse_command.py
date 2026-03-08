@@ -84,6 +84,8 @@ def test_normalize_transcript_cleans_spacing_and_full_width_ascii() -> None:
         ("システム、おはよう", "good_morning"),
         ("システム おやすみ", "good_night"),
         ("システム バイオメトリクス認証", "system_biometric_auth"),
+        ("システム バイアメテルクス認証", "system_biometric_auth"),
+        ("システム バイアメテリクス認証", "system_biometric_auth"),
         ("システム ロックモード", "system_lock_mode"),
         ("システム、YouTubeを最小化して", "youtube_minimize"),
         ("システム、ウェブカメラが見たい", "god_mode_show"),

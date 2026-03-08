@@ -71,6 +71,8 @@ def _apply_command_aliases(text: str) -> str:
     aliased = aliased.replace("バイオミテリックス", "バイオメトリクス")
     aliased = aliased.replace("バヤメテリクス", "バイオメトリクス")
     aliased = aliased.replace("バイラメテリクス", "バイオメトリクス")
+    aliased = aliased.replace("バイアメテルクス", "バイオメトリクス")
+    aliased = aliased.replace("バイアメテリクス", "バイオメトリクス")
     aliased = aliased.replace("認証開始", "認証")
     aliased = re.sub(r"バイオメトリクス認$", "バイオメトリクス認証", aliased)
     aliased = re.sub(r"バイオメトリクス$", "バイオメトリクス認証", aliased)
