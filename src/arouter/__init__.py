@@ -122,6 +122,7 @@ from .live_cam_status import (
     run_live_cam_page_snapshot_query,
     run_live_cam_page_snapshot_via_websocket,
     run_live_cam_target_inspection,
+    run_live_cam_target_snapshot_runtime,
     select_live_cam_page_target,
     select_live_cam_page_url,
 )
@@ -435,6 +436,7 @@ __all__ = [
     "run_live_cam_page_snapshot_query",
     "run_live_cam_page_snapshot_via_websocket",
     "run_live_cam_target_inspection",
+    "run_live_cam_target_snapshot_runtime",
     "find_window_geometry_from_wmctrl_lines",
     "find_window_id_by_pid_and_title",
     "find_window_row_by_pid_and_title",

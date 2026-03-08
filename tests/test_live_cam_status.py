@@ -13,6 +13,7 @@ from arouter import (
     run_live_cam_page_snapshot_query,
     run_live_cam_page_snapshot_via_websocket,
     run_live_cam_target_inspection,
+    run_live_cam_target_snapshot_runtime,
     select_live_cam_page_target,
     select_live_cam_page_url,
 )
@@ -336,3 +337,17 @@ def test_run_live_cam_target_inspection_returns_none_without_websocket_url() -> 
     )
 
     assert out is None
+
+
+def test_run_live_cam_target_snapshot_runtime_chains_websocket_snapshot() -> None:
+    events: list[str] = []
+
+    out = run_live_cam_target_snapshot_runtime(
+        target={"webSocketDebuggerUrl": "ws://127.0.0.1:9993/devtools/page/1"},
+        create_client=lambda ws_url: {"ws_url": ws_url},
+        enable_client=lambda client: events.append(f"enable:{client['ws_url']}"),
+        query_snapshot=lambda client: {"watchText": client["ws_url"]},
+    )
+
+    assert out == {"watchText": "ws://127.0.0.1:9993/devtools/page/1"}
+    assert events == ["enable:ws://127.0.0.1:9993/devtools/page/1"]

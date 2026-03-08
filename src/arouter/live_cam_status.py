@@ -167,6 +167,24 @@ def run_live_cam_target_inspection(
     return snapshot if isinstance(snapshot, dict) else None
 
 
+def run_live_cam_target_snapshot_runtime(
+    *,
+    target: dict[str, Any],
+    create_client: Callable[[str], Any],
+    enable_client: Callable[[Any], None],
+    query_snapshot: Callable[[Any], dict[str, Any] | None],
+) -> dict[str, Any] | None:
+    return run_live_cam_target_inspection(
+        target=target,
+        inspect_websocket=lambda ws_url: run_live_cam_page_snapshot_via_websocket(
+            ws_url=ws_url,
+            create_client=create_client,
+            enable_client=enable_client,
+            query_snapshot=query_snapshot,
+        ),
+    )
+
+
 def run_live_cam_page_brief_flow(
     *,
     port: int,
