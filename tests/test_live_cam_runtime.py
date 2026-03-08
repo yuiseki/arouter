@@ -11,7 +11,9 @@ from arouter import (
     build_live_cam_reopen_result,
     build_live_cam_start_command,
     build_live_cam_started_result,
+    build_minimize_other_windows_response,
     collect_live_cam_pids,
+    collect_live_cam_skip_pids,
     collect_window_ids_for_pids,
     find_missing_live_cam_window_ports,
     parse_key_value_stdout,
@@ -113,6 +115,15 @@ def test_collect_live_cam_pids_returns_none_when_any_pid_missing() -> None:
     )
 
     assert out is None
+
+
+def test_collect_live_cam_skip_pids_sorts_unique_pid_values() -> None:
+    out = collect_live_cam_skip_pids(
+        [{"port": 9993}, {"port": 9994}, {"port": 9995}],
+        pid_lookup=lambda port: {9993: 101, 9994: 101, 9995: 103}.get(port),
+    )
+
+    assert out == [101, 103]
 
 
 def test_find_missing_live_cam_window_ports_uses_visible_window_ids() -> None:
@@ -258,4 +269,11 @@ def test_build_live_cam_minimize_response_serializes_minimized_windows() -> None
     assert result == (
         'live camera wall minimize {"minimized": 1, "windowIds": ["0x1"], '
         '"ports": [9993], "windows": [], "urls": []}'
+    )
+
+
+def test_build_minimize_other_windows_response_includes_skip_pid_list() -> None:
+    assert (
+        build_minimize_other_windows_response([101, 103])
+        == "minimize other windows via KWin: ok (skipped live_cam pids=[101, 103])"
     )

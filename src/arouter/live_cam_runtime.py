@@ -71,6 +71,15 @@ def collect_live_cam_pids(
     return pids_by_port
 
 
+def collect_live_cam_skip_pids(
+    instances: list[dict[str, Any]],
+    *,
+    pid_lookup: Callable[[int], int | None],
+) -> list[int]:
+    pids_by_port = collect_live_cam_pids(instances, pid_lookup=pid_lookup) or {}
+    return sorted({int(pid) for pid in pids_by_port.values()})
+
+
 def collect_window_ids_for_pids(
     pids: list[int],
     *,
@@ -256,3 +265,10 @@ def build_live_cam_minimize_response(
         **state,
     }
     return "live camera wall minimize " + json.dumps(payload, ensure_ascii=False)
+
+
+def build_minimize_other_windows_response(skip_pids: list[int]) -> str:
+    skip_info = (
+        f"skipped live_cam pids={skip_pids}" if skip_pids else "no live_cam pids"
+    )
+    return f"minimize other windows via KWin: ok ({skip_info})"
