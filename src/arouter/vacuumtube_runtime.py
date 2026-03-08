@@ -124,6 +124,22 @@ def run_vacuumtube_state_query(
     return data if isinstance(data, dict) else {}
 
 
+def run_vacuumtube_hide_overlay(
+    *,
+    evaluate: Callable[[str], Any],
+) -> None:
+    expr = r"""
+(() => {
+  const el = document.getElementById('vt-settings-overlay-root');
+  if (!el) return false;
+  el.style.setProperty('display', 'none', 'important');
+  el.style.setProperty('visibility', 'hidden', 'important');
+  return true;
+})()
+"""
+    evaluate(expr)
+
+
 def finalize_vacuumtube_context(context: dict[str, Any]) -> dict[str, Any]:
     finalized = dict(context)
     finalized["available"] = bool(finalized.get("windowFound")) or bool(finalized.get("hash"))

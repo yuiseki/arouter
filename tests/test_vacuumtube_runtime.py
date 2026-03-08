@@ -17,6 +17,7 @@ from arouter import (
     restart_vacuumtube_tmux_session,
     run_vacuumtube_fullscreen,
     run_vacuumtube_go_home,
+    run_vacuumtube_hide_overlay,
     run_vacuumtube_minimize,
     run_vacuumtube_open_from_home,
     run_vacuumtube_play_bgm,
@@ -100,6 +101,15 @@ def test_run_vacuumtube_state_query_returns_empty_dict_for_non_dict_payload() ->
     out = run_vacuumtube_state_query(evaluate=lambda _expr: ["not", "dict"])
 
     assert out == {}
+
+
+def test_run_vacuumtube_hide_overlay_invokes_evaluate_with_overlay_selector() -> None:
+    seen: list[str] = []
+
+    run_vacuumtube_hide_overlay(evaluate=lambda expr: seen.append(expr))
+
+    assert len(seen) == 1
+    assert "vt-settings-overlay-root" in seen[0]
 
 
 def test_finalize_vacuumtube_context_marks_available_from_window_or_hash() -> None:
