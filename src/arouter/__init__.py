@@ -114,6 +114,10 @@ from .window_actions import (
     build_window_minimize_command,
     build_window_move_resize_command,
 )
+from .window_presentation import (
+    is_window_fullscreenish,
+    top_right_region_from_screen_and_work_area,
+)
 from .window_rows import (
     chromium_window_ids_from_wmctrl_lines,
     detect_new_window_id,
@@ -192,6 +196,7 @@ __all__ = [
     "handle_authorization_denied",
     "find_konsole_rows_for_tmux_client_pids",
     "is_vacuumtube_quadrant_mode_for_load_check",
+    "is_window_fullscreenish",
     "load_password_candidates",
     "load_check_bottom_left_geom",
     "maybe_auto_lock",
@@ -237,6 +242,7 @@ __all__ = [
     "window_title_from_wmctrl_lines",
     "web_watch_retry_video_id",
     "trim_notify_text",
+    "top_right_region_from_screen_and_work_area",
     "verify_unlock_password",
     "write_signal_file",
 ]
