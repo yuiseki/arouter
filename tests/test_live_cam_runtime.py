@@ -21,6 +21,7 @@ from arouter import (
     resolve_live_cam_action_state,
     resolve_live_cam_layout_bootstrap,
     run_live_cam_close_windows,
+    run_live_cam_layout_flow,
     run_live_cam_parallel,
     run_live_cam_raise_windows,
     run_live_cam_window_action_flow,
@@ -412,4 +413,46 @@ def test_build_minimize_other_windows_response_includes_skip_pid_list() -> None:
     assert (
         build_minimize_other_windows_response([101, 103])
         == "minimize other windows via KWin: ok (skipped live_cam pids=[101, 103])"
+    )
+
+
+def test_run_live_cam_layout_flow_applies_layout_raises_windows_and_builds_response() -> None:
+    events: list[str] = []
+
+    result = run_live_cam_layout_flow(
+        mode="full",
+        screen_w=4096,
+        screen_h=2160,
+        work_area=(0, 0, 4096, 2116),
+        pids_by_port={9993: 101, 9994: 102},
+        fast_path=True,
+        started=[],
+        opened=[{"label": "shibuya", "port": 9993}],
+        open_errors=[],
+        resolve_layout_plan=lambda mode, screen_w, screen_h, work_area, pids_by_port: {
+            "work_area": {"x": 0, "y": 0, "w": 4096, "h": 2116},
+            "targets": [{"pid": 101, "x": 1, "y": 2, "w": 3, "h": 4}],
+            "plugin_name": "plugin-name",
+            "keep_above": True,
+        },
+        apply_layout=lambda targets, plugin_name, keep_above, no_border: events.append(
+            f"apply:{plugin_name}:{keep_above}:{no_border}:{targets[0]['pid']}"
+        ),
+        raise_windows_for_pids=lambda pids: events.append(f"raise:{pids}"),
+        collect_runtime_state=lambda pids_by_port: {
+            "windows": [{"pid": pids_by_port[9993]}],
+            "urls": [],
+        },
+    )
+
+    assert events == [
+        "apply:plugin-name:True:True:101",
+        "raise:[101, 102]",
+    ]
+    assert result == (
+        'live camera wall {"mode": "full", "fastPath": true, '
+        '"screen": {"w": 4096, "h": 2160}, '
+        '"workArea": {"x": 0, "y": 0, "w": 4096, "h": 2116}, '
+        '"started": [], "opened": [{"label": "shibuya", "port": 9993}], '
+        '"windows": [{"pid": 101}], "urls": []}'
     )

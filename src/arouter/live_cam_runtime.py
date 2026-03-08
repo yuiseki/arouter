@@ -395,3 +395,51 @@ def build_minimize_other_windows_response(skip_pids: list[int]) -> str:
         f"skipped live_cam pids={skip_pids}" if skip_pids else "no live_cam pids"
     )
     return f"minimize other windows via KWin: ok ({skip_info})"
+
+
+def run_live_cam_layout_flow(
+    *,
+    mode: str,
+    screen_w: int,
+    screen_h: int,
+    work_area: tuple[int, int, int, int] | None,
+    pids_by_port: dict[int, int],
+    fast_path: bool,
+    started: list[dict[str, Any]],
+    opened: list[dict[str, Any]],
+    open_errors: list[str],
+    resolve_layout_plan: Callable[
+        [str, int, int, tuple[int, int, int, int] | None, dict[int, int]],
+        dict[str, Any],
+    ],
+    apply_layout: Callable[[list[dict[str, Any]], str, bool, bool], None],
+    raise_windows_for_pids: Callable[[list[int]], None],
+    collect_runtime_state: Callable[[dict[int, int]], dict[str, Any]],
+) -> str:
+    plan = resolve_layout_plan(mode, screen_w, screen_h, work_area, pids_by_port)
+    work = plan["work_area"]
+    work_area_tuple = (
+        int(work["x"]),
+        int(work["y"]),
+        int(work["w"]),
+        int(work["h"]),
+    )
+    targets = list(plan["targets"])
+    plugin_name = str(plan["plugin_name"])
+    keep_above = bool(plan["keep_above"])
+
+    apply_layout(targets, plugin_name, keep_above, True)
+    if keep_above:
+        raise_windows_for_pids(list(pids_by_port.values()))
+    state = collect_runtime_state(pids_by_port)
+    return build_live_cam_layout_response(
+        mode=mode,
+        fast_path=fast_path,
+        screen_w=screen_w,
+        screen_h=screen_h,
+        work_area=work_area_tuple,
+        started=started,
+        opened=opened,
+        state=state,
+        open_errors=open_errors,
+    )
