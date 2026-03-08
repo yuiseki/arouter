@@ -263,6 +263,7 @@ from .window_query_runtime import (
     run_window_id_query_by_pid_title,
     run_window_row_by_listen_port,
     run_window_rows_query_for_pids,
+    run_window_title_query,
     run_wmctrl_list_query,
     run_work_area_query,
 )
@@ -361,6 +362,7 @@ __all__ = [
     "run_vacuumtube_window_id_query",
     "run_window_geometry_query",
     "run_window_id_query_by_pid_title",
+    "run_window_title_query",
     "run_window_rows_query_for_pids",
     "run_window_row_by_listen_port",
     "run_work_area_query",

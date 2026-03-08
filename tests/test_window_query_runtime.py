@@ -10,6 +10,7 @@ from arouter import (
     run_window_id_query_by_pid_title,
     run_window_row_by_listen_port,
     run_window_rows_query_for_pids,
+    run_window_title_query,
     run_wmctrl_list_query,
     run_work_area_query,
 )
@@ -203,6 +204,24 @@ def test_run_window_geometry_query_returns_geometry() -> None:
     assert calls == [
         "rows",
         (["0xabc 0 10 20 30 40 host VacuumTube"], "0xabc"),
+    ]
+
+
+def test_run_window_title_query_returns_title() -> None:
+    calls: list[object] = []
+
+    title = run_window_title_query(
+        win_id="0x050000b5",
+        row_provider=lambda: calls.append("rows")
+        or ["0x050000b5 0 host 東京アメッシュ - Chromium"],
+        title_lookup=lambda rows, win_id: calls.append((rows, win_id))
+        or "東京アメッシュ - Chromium",
+    )
+
+    assert title == "東京アメッシュ - Chromium"
+    assert calls == [
+        "rows",
+        (["0x050000b5 0 host 東京アメッシュ - Chromium"], "0x050000b5"),
     ]
 
 

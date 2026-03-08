@@ -123,6 +123,15 @@ def run_window_geometry_query(
     return find_geometry(row_provider(), str(win_id).lower())
 
 
+def run_window_title_query(
+    *,
+    win_id: str,
+    row_provider: Callable[[], list[str]],
+    title_lookup: Callable[[list[str], str], str],
+) -> str:
+    return title_lookup(row_provider(), str(win_id))
+
+
 def build_xprop_wm_state_command(win_id: str) -> list[str]:
     return ["xprop", "-id", win_id, "_NET_WM_STATE"]
 
