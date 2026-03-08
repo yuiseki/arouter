@@ -262,6 +262,16 @@ def run_vacuumtube_hard_reload_home(
     evaluate("location.href = 'https://www.youtube.com/tv#/'")
 
 
+def run_vacuumtube_click_tile_center(
+    *,
+    tile: dict[str, Any],
+    mouse_click: Callable[[float, float], None],
+) -> None:
+    x = float(tile.get("cx") or 0)
+    y = float(tile.get("cy") or 0)
+    mouse_click(x, y)
+
+
 def finalize_vacuumtube_context(context: dict[str, Any]) -> dict[str, Any]:
     finalized = dict(context)
     finalized["available"] = bool(finalized.get("windowFound")) or bool(finalized.get("hash"))

@@ -15,6 +15,7 @@ from arouter import (
     merge_vacuumtube_window_snapshot,
     recover_vacuumtube_unresponsive_state,
     restart_vacuumtube_tmux_session,
+    run_vacuumtube_click_tile_center,
     run_vacuumtube_ensure_home,
     run_vacuumtube_fullscreen,
     run_vacuumtube_go_home,
@@ -258,6 +259,17 @@ def test_run_vacuumtube_hard_reload_home_invokes_full_home_url() -> None:
     run_vacuumtube_hard_reload_home(evaluate=seen.append)
 
     assert seen == ["location.href = 'https://www.youtube.com/tv#/'"]
+
+
+def test_run_vacuumtube_click_tile_center_passes_float_coordinates() -> None:
+    seen: list[tuple[float, float]] = []
+
+    run_vacuumtube_click_tile_center(
+        tile={"cx": "123.4", "cy": 456},
+        mouse_click=lambda x, y: seen.append((x, y)),
+    )
+
+    assert seen == [(123.4, 456.0)]
 
 
 def test_finalize_vacuumtube_context_marks_available_from_window_or_hash() -> None:
