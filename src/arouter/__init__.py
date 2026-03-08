@@ -1,4 +1,5 @@
 from .authorization import authorize_command
+from .biometric_bootstrap import ensure_biometric_runtime_attrs
 from .biometric_password import (
     encrypt_password_file,
     load_password_candidates,
@@ -53,6 +54,7 @@ __all__ = [
     "TextCommandRouter",
     "VoiceCommand",
     "authorize_command",
+    "ensure_biometric_runtime_attrs",
     "build_overlay_ipc_line",
     "command_has_system_prefix",
     "consume_signal_file",
