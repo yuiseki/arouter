@@ -21,6 +21,7 @@ Current migrated slice:
 - ack / post-action voice policy helpers
 - authorized command execution flow helper
 - biometric/speaker/password command authorization helper
+- biometric signal-file helpers for manual lock/unlock edge triggers
 - segment WAV storage and auth-denied handling helpers
 - segment error reporting helper
 - transcript resolution helper for mic-loop command gating
@@ -41,6 +42,7 @@ Current migrated slice:
 - ack timing and post-action voice-text policy
 - authorized-command execution flow for the mic loop
 - command authorization policy for locked/unlocked execution
+- signal-file consume/write helpers for biometric lock runtime glue
 - successful/auth-denied WAV retention handling
 - subprocess/runtime error reporting
 - transcript parse/contextualize/suppress/authorize resolution

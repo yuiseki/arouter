@@ -39,6 +39,7 @@ The first migrated slice is limited to:
 - ack timing and post-action voice-text policy
 - authorized-command execution flow
 - biometric/speaker/password command authorization
+- biometric signal-file consume/write helpers
 - successful/auth-denied WAV storage handling
 - segment error reporting
 - transcript parse/contextualize/suppress/authorize resolution

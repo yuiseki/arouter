@@ -1,4 +1,5 @@
 from .authorization import authorize_command
+from .biometric_signal import consume_signal_file, write_signal_file
 from .errors import report_segment_error
 from .execution import command_has_system_prefix, execute_command, execute_news_command
 from .flow import run_authorized_command_flow
@@ -28,6 +29,7 @@ __all__ = [
     "authorize_command",
     "build_overlay_ipc_line",
     "command_has_system_prefix",
+    "consume_signal_file",
     "compose_overlay_notify_text",
     "contextualize_command_with_vacuumtube_state",
     "detect_non_command_reaction",
@@ -50,4 +52,5 @@ __all__ = [
     "store_authfail_wav",
     "store_authorized_wav",
     "trim_notify_text",
+    "write_signal_file",
 ]
