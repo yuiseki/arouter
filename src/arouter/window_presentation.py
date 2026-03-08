@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import Any
 
 
@@ -27,6 +28,60 @@ def resolve_window_restore_plan(
     if is_fullscreenish:
         return {"window_id": window_id, "action": "skip_top_right"}
     return {"window_id": window_id, "action": "top_right"}
+
+
+def parse_desktop_size_from_wmctrl_output(text: str) -> tuple[int, int] | None:
+    lines = str(text or "").splitlines()
+    if not lines:
+        return None
+    preferred = [line for line in lines if "*" in line]
+    for line in preferred + lines:
+        match = re.search(r"DG:\s*(\d+)x(\d+)", line)
+        if not match:
+            continue
+        try:
+            return (int(match.group(1)), int(match.group(2)))
+        except Exception:
+            return None
+    return None
+
+
+def parse_screen_size_from_xrandr_output(text: str) -> tuple[int, int] | None:
+    lines = str(text or "").splitlines()
+    connected_lines = [line for line in lines if " connected primary " in line]
+    if not connected_lines:
+        connected_lines = [line for line in lines if " connected " in line]
+    for line in connected_lines:
+        match = re.search(r"\b(\d+)x(\d+)\+\d+\+\d+\b", line)
+        if not match:
+            continue
+        try:
+            width = int(match.group(1))
+            height = int(match.group(2))
+        except Exception:
+            continue
+        if width > 0 and height > 0:
+            return (width, height)
+    return None
+
+
+def parse_work_area_from_wmctrl_output(text: str) -> tuple[int, int, int, int] | None:
+    for line in str(text or "").splitlines():
+        if "*" not in line:
+            continue
+        match = re.search(r"WA:\s*(\d+),(\d+)\s+(\d+)x(\d+)", line)
+        if not match:
+            continue
+        try:
+            x = int(match.group(1))
+            y = int(match.group(2))
+            width = int(match.group(3))
+            height = int(match.group(4))
+        except Exception:
+            continue
+        if width > 0 and height > 0:
+            return (x, y, width, height)
+    return None
 
 
 def resolve_expected_top_right_geometry(

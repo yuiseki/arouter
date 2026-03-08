@@ -5,6 +5,9 @@ import pytest
 from arouter import (
     build_window_presentation_snapshot,
     is_window_fullscreenish,
+    parse_desktop_size_from_wmctrl_output,
+    parse_screen_size_from_xrandr_output,
+    parse_work_area_from_wmctrl_output,
     resolve_expected_top_right_geometry,
     resolve_window_restore_plan,
     top_right_region_from_screen_and_work_area,
@@ -56,6 +59,26 @@ def test_resolve_expected_top_right_geometry_falls_back_when_screen_missing() ->
         work_area=None,
         fallback_geometry={"x": 1, "y": 2, "w": 3, "h": 4},
     ) == {"x": 1, "y": 2, "w": 3, "h": 4}
+
+
+def test_parse_desktop_size_from_wmctrl_output_prefers_current_desktop() -> None:
+    assert parse_desktop_size_from_wmctrl_output(
+        "0  - DG: 1280x720 VP: 0,0 WA: 0,0 1280x680\n"
+        "1  * DG: 1920x1080 VP: 0,0 WA: 0,0 1920x1040\n"
+    ) == (1920, 1080)
+
+
+def test_parse_screen_size_from_xrandr_output_prefers_primary_then_connected() -> None:
+    assert parse_screen_size_from_xrandr_output(
+        "HDMI-0 connected 1280x720+0+0\n"
+        "DP-0 connected primary 4096x2160+0+0\n"
+    ) == (4096, 2160)
+
+
+def test_parse_work_area_from_wmctrl_output_returns_current_desktop_work_area() -> None:
+    assert parse_work_area_from_wmctrl_output(
+        "0  * DG: 4096x2160 VP: 0,0 WA: 0,0 4096x2116\n"
+    ) == (0, 0, 4096, 2116)
 
 
 def test_top_right_region_intersects_work_area() -> None:
