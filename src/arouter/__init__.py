@@ -51,6 +51,7 @@ from .execution import command_has_system_prefix, execute_command, execute_news_
 from .flow import run_authorized_command_flow
 from .kwin_runtime import (
     run_kwin_temp_script,
+    run_live_cam_layout_runtime,
     run_live_cam_layout_script,
     run_live_cam_minimize_script,
     run_minimize_other_windows_script,
@@ -325,6 +326,7 @@ __all__ = [
     "build_minimize_other_windows_script",
     "build_window_frame_geometry_script",
     "run_kwin_temp_script",
+    "run_live_cam_layout_runtime",
     "run_live_cam_layout_script",
     "run_live_cam_minimize_script",
     "run_minimize_other_windows_script",

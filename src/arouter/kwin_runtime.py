@@ -59,6 +59,36 @@ def run_live_cam_layout_script(
     )
 
 
+def run_live_cam_layout_runtime(
+    targets: list[dict[str, object]],
+    *,
+    plugin_name: str,
+    keep_above: bool,
+    no_border: bool,
+    build_script: Callable[..., str],
+    write_temp_script: Callable[[str, str], str],
+    command_plan_builder: Callable[[str, str], KWinScriptCommandPlan],
+    run_command: Callable[[list[str]], None],
+    sleep: Callable[[float], None],
+    cleanup: Callable[[str], None],
+) -> None:
+    run_kwin_temp_script(
+        script_text=build_script(
+            targets,
+            keep_above=keep_above,
+            no_border=no_border,
+        ),
+        plugin_name=plugin_name,
+        file_prefix="codex-kwin-livecam-",
+        write_temp_script=write_temp_script,
+        command_plan_builder=command_plan_builder,
+        run_command=run_command,
+        sleep=sleep,
+        sleep_sec=0.8,
+        cleanup=cleanup,
+    )
+
+
 def run_window_frame_geometry_script(
     *,
     pid: int,
