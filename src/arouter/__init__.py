@@ -122,6 +122,7 @@ from .window_actions import (
 )
 from .window_presentation import (
     build_window_presentation_snapshot,
+    geometry_close,
     is_window_fullscreenish,
     parse_desktop_size_from_wmctrl_output,
     parse_screen_size_from_xrandr_output,
@@ -206,6 +207,7 @@ __all__ = [
     "find_window_geometry_from_wmctrl_lines",
     "find_window_id_by_pid_and_title",
     "find_window_id_by_title",
+    "geometry_close",
     "good_night_voice_text",
     "handle_authorization_denied",
     "find_konsole_rows_for_tmux_client_pids",

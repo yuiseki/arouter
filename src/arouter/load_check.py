@@ -4,6 +4,8 @@ import json
 from collections.abc import Callable
 from typing import Any, Protocol
 
+from .window_presentation import geometry_close as _geometry_close
+
 
 class VacuumTubeLoadCheckRuntime(Protocol):
     cdp_port: int | None
@@ -15,17 +17,6 @@ class VacuumTubeLoadCheckRuntime(Protocol):
     def get_window_geometry(self, win_id: str) -> dict[str, Any] | None: ...
 
     def _current_window_is_fullscreenish(self, win_id: str) -> bool: ...
-
-
-def _geometry_close(actual: dict[str, Any], expected: dict[str, Any], *, tol: int = 24) -> bool:
-    for key in ("x", "y", "w", "h"):
-        try:
-            if abs(int(actual.get(key, -999999)) - int(expected.get(key, -999999))) > tol:
-                return False
-        except Exception:
-            return False
-    return True
-
 
 def load_check_bottom_left_geom(*, screen_w: int, screen_h: int) -> dict[str, int]:
     return {

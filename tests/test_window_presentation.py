@@ -4,6 +4,7 @@ import pytest
 
 from arouter import (
     build_window_presentation_snapshot,
+    geometry_close,
     is_window_fullscreenish,
     parse_desktop_size_from_wmctrl_output,
     parse_screen_size_from_xrandr_output,
@@ -12,6 +13,22 @@ from arouter import (
     resolve_window_restore_plan,
     top_right_region_from_screen_and_work_area,
 )
+
+
+def test_geometry_close_within_tolerance() -> None:
+    assert geometry_close(
+        {"x": 2055, "y": 30, "w": 2038, "h": 1048},
+        {"x": 2048, "y": 28, "w": 2048, "h": 1052},
+        tol=12,
+    )
+
+
+def test_geometry_close_outside_tolerance() -> None:
+    assert not geometry_close(
+        {"x": 1448, "y": 720, "w": 1199, "h": 677},
+        {"x": 2048, "y": 28, "w": 2048, "h": 1052},
+        tol=24,
+    )
 
 
 def test_build_window_presentation_snapshot_sets_fields() -> None:

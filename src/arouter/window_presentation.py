@@ -4,6 +4,16 @@ import re
 from typing import Any
 
 
+def geometry_close(actual: dict[str, Any], expected: dict[str, Any], *, tol: int = 24) -> bool:
+    try:
+        return all(
+            abs(int(actual[key]) - int(expected[key])) <= tol
+            for key in ("x", "y", "w", "h")
+        )
+    except Exception:
+        return False
+
+
 def build_window_presentation_snapshot(
     *,
     window_id: str | None,
