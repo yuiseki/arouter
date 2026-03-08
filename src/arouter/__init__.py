@@ -34,6 +34,7 @@ from .biometric_signal import (
     write_signal_file,
 )
 from .cdp_targets import require_cdp_target_list
+from .display_env import build_x11_env, resolve_x11_display
 from .errors import report_segment_error
 from .execution import command_has_system_prefix, execute_command, execute_news_command
 from .flow import run_authorized_command_flow
@@ -201,6 +202,7 @@ __all__ = [
     "encrypt_biometric_password_payload",
     "ensure_biometric_runtime_attrs",
     "build_overlay_ipc_line",
+    "build_x11_env",
     "build_kwin_load_script_command",
     "build_kwin_script_command_plan",
     "build_kwin_start_script_command",
@@ -250,6 +252,7 @@ __all__ = [
     "default_locked_denied_text",
     "encrypt_password_file",
     "resolve_biometric_arg_path",
+    "resolve_x11_display",
     "contextualize_command_with_vacuumtube_state",
     "require_cdp_target_list",
     "detect_non_command_reaction",
