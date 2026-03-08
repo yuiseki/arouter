@@ -11,6 +11,7 @@ from arouter import (
     looks_like_weather_chromium_title,
     select_weather_candidate_window_ids,
     wait_for_window_id,
+    window_rows_for_pids_from_wmctrl_lines,
     window_title_from_wmctrl_lines,
 )
 
@@ -187,6 +188,29 @@ def test_find_window_geometry_from_wmctrl_lines_reads_target_geometry() -> None:
     )
 
     assert geom == {"x": 10, "y": 20, "w": 30, "h": 40}
+
+
+def test_window_rows_for_pids_from_wmctrl_lines_filters_target_pids() -> None:
+    rows = window_rows_for_pids_from_wmctrl_lines(
+        [
+            "0x001 0 101 10 20 30 40 host VacuumTube Main",
+            "0x002 0 202 11 21 31 41 host VacuumTube Side",
+            "broken row",
+        ],
+        pids=[202],
+    )
+
+    assert rows == [
+        {
+            "id": "0x002",
+            "pid": 202,
+            "x": 11,
+            "y": 21,
+            "w": 31,
+            "h": 41,
+            "title": "VacuumTube Side",
+        }
+    ]
 
 
 def test_wait_for_window_id_polls_until_window_appears() -> None:

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import Any
 
 
 def looks_like_weather_chromium_title(title: str) -> bool:
@@ -121,6 +122,39 @@ def find_window_geometry_from_wmctrl_lines(
         except Exception:
             return None
     return None
+
+
+def window_rows_for_pids_from_wmctrl_lines(
+    lines: list[str],
+    *,
+    pids: list[int],
+) -> list[dict[str, Any]]:
+    wanted = {int(pid) for pid in pids}
+    rows: list[dict[str, Any]] = []
+    for line in lines:
+        parts = line.split(None, 8)
+        if len(parts) < 8:
+            continue
+        try:
+            pid = int(parts[2])
+        except Exception:
+            continue
+        if pid not in wanted:
+            continue
+        try:
+            row = {
+                "id": parts[0],
+                "pid": pid,
+                "x": int(parts[3]),
+                "y": int(parts[4]),
+                "w": int(parts[5]),
+                "h": int(parts[6]),
+                "title": parts[8] if len(parts) >= 9 else "",
+            }
+        except Exception:
+            continue
+        rows.append(row)
+    return rows
 
 
 def wait_for_window_id(

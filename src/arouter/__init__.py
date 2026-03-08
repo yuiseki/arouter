@@ -88,6 +88,7 @@ from .window_rows import (
     looks_like_weather_chromium_title,
     select_weather_candidate_window_ids,
     wait_for_window_id,
+    window_rows_for_pids_from_wmctrl_lines,
     window_title_from_wmctrl_lines,
 )
 
@@ -168,6 +169,7 @@ __all__ = [
     "seed_signal_seen_mtime",
     "wait_for_window_id",
     "wait_for_new_window_row",
+    "window_rows_for_pids_from_wmctrl_lines",
     "window_title_from_wmctrl_lines",
     "trim_notify_text",
     "verify_unlock_password",
