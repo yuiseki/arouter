@@ -3,6 +3,48 @@ from __future__ import annotations
 from collections.abc import Callable
 
 
+def looks_like_weather_chromium_title(title: str) -> bool:
+    normalized = (title or "").lower()
+    return "chromium" in normalized and any(
+        keyword in normalized
+        for keyword in ("アメッシュ", "yahoo!天気", "天気・災害", "tenki.jp")
+    )
+
+
+def select_weather_candidate_window_ids(
+    lines: list[str],
+    last_weather_window_ids: list[str],
+) -> list[str]:
+    rows: list[dict[str, str]] = []
+    by_id: dict[str, dict[str, str]] = {}
+    for line in lines:
+        parts = line.split(None, 3)
+        if len(parts) < 4:
+            continue
+        row = {"id": parts[0].lower(), "title": parts[3]}
+        rows.append(row)
+        by_id[row["id"]] = row
+
+    candidate_ids: list[str] = []
+    seen: set[str] = set()
+
+    for wid in last_weather_window_ids:
+        key = (wid or "").lower()
+        if key and key in by_id and key not in seen:
+            candidate_ids.append(key)
+            seen.add(key)
+
+    for row in rows:
+        key = str(row.get("id") or "").lower()
+        if not key or key in seen:
+            continue
+        if looks_like_weather_chromium_title(str(row.get("title") or "")):
+            candidate_ids.append(key)
+            seen.add(key)
+
+    return candidate_ids
+
+
 def chromium_window_ids_from_wmctrl_lines(lines: list[str]) -> set[str]:
     ids: set[str] = set()
     for line in lines:

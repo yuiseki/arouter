@@ -8,6 +8,8 @@ from arouter import (
     find_window_geometry_from_wmctrl_lines,
     find_window_id_by_pid_and_title,
     find_window_id_by_title,
+    looks_like_weather_chromium_title,
+    select_weather_candidate_window_ids,
     wait_for_window_id,
     window_title_from_wmctrl_lines,
 )
@@ -45,6 +47,37 @@ def test_chromium_window_ids_from_wmctrl_lines_filters_chromium_titles() -> None
     )
 
     assert ids == {"0x050000b5"}
+
+
+def test_looks_like_weather_chromium_title_requires_weather_keyword_and_chromium() -> None:
+    assert looks_like_weather_chromium_title("東京アメッシュ - Chromium") is True
+    assert looks_like_weather_chromium_title("東京アメッシュ - VacuumTube") is False
+
+
+def test_select_weather_candidate_window_ids_prefers_known_ids_then_title_fallback() -> None:
+    candidate_ids = select_weather_candidate_window_ids(
+        [
+            "0x050000b5  0 yuisekin-z 東京アメッシュ - Chromium",
+            "0x00a00004  0 yuisekin-z VacuumTube",
+            "0x00b00005  0 yuisekin-z Yahoo!天気・災害 - Chromium",
+        ],
+        last_weather_window_ids=["0x00b00005", "0x0badbeef", "0x00b00005"],
+    )
+
+    assert candidate_ids == ["0x00b00005", "0x050000b5"]
+
+
+def test_select_weather_candidate_window_ids_falls_back_to_weather_titles_when_history_empty(
+) -> None:
+    candidate_ids = select_weather_candidate_window_ids(
+        [
+            "0x050000b5  0 yuisekin-z 東京アメッシュ - Chromium",
+            "0x00a00004  0 yuisekin-z VacuumTube",
+        ],
+        last_weather_window_ids=[],
+    )
+
+    assert candidate_ids == ["0x050000b5"]
 
 
 def test_detect_new_window_id_returns_new_id_when_it_appears() -> None:
