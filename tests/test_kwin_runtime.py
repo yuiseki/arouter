@@ -4,7 +4,9 @@ from arouter import (
     run_kwin_temp_script,
     run_live_cam_layout_runtime,
     run_live_cam_layout_script,
+    run_live_cam_minimize_runtime,
     run_live_cam_minimize_script,
+    run_minimize_other_windows_runtime,
     run_minimize_other_windows_script,
     run_window_frame_geometry_runtime,
     run_window_frame_geometry_script,
@@ -219,6 +221,36 @@ def test_run_live_cam_minimize_script_builds_script_and_uses_kwin_runner() -> No
     ]
 
 
+def test_run_live_cam_minimize_runtime_builds_script_and_runs_kwin_temp_script() -> None:
+    events: list[object] = []
+
+    run_live_cam_minimize_runtime(
+        pids=[123, 456],
+        plugin_name="plugin-name",
+        build_script=lambda pids: (events.append(("build", pids)) or "SCRIPT"),
+        write_temp_script=lambda text, prefix: (
+            events.append(("write", text, prefix)) or "/tmp/demo.js"
+        ),
+        command_plan_builder=lambda path, plugin: {
+            "run": [["qdbus", "load", path, plugin], ["qdbus", "start"]],
+            "unload": ["qdbus", "unload", plugin],
+        },
+        run_command=lambda command: events.append(("run", command)),
+        sleep=lambda seconds: events.append(("sleep", seconds)),
+        cleanup=lambda path: events.append(("cleanup", path)),
+    )
+
+    assert events == [
+        ("build", [123, 456]),
+        ("write", "SCRIPT", "codex-kwin-livecam-minimize-"),
+        ("run", ["qdbus", "load", "/tmp/demo.js", "plugin-name"]),
+        ("run", ["qdbus", "start"]),
+        ("sleep", 0.4),
+        ("run", ["qdbus", "unload", "plugin-name"]),
+        ("cleanup", "/tmp/demo.js"),
+    ]
+
+
 def test_run_minimize_other_windows_script_builds_script_and_uses_kwin_runner() -> None:
     events: list[object] = []
 
@@ -237,4 +269,34 @@ def test_run_minimize_other_windows_script_builds_script_and_uses_kwin_runner() 
             "file_prefix": "codex-kwin-minimize-",
             "sleep_sec": 0.3,
         },
+    ]
+
+
+def test_run_minimize_other_windows_runtime_builds_script_and_runs_kwin_temp_script() -> None:
+    events: list[object] = []
+
+    run_minimize_other_windows_runtime(
+        skip_pids=[101, 202],
+        plugin_name="plugin-name",
+        build_script=lambda skip_pids: (events.append(("build", skip_pids)) or "SCRIPT"),
+        write_temp_script=lambda text, prefix: (
+            events.append(("write", text, prefix)) or "/tmp/demo.js"
+        ),
+        command_plan_builder=lambda path, plugin: {
+            "run": [["qdbus", "load", path, plugin], ["qdbus", "start"]],
+            "unload": ["qdbus", "unload", plugin],
+        },
+        run_command=lambda command: events.append(("run", command)),
+        sleep=lambda seconds: events.append(("sleep", seconds)),
+        cleanup=lambda path: events.append(("cleanup", path)),
+    )
+
+    assert events == [
+        ("build", [101, 202]),
+        ("write", "SCRIPT", "codex-kwin-minimize-"),
+        ("run", ["qdbus", "load", "/tmp/demo.js", "plugin-name"]),
+        ("run", ["qdbus", "start"]),
+        ("sleep", 0.3),
+        ("run", ["qdbus", "unload", "plugin-name"]),
+        ("cleanup", "/tmp/demo.js"),
     ]

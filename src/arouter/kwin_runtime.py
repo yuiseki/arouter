@@ -155,6 +155,30 @@ def run_live_cam_minimize_script(
     )
 
 
+def run_live_cam_minimize_runtime(
+    *,
+    pids: list[int],
+    plugin_name: str,
+    build_script: Callable[[list[int]], str],
+    write_temp_script: Callable[[str, str], str],
+    command_plan_builder: Callable[[str, str], KWinScriptCommandPlan],
+    run_command: Callable[[list[str]], None],
+    sleep: Callable[[float], None],
+    cleanup: Callable[[str], None],
+) -> None:
+    run_kwin_temp_script(
+        script_text=build_script(pids),
+        plugin_name=plugin_name,
+        file_prefix="codex-kwin-livecam-minimize-",
+        write_temp_script=write_temp_script,
+        command_plan_builder=command_plan_builder,
+        run_command=run_command,
+        sleep=sleep,
+        sleep_sec=0.4,
+        cleanup=cleanup,
+    )
+
+
 def run_minimize_other_windows_script(
     *,
     skip_pids: list[int],
@@ -167,4 +191,28 @@ def run_minimize_other_windows_script(
         plugin_name=plugin_name,
         file_prefix="codex-kwin-minimize-",
         sleep_sec=0.3,
+    )
+
+
+def run_minimize_other_windows_runtime(
+    *,
+    skip_pids: list[int],
+    plugin_name: str,
+    build_script: Callable[[list[int]], str],
+    write_temp_script: Callable[[str, str], str],
+    command_plan_builder: Callable[[str, str], KWinScriptCommandPlan],
+    run_command: Callable[[list[str]], None],
+    sleep: Callable[[float], None],
+    cleanup: Callable[[str], None],
+) -> None:
+    run_kwin_temp_script(
+        script_text=build_script(skip_pids),
+        plugin_name=plugin_name,
+        file_prefix="codex-kwin-minimize-",
+        write_temp_script=write_temp_script,
+        command_plan_builder=command_plan_builder,
+        run_command=run_command,
+        sleep=sleep,
+        sleep_sec=0.3,
+        cleanup=cleanup,
     )
