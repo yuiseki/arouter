@@ -66,7 +66,11 @@ from .router import (
 )
 from .segment import process_pcm_segment, process_transcribed_segment
 from .storage import handle_authorization_denied, store_authfail_wav, store_authorized_wav
-from .window_rows import chromium_window_ids_from_wmctrl_lines, window_title_from_wmctrl_lines
+from .window_rows import (
+    chromium_window_ids_from_wmctrl_lines,
+    detect_new_window_id,
+    window_title_from_wmctrl_lines,
+)
 
 __all__ = [
     "CommandExecutionPayload",
@@ -80,6 +84,7 @@ __all__ = [
     "command_has_system_prefix",
     "chromium_window_ids_from_wmctrl_lines",
     "consume_signal_file",
+    "detect_new_window_id",
     "compose_overlay_notify_text",
     "current_signal_mtime",
     "default_lock_screen_text",
