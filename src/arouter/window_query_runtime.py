@@ -62,6 +62,20 @@ def run_window_row_by_listen_port(
     )
 
 
+def run_window_id_query_by_pid_title(
+    *,
+    pid: int,
+    row_provider: Callable[[], list[str]],
+    find_window_id: Callable[..., str | None],
+    title_hint: str,
+) -> str | None:
+    return find_window_id(
+        row_provider(),
+        pid=int(pid),
+        title_hint=title_hint,
+    )
+
+
 def build_xprop_wm_state_command(win_id: str) -> list[str]:
     return ["xprop", "-id", win_id, "_NET_WM_STATE"]
 

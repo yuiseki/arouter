@@ -5,6 +5,7 @@ from arouter import (
     read_window_fullscreen_state,
     run_desktop_size_query,
     run_screen_size_query,
+    run_window_id_query_by_pid_title,
     run_window_row_by_listen_port,
     run_wmctrl_list_query,
     run_work_area_query,
@@ -98,6 +99,25 @@ def test_run_window_row_by_listen_port_returns_none_without_listen_pid() -> None
     )
 
     assert row is None
+
+
+def test_run_window_id_query_by_pid_title_returns_matching_window_id() -> None:
+    calls: list[object] = []
+
+    win_id = run_window_id_query_by_pid_title(
+        pid=456,
+        row_provider=lambda: calls.append("rows")
+        or ["0x002 0 456 host VacuumTube"],
+        find_window_id=lambda rows, *, pid, title_hint: calls.append((rows, pid, title_hint))
+        or "0x002",
+        title_hint="VacuumTube",
+    )
+
+    assert win_id == "0x002"
+    assert calls == [
+        "rows",
+        (["0x002 0 456 host VacuumTube"], 456, "VacuumTube"),
+    ]
 
 
 def test_build_xprop_wm_state_command_matches_existing_contract() -> None:
