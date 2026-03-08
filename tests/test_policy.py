@@ -9,6 +9,7 @@ from arouter import (
     post_action_voice_text,
     should_ack_before_action,
     should_wait_ack_before_action,
+    suppress_transcribed_command_reason,
 )
 
 
@@ -38,6 +39,36 @@ def test_should_ack_before_action_excludes_good_night_and_biometric_auth() -> No
     assert should_ack_before_action(
         VoiceCommand(intent="system_status_report", normalized_text="", raw_text="")
     )
+
+
+def test_suppress_transcribed_command_reason_for_too_short_fullscreen() -> None:
+    reason = suppress_transcribed_command_reason(
+        VoiceCommand(intent="youtube_fullscreen", normalized_text="", raw_text=""),
+        dur_sec=0.6,
+        fullscreenish=False,
+    )
+
+    assert reason == "segment too short for youtube_fullscreen (0.60s)"
+
+
+def test_suppress_transcribed_command_reason_for_short_repeat_when_already_fullscreen() -> None:
+    reason = suppress_transcribed_command_reason(
+        VoiceCommand(intent="youtube_fullscreen", normalized_text="", raw_text=""),
+        dur_sec=1.4,
+        fullscreenish=True,
+    )
+
+    assert reason == "short repeated youtube_fullscreen while already fullscreen"
+
+
+def test_suppress_transcribed_command_reason_allows_longer_fullscreen_segment() -> None:
+    reason = suppress_transcribed_command_reason(
+        VoiceCommand(intent="youtube_fullscreen", normalized_text="", raw_text=""),
+        dur_sec=1.9,
+        fullscreenish=True,
+    )
+
+    assert reason is None
 
 
 def test_good_night_voice_text_handles_success_result() -> None:

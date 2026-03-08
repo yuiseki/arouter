@@ -117,6 +117,7 @@ from .policy import (
     post_action_voice_text,
     should_ack_before_action,
     should_wait_ack_before_action,
+    suppress_transcribed_command_reason,
 )
 from .reactions import detect_non_command_reaction
 from .resolution import SegmentTranscriptResolution, resolve_segment_transcript
@@ -330,6 +331,7 @@ __all__ = [
     "select_weather_candidate_window_ids",
     "should_ack_before_action",
     "should_wait_ack_before_action",
+    "suppress_transcribed_command_reason",
     "start_biometric_poller",
     "start_vacuumtube_context_poller",
     "store_authfail_wav",

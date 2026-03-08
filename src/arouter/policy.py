@@ -44,6 +44,23 @@ def should_ack_before_action(cmd: VoiceCommand) -> bool:
     return cmd.intent not in _NO_PRE_ACK_INTENTS
 
 
+def suppress_transcribed_command_reason(
+    cmd: VoiceCommand,
+    *,
+    dur_sec: float,
+    fullscreenish: bool,
+) -> str | None:
+    if cmd.intent != "youtube_fullscreen":
+        return None
+    if dur_sec < 1.2:
+        return f"segment too short for youtube_fullscreen ({dur_sec:.2f}s)"
+    if dur_sec >= 1.8:
+        return None
+    if fullscreenish:
+        return "short repeated youtube_fullscreen while already fullscreen"
+    return None
+
+
 def good_night_voice_text(action_result: str) -> str:
     lowered = (action_result or "").lower()
     if "no vacuumtube window" in lowered:
