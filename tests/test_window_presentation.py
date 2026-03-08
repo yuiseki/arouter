@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 import pytest
 
 from arouter import (
@@ -14,8 +16,17 @@ from arouter import (
     parse_work_area_from_wmctrl_output,
     resolve_expected_top_right_geometry,
     resolve_window_restore_plan,
+    run_top_right_position_flow,
     top_right_region_from_screen_and_work_area,
 )
+
+
+def _record_wmctrl_move(
+    events: list[str],
+    win_id: str,
+    geom: dict[str, Any],
+) -> None:
+    events.append(f"wmctrl:{win_id}:{geom['x']}")
 
 
 def test_geometry_close_within_tolerance() -> None:
@@ -214,3 +225,114 @@ def test_is_window_fullscreenish_rejects_small_window() -> None:
         {"x": 100, "y": 100, "w": 640, "h": 480},
         (1920, 1080),
     )
+
+
+def test_run_top_right_position_flow_returns_already_ok_without_actions() -> None:
+    events: list[str] = []
+
+    result = run_top_right_position_flow(
+        win_id="0x123",
+        target={"x": 2048, "y": 0, "w": 2048, "h": 1080},
+        before={"x": 2048, "y": 0, "w": 2048, "h": 1080},
+        tolerance=24,
+        retries=2,
+        main_pid=123,
+        clear_fullscreen_if_needed=lambda: events.append("clear"),
+        kwin_frame_action=lambda pid, geom: events.append(f"kwin_frame:{pid}:{geom['x']}"),
+        kwin_tile_action=lambda: events.append("kwin_tile"),
+        wmctrl_move_resize_action=lambda win_id, geom: _record_wmctrl_move(
+            events,
+            win_id,
+            geom,
+        ),
+        geometry_fetcher=lambda _win_id: {"x": 2048, "y": 0, "w": 2048, "h": 1080},
+        sleep=lambda seconds: events.append(f"sleep:{seconds}"),
+    )
+
+    assert result["ok"] is True
+    assert result["method"] == "already_ok"
+    assert events == []
+
+
+def test_run_top_right_position_flow_retries_after_kwin_frame_failure() -> None:
+    events: list[str] = []
+    geometries = [
+        {"x": 100, "y": 100, "w": 800, "h": 600},
+        {"x": 2048, "y": 4, "w": 2044, "h": 1080},
+    ]
+
+    def kwin_frame_action(_pid: int, _geom: dict[str, Any]) -> None:
+        raise RuntimeError("kwin unavailable")
+
+    def geometry_fetcher(_win_id: str) -> dict[str, Any]:
+        return geometries.pop(0)
+
+    result = run_top_right_position_flow(
+        win_id="0x123",
+        target={"x": 2048, "y": 0, "w": 2048, "h": 1080},
+        before={"x": 0, "y": 0, "w": 640, "h": 480},
+        tolerance=24,
+        retries=1,
+        main_pid=321,
+        clear_fullscreen_if_needed=lambda: events.append("clear"),
+        kwin_frame_action=kwin_frame_action,
+        kwin_tile_action=lambda: events.append("kwin_tile"),
+        wmctrl_move_resize_action=lambda win_id, geom: _record_wmctrl_move(
+            events,
+            win_id,
+            geom,
+        ),
+        geometry_fetcher=geometry_fetcher,
+        sleep=lambda seconds: events.append(f"sleep:{seconds}"),
+    )
+
+    assert result["ok"] is True
+    assert result["method"] == "wmctrl_move_resize"
+    assert events == [
+        "clear",
+        "kwin_tile",
+        "sleep:0.35",
+        "wmctrl:0x123:2048",
+        "sleep:0.25",
+    ]
+
+
+def test_run_top_right_position_flow_returns_last_failed_geometry_when_all_attempts_fail() -> None:
+    events: list[str] = []
+    geometries = [
+        {"x": 100, "y": 100, "w": 800, "h": 600},
+        {"x": 110, "y": 110, "w": 810, "h": 610},
+        {"x": 120, "y": 120, "w": 820, "h": 620},
+    ]
+
+    result = run_top_right_position_flow(
+        win_id="0x123",
+        target={"x": 2048, "y": 0, "w": 2048, "h": 1080},
+        before=None,
+        tolerance=24,
+        retries=1,
+        main_pid=None,
+        clear_fullscreen_if_needed=lambda: events.append("clear"),
+        kwin_frame_action=lambda _pid, _geom: events.append("kwin_frame"),
+        kwin_tile_action=lambda: events.append("kwin_tile"),
+        wmctrl_move_resize_action=lambda win_id, geom: _record_wmctrl_move(
+            events,
+            win_id,
+            geom,
+        ),
+        geometry_fetcher=lambda _win_id: geometries.pop(0),
+        sleep=lambda seconds: events.append(f"sleep:{seconds}"),
+    )
+
+    assert result["ok"] is False
+    assert result["method"] == "kwin_tile_after_wmctrl"
+    assert result["after"] == {"x": 120, "y": 120, "w": 820, "h": 620}
+    assert events == [
+        "clear",
+        "kwin_tile",
+        "sleep:0.35",
+        "wmctrl:0x123:2048",
+        "sleep:0.25",
+        "kwin_tile",
+        "sleep:0.35",
+    ]

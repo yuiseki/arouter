@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 from typing import Any
 
 
@@ -92,6 +93,71 @@ def finalize_top_right_position_result(
     updated["method"] = method
     updated["ok"] = bool(geom and geometry_close(geom, expected, tol=tol))
     return updated
+
+
+def run_top_right_position_flow(
+    *,
+    win_id: str,
+    target: dict[str, Any],
+    before: dict[str, Any] | None,
+    tolerance: int,
+    retries: int,
+    main_pid: int | None,
+    clear_fullscreen_if_needed: Callable[[], None],
+    kwin_frame_action: Callable[[int, dict[str, Any]], None],
+    kwin_tile_action: Callable[[], None],
+    wmctrl_move_resize_action: Callable[[str, dict[str, Any]], None],
+    geometry_fetcher: Callable[[str], dict[str, Any] | None],
+    sleep: Callable[[float], None],
+) -> dict[str, Any]:
+    result = build_top_right_position_result(
+        window_id=win_id,
+        target=target,
+        before=before,
+        tolerance=tolerance,
+    )
+    if before and geometry_close(before, target, tol=tolerance):
+        return finalize_top_right_position_result(
+            result,
+            geom=before,
+            expected=target,
+            tol=tolerance,
+            method="already_ok",
+        )
+
+    clear_fullscreen_if_needed()
+
+    for step in build_top_right_position_attempt_plan(
+        retries=retries,
+        has_main_pid=bool(main_pid),
+    ):
+        if step["action"] == "kwin_frame":
+            if not main_pid:
+                continue
+            try:
+                kwin_frame_action(int(main_pid), target)
+            except Exception:
+                continue
+        elif step["action"] == "kwin_tile":
+            kwin_tile_action()
+        elif step["action"] == "wmctrl_move_resize":
+            wmctrl_move_resize_action(win_id, target)
+        else:
+            continue
+
+        sleep(float(step["sleep"]))
+        geom = geometry_fetcher(win_id)
+        result = finalize_top_right_position_result(
+            result,
+            geom=geom,
+            expected=target,
+            tol=tolerance,
+            method=str(step["method"]),
+        )
+        if result["ok"]:
+            return result
+
+    return result
 
 
 def resolve_window_restore_plan(
