@@ -71,6 +71,19 @@ def collect_live_cam_pids(
     return pids_by_port
 
 
+def collect_window_ids_for_pids(
+    pids: list[int],
+    *,
+    window_id_lookup: Callable[[int], str | None],
+) -> list[str]:
+    window_ids: list[str] = []
+    for pid in pids:
+        wid = window_id_lookup(int(pid))
+        if wid:
+            window_ids.append(wid)
+    return window_ids
+
+
 def find_missing_live_cam_window_ports(
     pids_by_port: dict[int, int],
     rows: list[dict[str, Any]],

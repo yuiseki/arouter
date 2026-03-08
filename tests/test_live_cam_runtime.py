@@ -12,6 +12,7 @@ from arouter import (
     build_live_cam_start_command,
     build_live_cam_started_result,
     collect_live_cam_pids,
+    collect_window_ids_for_pids,
     find_missing_live_cam_window_ports,
     parse_key_value_stdout,
     resolve_existing_live_cam_windowed_pids,
@@ -167,6 +168,15 @@ def test_resolve_live_cam_action_state_returns_empty_state_when_pid_missing() ->
         "pids_by_port": {},
         "state": {"windows": [], "urls": []},
     }
+
+
+def test_collect_window_ids_for_pids_skips_missing_window_ids() -> None:
+    out = collect_window_ids_for_pids(
+        [123, 456, 789],
+        window_id_lookup=lambda pid: {123: "0x1", 789: "0x3"}.get(pid),
+    )
+
+    assert out == ["0x1", "0x3"]
 
 
 def test_build_live_cam_open_result_extracts_final_href() -> None:
