@@ -50,6 +50,12 @@ from .live_cam_layout import (
     build_live_cam_layout_targets_full,
     compact_live_cam_region_from_screen_and_work_area,
 )
+from .live_cam_selection import (
+    annotate_live_cam_payload_selection,
+    expand_live_cam_candidates,
+    normalize_live_cam_force_video_id,
+    web_watch_retry_video_id,
+)
 from .live_cam_status import find_stuck_live_cam_specs, page_matches_live_camera_spec
 from .load_check import (
     build_load_check_wmctrl_commands,
@@ -142,6 +148,8 @@ __all__ = [
     "execute_command",
     "execute_news_command",
     "extract_password_unlock_secret",
+    "annotate_live_cam_payload_selection",
+    "expand_live_cam_candidates",
     "find_stuck_live_cam_specs",
     "find_window_geometry_from_wmctrl_lines",
     "find_window_id_by_pid_and_title",
@@ -156,6 +164,7 @@ __all__ = [
     "maybe_lock_from_signal",
     "maybe_unlock_from_signal",
     "normalize_transcript",
+    "normalize_live_cam_force_video_id",
     "parse_command",
     "post_action_voice_text",
     "process_pcm_segment",
@@ -190,6 +199,7 @@ __all__ = [
     "wait_for_new_window_row",
     "window_rows_for_pids_from_wmctrl_lines",
     "window_title_from_wmctrl_lines",
+    "web_watch_retry_video_id",
     "trim_notify_text",
     "verify_unlock_password",
     "write_signal_file",
