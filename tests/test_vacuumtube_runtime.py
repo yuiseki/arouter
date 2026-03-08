@@ -17,6 +17,7 @@ from arouter import (
     restart_vacuumtube_tmux_session,
     run_vacuumtube_click_tile_center,
     run_vacuumtube_ensure_home,
+    run_vacuumtube_enumerate_tiles,
     run_vacuumtube_fullscreen,
     run_vacuumtube_go_home,
     run_vacuumtube_hard_reload_home,
@@ -270,6 +271,27 @@ def test_run_vacuumtube_click_tile_center_passes_float_coordinates() -> None:
     )
 
     assert seen == [(123.4, 456.0)]
+
+
+def test_run_vacuumtube_enumerate_tiles_returns_dict_rows() -> None:
+    out = run_vacuumtube_enumerate_tiles(
+        evaluate=lambda expr: [
+            {"title": "Tile 1", "visible": True, "expr_seen": "ytlr-tile-renderer" in expr},
+            "skip-me",
+            {"title": "Tile 2", "visible": False},
+        ]
+    )
+
+    assert out == [
+        {"title": "Tile 1", "visible": True, "expr_seen": True},
+        {"title": "Tile 2", "visible": False},
+    ]
+
+
+def test_run_vacuumtube_enumerate_tiles_returns_empty_list_for_non_list_payload() -> None:
+    out = run_vacuumtube_enumerate_tiles(evaluate=lambda _expr: {"title": "Tile 1"})
+
+    assert out == []
 
 
 def test_finalize_vacuumtube_context_marks_available_from_window_or_hash() -> None:

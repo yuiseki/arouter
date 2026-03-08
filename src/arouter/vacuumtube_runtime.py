@@ -272,6 +272,76 @@ def run_vacuumtube_click_tile_center(
     mouse_click(x, y)
 
 
+def run_vacuumtube_enumerate_tiles(
+    *,
+    evaluate: Callable[[str], Any],
+) -> list[dict[str, Any]]:
+    expr = r"""
+(() => {
+  const out = [];
+  const seenRoots = new Set();
+  const seenEls = new Set();
+  function walkRoot(root) {
+    if (!root || seenRoots.has(root)) return;
+    seenRoots.add(root);
+    if (!root.querySelectorAll) return;
+    for (const el of root.querySelectorAll('ytlr-tile-renderer')) {
+      if (seenEls.has(el)) continue;
+      seenEls.add(el);
+      const r = el.getBoundingClientRect();
+      const st = getComputedStyle(el);
+      const visible =
+        r.width > 20 &&
+        r.height > 20 &&
+        st.display !== 'none' &&
+        st.visibility !== 'hidden';
+      const txt = (el.innerText || el.textContent || '').replace(/\s+/g, ' ').trim();
+      let title = '';
+      let hasJaLiveBadge = false;
+      let hasJaLiveBadgeBottomRight = false;
+      for (const c of el.querySelectorAll('*')) {
+        const t = (c.innerText || c.textContent || '').replace(/\s+/g, ' ').trim();
+        if (t === 'ライブ') {
+          hasJaLiveBadge = true;
+          const cr = c.getBoundingClientRect();
+          if (
+            cr.width > 0 && cr.height > 0 &&
+            cr.right >= r.right - Math.max(80, r.width * 0.45) &&
+            cr.bottom >= r.bottom - Math.max(80, r.height * 0.45)
+          ) {
+            hasJaLiveBadgeBottomRight = true;
+          }
+        }
+        if (t.length > title.length) title = t;
+      }
+      out.push({
+        visible,
+        title,
+        text: txt,
+        hasJaLiveBadge,
+        hasJaLiveBadgeBottomRight,
+        x: r.x,
+        y: r.y,
+        width: r.width,
+        height: r.height,
+        cx: r.x + r.width / 2,
+        cy: r.y + r.height / 2,
+      });
+    }
+    for (const node of root.querySelectorAll('*')) {
+      if (node.shadowRoot) walkRoot(node.shadowRoot);
+    }
+  }
+  walkRoot(document);
+  return out;
+})()
+"""
+    data = evaluate(expr)
+    if not isinstance(data, list):
+        return []
+    return [row for row in data if isinstance(row, dict)]
+
+
 def finalize_vacuumtube_context(context: dict[str, Any]) -> dict[str, Any]:
     finalized = dict(context)
     finalized["available"] = bool(finalized.get("windowFound")) or bool(finalized.get("hash"))
