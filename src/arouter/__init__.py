@@ -24,6 +24,7 @@ from .biometric_runtime import (
     maybe_auto_lock,
     maybe_lock_from_signal,
     maybe_unlock_from_signal,
+    reassert_lock_screen,
     set_system_locked,
 )
 from .biometric_signal import (
@@ -87,6 +88,7 @@ __all__ = [
     "process_pcm_segment",
     "process_transcribed_segment",
     "read_password_secret_lines",
+    "reassert_lock_screen",
     "request_biometric_lock_payload",
     "resolve_biometric_poll_interval",
     "report_segment_error",

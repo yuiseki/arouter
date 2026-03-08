@@ -11,6 +11,7 @@ from arouter import (
     maybe_auto_lock,
     maybe_lock_from_signal,
     maybe_unlock_from_signal,
+    reassert_lock_screen,
     set_system_locked,
 )
 
@@ -112,4 +113,27 @@ def test_maybe_auto_lock_is_noop_when_face_not_absent() -> None:
     maybe_auto_lock(runtime, set_locked=set_system_locked)
 
     assert runtime._system_locked is False
+    runtime.overlay.show_lock_screen.assert_not_called()
+
+
+def test_reassert_lock_screen_shows_overlay_when_locked() -> None:
+    runtime = _make_runtime()
+    runtime._system_locked = True
+
+    changed = reassert_lock_screen(runtime, reason="auth_denied:system_status_report")
+
+    assert changed is True
+    assert runtime._lock_screen_visible is True
+    runtime.overlay.show_lock_screen.assert_called_once_with(text=default_lock_screen_text())
+    runtime.log.assert_called_once_with(
+        "system lock overlay reasserted: reason=auth_denied:system_status_report"
+    )
+
+
+def test_reassert_lock_screen_is_noop_when_unlocked() -> None:
+    runtime = _make_runtime()
+
+    changed = reassert_lock_screen(runtime, reason="auth_denied:system_status_report")
+
+    assert changed is False
     runtime.overlay.show_lock_screen.assert_not_called()

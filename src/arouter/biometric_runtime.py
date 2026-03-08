@@ -65,6 +65,22 @@ def set_system_locked(runtime: LockRuntime, locked: bool, *, reason: str) -> boo
     return changed
 
 
+def reassert_lock_screen(runtime: LockRuntime, *, reason: str) -> bool:
+    if not runtime._biometric_lock_enabled() or not bool(getattr(runtime, "_system_locked", False)):
+        return False
+    lock_client = getattr(runtime, "lock_overlay", None) or getattr(runtime, "overlay", None)
+    try:
+        show = getattr(lock_client, "show_lock_screen", None)
+        if callable(show):
+            show(text=runtime._lock_screen_text())
+        runtime._lock_screen_visible = True
+        runtime.log(f"system lock overlay reasserted: reason={reason}")
+        return True
+    except Exception as exc:
+        runtime.log(f"biometric lock overlay reassert failed ({reason}): {exc}")
+        return False
+
+
 def maybe_unlock_from_signal(
     runtime: LockRuntime,
     *,
