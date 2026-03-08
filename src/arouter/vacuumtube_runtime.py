@@ -142,6 +142,46 @@ def ensure_vacuumtube_started_and_positioned(
     return capture_window_presentation(win_id)
 
 
+def ensure_vacuumtube_runtime_ready(
+    *,
+    cdp_ready: Callable[[], bool],
+    tmux_has: Callable[[], bool],
+    wait_cdp_ready: Callable[[float], bool],
+    restart_tmux_session: Callable[[], None],
+    start_in_tmux: Callable[[], None],
+    log: Callable[[str], None],
+    tmux_session: str,
+    base_url: str,
+) -> None:
+    if cdp_ready():
+        return
+    if tmux_has():
+        if wait_cdp_ready(2.5):
+            return
+        log(f"VacuumTube tmux session stale or crashed; restarting: {tmux_session}")
+        restart_tmux_session()
+    else:
+        start_in_tmux()
+    if not wait_cdp_ready(35.0):
+        raise RuntimeError(f"VacuumTube CDP not ready at {base_url}")
+
+
+def recover_vacuumtube_unresponsive_state(
+    *,
+    restart_tmux_session: Callable[[], None],
+    wait_cdp_ready: Callable[[float], bool],
+    ensure_started_and_positioned: Callable[[], dict[str, Any]],
+    log: Callable[[str], None],
+    tmux_session: str,
+    base_url: str,
+) -> dict[str, Any]:
+    log(f"VacuumTube recovery requested; restarting tmux session: {tmux_session}")
+    restart_tmux_session()
+    if not wait_cdp_ready(35.0):
+        raise RuntimeError(f"VacuumTube CDP not ready at {base_url}")
+    return ensure_started_and_positioned()
+
+
 def run_vacuumtube_resume_playback(
     *,
     find_window_id: Callable[[], str | None],

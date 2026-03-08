@@ -7,11 +7,13 @@ import pytest
 
 from arouter import (
     build_vacuumtube_context_base,
+    ensure_vacuumtube_runtime_ready,
     ensure_vacuumtube_started_and_positioned,
     finalize_vacuumtube_context,
     is_recoverable_vacuumtube_error,
     merge_vacuumtube_cdp_state,
     merge_vacuumtube_window_snapshot,
+    recover_vacuumtube_unresponsive_state,
     run_vacuumtube_fullscreen,
     run_vacuumtube_go_home,
     run_vacuumtube_minimize,
@@ -145,6 +147,90 @@ def test_ensure_vacuumtube_started_and_positioned_restarts_when_window_missing()
     ]
     assert "ensure_top_right" in events
     assert any(event.startswith("VacuumTube window position check: ") for event in events)
+
+
+def test_ensure_vacuumtube_runtime_ready_restarts_stale_tmux_session() -> None:
+    events: list[str] = []
+    ready_states = iter([False, True])
+
+    def wait_ready(timeout: float) -> bool:
+        events.append(f"wait_cdp_ready:{timeout}")
+        return next(ready_states)
+
+    ensure_vacuumtube_runtime_ready(
+        cdp_ready=lambda: events.append("cdp_ready") or False,
+        tmux_has=lambda: events.append("tmux_has") or True,
+        wait_cdp_ready=wait_ready,
+        restart_tmux_session=lambda: events.append("restart"),
+        start_in_tmux=lambda: events.append("start"),
+        log=events.append,
+        tmux_session="vacuumtube-main",
+        base_url="http://127.0.0.1:9992",
+    )
+
+    assert events == [
+        "cdp_ready",
+        "tmux_has",
+        "wait_cdp_ready:2.5",
+        "VacuumTube tmux session stale or crashed; restarting: vacuumtube-main",
+        "restart",
+        "wait_cdp_ready:35.0",
+    ]
+
+
+def test_ensure_vacuumtube_runtime_ready_starts_tmux_when_missing() -> None:
+    events: list[str] = []
+
+    def wait_ready(timeout: float) -> bool:
+        events.append(f"wait_cdp_ready:{timeout}")
+        return True
+
+    ensure_vacuumtube_runtime_ready(
+        cdp_ready=lambda: events.append("cdp_ready") or False,
+        tmux_has=lambda: events.append("tmux_has") or False,
+        wait_cdp_ready=wait_ready,
+        restart_tmux_session=lambda: events.append("restart"),
+        start_in_tmux=lambda: events.append("start"),
+        log=events.append,
+        tmux_session="vacuumtube-main",
+        base_url="http://127.0.0.1:9992",
+    )
+
+    assert events == [
+        "cdp_ready",
+        "tmux_has",
+        "start",
+        "wait_cdp_ready:35.0",
+    ]
+
+
+def test_recover_vacuumtube_unresponsive_state_restarts_then_returns_positioned_state() -> None:
+    events: list[str] = []
+
+    def wait_ready(timeout: float) -> bool:
+        events.append(f"wait_cdp_ready:{timeout}")
+        return True
+
+    def ensure_started() -> dict[str, str]:
+        events.append("ensure_started")
+        return {"window_id": "0x123"}
+
+    result = recover_vacuumtube_unresponsive_state(
+        restart_tmux_session=lambda: events.append("restart"),
+        wait_cdp_ready=wait_ready,
+        ensure_started_and_positioned=ensure_started,
+        log=events.append,
+        tmux_session="vacuumtube-main",
+        base_url="http://127.0.0.1:9992",
+    )
+
+    assert result == {"window_id": "0x123"}
+    assert events == [
+        "VacuumTube recovery requested; restarting tmux session: vacuumtube-main",
+        "restart",
+        "wait_cdp_ready:35.0",
+        "ensure_started",
+    ]
 
 
 def test_ensure_vacuumtube_started_and_positioned_raises_when_cdp_never_returns() -> None:

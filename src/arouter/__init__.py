@@ -157,11 +157,13 @@ from .vacuumtube_poller import (
 )
 from .vacuumtube_runtime import (
     build_vacuumtube_context_base,
+    ensure_vacuumtube_runtime_ready,
     ensure_vacuumtube_started_and_positioned,
     finalize_vacuumtube_context,
     is_recoverable_vacuumtube_error,
     merge_vacuumtube_cdp_state,
     merge_vacuumtube_window_snapshot,
+    recover_vacuumtube_unresponsive_state,
     run_vacuumtube_fullscreen,
     run_vacuumtube_go_home,
     run_vacuumtube_minimize,
@@ -289,7 +291,9 @@ __all__ = [
     "build_top_right_position_result",
     "build_vacuumtube_context_error",
     "build_vacuumtube_context_base",
+    "ensure_vacuumtube_runtime_ready",
     "ensure_vacuumtube_started_and_positioned",
+    "recover_vacuumtube_unresponsive_state",
     "run_vacuumtube_fullscreen",
     "run_vacuumtube_play_bgm",
     "run_vacuumtube_go_home",
