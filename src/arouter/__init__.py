@@ -233,6 +233,13 @@ from .window_rows import (
     window_rows_for_pids_from_wmctrl_lines,
     window_title_from_wmctrl_lines,
 )
+from .window_runtime import (
+    run_window_activate,
+    run_window_close,
+    run_window_fullscreen,
+    run_window_key,
+    run_window_move_resize,
+)
 
 __all__ = [
     "CommandExecutionPayload",
@@ -289,6 +296,11 @@ __all__ = [
     "build_wmctrl_list_command",
     "build_window_move_resize_command",
     "build_window_minimize_command",
+    "run_window_activate",
+    "run_window_close",
+    "run_window_fullscreen",
+    "run_window_key",
+    "run_window_move_resize",
     "build_top_right_position_attempt_plan",
     "build_top_right_position_result",
     "build_vacuumtube_context_error",
