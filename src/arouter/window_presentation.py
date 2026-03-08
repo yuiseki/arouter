@@ -3,6 +3,32 @@ from __future__ import annotations
 from typing import Any
 
 
+def build_window_presentation_snapshot(
+    *,
+    window_id: str | None,
+    fullscreen: bool,
+) -> dict[str, Any]:
+    return {
+        "window_id": window_id,
+        "fullscreen": bool(fullscreen),
+    }
+
+
+def resolve_window_restore_plan(
+    presentation: dict[str, Any] | None,
+    *,
+    fallback_window_id: str,
+    is_fullscreenish: bool,
+) -> dict[str, Any]:
+    snap = presentation if isinstance(presentation, dict) else {}
+    window_id = str(snap.get("window_id") or "") or str(fallback_window_id)
+    if bool(snap.get("fullscreen")):
+        return {"window_id": window_id, "action": "fullscreen"}
+    if is_fullscreenish:
+        return {"window_id": window_id, "action": "skip_top_right"}
+    return {"window_id": window_id, "action": "top_right"}
+
+
 def top_right_region_from_screen_and_work_area(
     *,
     screen_w: int,

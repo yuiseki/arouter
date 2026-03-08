@@ -115,7 +115,9 @@ from .window_actions import (
     build_window_move_resize_command,
 )
 from .window_presentation import (
+    build_window_presentation_snapshot,
     is_window_fullscreenish,
+    resolve_window_restore_plan,
     top_right_region_from_screen_and_work_area,
 )
 from .window_rows import (
@@ -164,6 +166,7 @@ __all__ = [
     "build_window_key_command",
     "build_window_move_resize_command",
     "build_window_minimize_command",
+    "build_window_presentation_snapshot",
     "command_has_system_prefix",
     "chromium_window_ids_from_wmctrl_lines",
     "compact_live_cam_region_from_screen_and_work_area",
@@ -216,6 +219,7 @@ __all__ = [
     "read_password_secret_lines",
     "reassert_lock_screen",
     "request_biometric_lock_payload",
+    "resolve_window_restore_plan",
     "resolve_biometric_poll_interval",
     "report_segment_error",
     "run_biometric_poll_iteration",

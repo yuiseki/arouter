@@ -2,7 +2,43 @@ from __future__ import annotations
 
 import pytest
 
-from arouter import is_window_fullscreenish, top_right_region_from_screen_and_work_area
+from arouter import (
+    build_window_presentation_snapshot,
+    is_window_fullscreenish,
+    resolve_window_restore_plan,
+    top_right_region_from_screen_and_work_area,
+)
+
+
+def test_build_window_presentation_snapshot_sets_fields() -> None:
+    assert build_window_presentation_snapshot(window_id="0x123", fullscreen=True) == {
+        "window_id": "0x123",
+        "fullscreen": True,
+    }
+
+
+def test_resolve_window_restore_plan_prefers_fullscreen() -> None:
+    assert resolve_window_restore_plan(
+        {"window_id": "0x123", "fullscreen": True},
+        fallback_window_id="0x999",
+        is_fullscreenish=False,
+    ) == {"window_id": "0x123", "action": "fullscreen"}
+
+
+def test_resolve_window_restore_plan_skips_top_right_when_current_window_looks_fullscreen() -> None:
+    assert resolve_window_restore_plan(
+        {"window_id": "0x123", "fullscreen": False},
+        fallback_window_id="0x999",
+        is_fullscreenish=True,
+    ) == {"window_id": "0x123", "action": "skip_top_right"}
+
+
+def test_resolve_window_restore_plan_uses_fallback_window_id_for_top_right() -> None:
+    assert resolve_window_restore_plan(
+        {"fullscreen": False},
+        fallback_window_id="0x999",
+        is_fullscreenish=False,
+    ) == {"window_id": "0x999", "action": "top_right"}
 
 
 def test_top_right_region_intersects_work_area() -> None:
