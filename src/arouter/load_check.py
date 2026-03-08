@@ -128,6 +128,25 @@ def find_konsole_rows_for_tmux_client_pids(
     return matched
 
 
+def wait_for_new_window_row(
+    *,
+    row_provider: Callable[[], list[dict[str, Any]]],
+    before_ids: set[str],
+    timeout_sec: float,
+    now: Callable[[], float],
+    sleep: Callable[[float], None],
+    poll_interval_sec: float = 0.15,
+) -> dict[str, Any] | None:
+    deadline = now() + timeout_sec
+    while now() < deadline:
+        rows = row_provider()
+        new_rows = [row for row in rows if str(row.get("id") or "").lower() not in before_ids]
+        if new_rows:
+            return new_rows[-1]
+        sleep(poll_interval_sec)
+    return None
+
+
 def is_vacuumtube_quadrant_mode_for_load_check(
     runtime: VacuumTubeLoadCheckRuntime,
     *,

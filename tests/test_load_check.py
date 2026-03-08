@@ -10,6 +10,7 @@ from arouter import (
     parse_konsole_window_rows,
     parse_tmux_client_pids,
     pid_ancestor_chain,
+    wait_for_new_window_row,
 )
 
 
@@ -137,3 +138,52 @@ def test_find_konsole_rows_for_tmux_client_pids_matches_ancestor_window_rows() -
         {"id": "0x00a", "pid": 400, "title": "Konsole - sysmon"},
         {"id": "0x00b", "pid": 700, "title": "Konsole - other"},
     ]
+
+
+def test_wait_for_new_window_row_returns_last_new_row_before_timeout() -> None:
+    timeline = [
+        [],
+        [{"id": "0x00a"}],
+        [{"id": "0x00a"}, {"id": "0x00b"}],
+    ]
+    clock = {"now": 0.0}
+
+    def row_provider() -> list[dict[str, str]]:
+        index = min(int(clock["now"] / 0.15), len(timeline) - 1)
+        return timeline[index]
+
+    def now() -> float:
+        return clock["now"]
+
+    def sleep(seconds: float) -> None:
+        clock["now"] += seconds
+
+    row = wait_for_new_window_row(
+        row_provider=row_provider,
+        before_ids={"0x000"},
+        timeout_sec=1.0,
+        now=now,
+        sleep=sleep,
+    )
+
+    assert row == {"id": "0x00a"}
+
+
+def test_wait_for_new_window_row_returns_none_on_timeout() -> None:
+    clock = {"now": 0.0}
+
+    def now() -> float:
+        return clock["now"]
+
+    def sleep(seconds: float) -> None:
+        clock["now"] += seconds
+
+    row = wait_for_new_window_row(
+        row_provider=lambda: [{"id": "0x000"}],
+        before_ids={"0x000"},
+        timeout_sec=0.3,
+        now=now,
+        sleep=sleep,
+    )
+
+    assert row is None

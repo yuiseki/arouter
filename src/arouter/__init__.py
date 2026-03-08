@@ -43,6 +43,7 @@ from .load_check import (
     parse_konsole_window_rows,
     parse_tmux_client_pids,
     pid_ancestor_chain,
+    wait_for_new_window_row,
 )
 from .models import VoiceCommand
 from .overlay import build_overlay_ipc_line, compose_overlay_notify_text, trim_notify_text
@@ -119,6 +120,7 @@ __all__ = [
     "stop_biometric_poller",
     "set_system_locked",
     "seed_signal_seen_mtime",
+    "wait_for_new_window_row",
     "trim_notify_text",
     "verify_unlock_password",
     "write_signal_file",
