@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import concurrent.futures
+import json
 from collections.abc import Callable
 from typing import Any
 
@@ -67,3 +68,42 @@ def build_live_cam_open_result(
         "finalHref": final_href,
         "method": payload.get("method"),
     }
+
+
+def build_live_cam_reopen_result(
+    spec: dict[str, Any],
+    payload: dict[str, Any],
+) -> dict[str, Any]:
+    return {
+        "label": spec["label"],
+        "port": spec["port"],
+        "videoId": payload.get("videoId"),
+        "method": payload.get("method"),
+    }
+
+
+def build_live_cam_layout_response(
+    *,
+    mode: str,
+    fast_path: bool,
+    screen_w: int,
+    screen_h: int,
+    work_area: tuple[int, int, int, int],
+    started: list[dict[str, Any]],
+    opened: list[dict[str, Any]],
+    state: dict[str, Any],
+    open_errors: list[str],
+) -> str:
+    work_x, work_y, work_w, work_h = work_area
+    payload: dict[str, Any] = {
+        "mode": mode,
+        "fastPath": fast_path,
+        "screen": {"w": screen_w, "h": screen_h},
+        "workArea": {"x": work_x, "y": work_y, "w": work_w, "h": work_h},
+        "started": started,
+        "opened": opened,
+        **state,
+    }
+    if open_errors:
+        payload["openErrors"] = open_errors
+    return "live camera wall " + json.dumps(payload, ensure_ascii=False)

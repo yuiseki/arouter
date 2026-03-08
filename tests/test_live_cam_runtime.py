@@ -2,7 +2,12 @@ from __future__ import annotations
 
 import time
 
-from arouter import build_live_cam_open_result, run_live_cam_parallel
+from arouter import (
+    build_live_cam_layout_response,
+    build_live_cam_open_result,
+    build_live_cam_reopen_result,
+    run_live_cam_parallel,
+)
 
 
 def test_run_live_cam_parallel_preserves_input_order() -> None:
@@ -61,3 +66,40 @@ def test_build_live_cam_open_result_extracts_final_href() -> None:
         "finalHref": "https://www.youtube.com/tv#/watch?v=abc123DEF45",
         "method": "direct-id",
     }
+
+
+def test_build_live_cam_reopen_result_keeps_reopen_fields() -> None:
+    result = build_live_cam_reopen_result(
+        {"label": "akihabara", "port": 9996},
+        {"videoId": "abc123DEF45", "method": "direct-id"},
+    )
+
+    assert result == {
+        "label": "akihabara",
+        "port": 9996,
+        "videoId": "abc123DEF45",
+        "method": "direct-id",
+    }
+
+
+def test_build_live_cam_layout_response_includes_optional_open_errors() -> None:
+    result = build_live_cam_layout_response(
+        mode="compact",
+        fast_path=True,
+        screen_w=4096,
+        screen_h=2160,
+        work_area=(0, 0, 4096, 2116),
+        started=[],
+        opened=[{"label": "akihabara", "port": 9996}],
+        state={"windows": [{"id": "0x1"}], "urls": []},
+        open_errors=["live_cam_reopen failed (akihabara:9996): timed out"],
+    )
+
+    assert result == (
+        'live camera wall {"mode": "compact", "fastPath": true, '
+        '"screen": {"w": 4096, "h": 2160}, '
+        '"workArea": {"x": 0, "y": 0, "w": 4096, "h": 2116}, '
+        '"started": [], "opened": [{"label": "akihabara", "port": 9996}], '
+        '"windows": [{"id": "0x1"}], "urls": [], '
+        '"openErrors": ["live_cam_reopen failed (akihabara:9996): timed out"]}'
+    )
