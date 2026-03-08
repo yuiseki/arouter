@@ -57,3 +57,24 @@ def run_live_cam_layout_script(
         file_prefix="codex-kwin-livecam-",
         sleep_sec=0.8,
     )
+
+
+def run_window_frame_geometry_script(
+    *,
+    pid: int,
+    geom: dict[str, int],
+    no_border: bool,
+    plugin_name: str,
+    build_script: Callable[..., str],
+    run_script: Callable[..., None],
+) -> None:
+    run_script(
+        script_text=build_script(
+            pid=pid,
+            geom=geom,
+            no_border=no_border,
+        ),
+        plugin_name=plugin_name,
+        file_prefix="codex-kwin-vacuumtube-main-",
+        sleep_sec=0.5,
+    )

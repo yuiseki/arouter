@@ -1,6 +1,10 @@
 from __future__ import annotations
 
-from arouter import run_kwin_temp_script, run_live_cam_layout_script
+from arouter import (
+    run_kwin_temp_script,
+    run_live_cam_layout_script,
+    run_window_frame_geometry_script,
+)
 
 
 def test_run_kwin_temp_script_runs_commands_then_unloads_and_cleans_up() -> None:
@@ -93,5 +97,30 @@ def test_run_live_cam_layout_script_builds_script_and_uses_kwin_runner() -> None
             "plugin_name": "plugin-name",
             "file_prefix": "codex-kwin-livecam-",
             "sleep_sec": 0.8,
+        },
+    ]
+
+
+def test_run_window_frame_geometry_script_builds_script_and_uses_kwin_runner() -> None:
+    events: list[object] = []
+
+    run_window_frame_geometry_script(
+        pid=123,
+        geom={"x": 1, "y": 2, "w": 3, "h": 4},
+        no_border=False,
+        plugin_name="plugin-name",
+        build_script=lambda *, pid, geom, no_border: (
+            events.append(("build", pid, geom, no_border)) or "SCRIPT"
+        ),
+        run_script=lambda **kwargs: events.append(kwargs),
+    )
+
+    assert events == [
+        ("build", 123, {"x": 1, "y": 2, "w": 3, "h": 4}, False),
+        {
+            "script_text": "SCRIPT",
+            "plugin_name": "plugin-name",
+            "file_prefix": "codex-kwin-vacuumtube-main-",
+            "sleep_sec": 0.5,
         },
     ]
