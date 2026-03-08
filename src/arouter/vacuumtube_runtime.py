@@ -288,3 +288,47 @@ def run_vacuumtube_quadrant(
     ensure_started_and_positioned()
     position = ensure_top_right_position()
     return "youtube quadrant " + json.dumps(position, ensure_ascii=False)
+
+
+def run_vacuumtube_stop_music(
+    *,
+    find_window_id: Callable[[], str | None],
+    snapshot_state: Callable[[], dict[str, Any]],
+    is_watch_state: Callable[[dict[str, Any]], bool],
+    send_space_key: Callable[[], None],
+    time_now: Callable[[], float],
+    sleep: Callable[[float], None],
+    ensure_top_right_position: Callable[[], dict[str, Any]],
+    log: Callable[[str], None],
+) -> str:
+    win_id = find_window_id()
+    if not win_id:
+        return "VacuumTube window not found (no-op)"
+
+    before = snapshot_state()
+    if not is_watch_state(before):
+        log("stop_music skipped: not on watch route")
+        return "not on watch route (no-op)"
+
+    send_space_key()
+    deadline = time_now() + 4.0
+    last = before
+    while time_now() < deadline:
+        try:
+            last = snapshot_state()
+            if is_watch_state(last):
+                video = last.get("video")
+                if isinstance(video, dict) and bool(video.get("paused", False)):
+                    try:
+                        position = ensure_top_right_position()
+                        payload = json.dumps(position, ensure_ascii=False)
+                        log(f"STOP post-action window position: {payload}")
+                    except Exception as err:
+                        log(f"STOP post-action position check skipped: {err}")
+                    return f"sent Space toggle to VacuumTube ({win_id}); pause confirmed"
+        except Exception:
+            pass
+        sleep(0.25)
+
+    payload = json.dumps(last, ensure_ascii=False)
+    return f"sent Space toggle to VacuumTube ({win_id}); pause not confirmed ({payload})"

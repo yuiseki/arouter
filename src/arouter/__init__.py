@@ -159,6 +159,7 @@ from .vacuumtube_runtime import (
     run_vacuumtube_play_bgm,
     run_vacuumtube_quadrant,
     run_vacuumtube_resume_playback,
+    run_vacuumtube_stop_music,
 )
 from .vacuumtube_state import (
     vacuumtube_is_home_browse_state,
@@ -275,6 +276,7 @@ __all__ = [
     "run_vacuumtube_go_home",
     "run_vacuumtube_quadrant",
     "run_vacuumtube_resume_playback",
+    "run_vacuumtube_stop_music",
     "build_weather_pages_closed_response",
     "build_weather_pages_tiled_response",
     "build_weather_tile_result",

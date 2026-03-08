@@ -17,6 +17,7 @@ from arouter import (
     run_vacuumtube_play_bgm,
     run_vacuumtube_quadrant,
     run_vacuumtube_resume_playback,
+    run_vacuumtube_stop_music,
 )
 
 
@@ -418,3 +419,85 @@ def test_run_vacuumtube_quadrant_wraps_position_result() -> None:
 
     assert result == 'youtube quadrant {"ok": true, "window_id": "0x123"}'
     assert events == ["ensure_started", "ensure_top_right"]
+
+
+def test_run_vacuumtube_stop_music_returns_noop_when_window_missing() -> None:
+    result = run_vacuumtube_stop_music(
+        find_window_id=lambda: None,
+        snapshot_state=lambda: {"hash": "#/watch?v=abc"},
+        is_watch_state=lambda state: bool(state),
+        send_space_key=lambda: None,
+        time_now=lambda: 100.0,
+        sleep=lambda _seconds: None,
+        ensure_top_right_position=lambda: {"ok": True},
+        log=lambda _msg: None,
+    )
+
+    assert result == "VacuumTube window not found (no-op)"
+
+
+def test_run_vacuumtube_stop_music_skips_when_not_on_watch_route() -> None:
+    events: list[str] = []
+
+    result = run_vacuumtube_stop_music(
+        find_window_id=lambda: "0x123",
+        snapshot_state=lambda: {"hash": "#/"},
+        is_watch_state=lambda _state: False,
+        send_space_key=lambda: events.append("space"),
+        time_now=lambda: 100.0,
+        sleep=lambda seconds: events.append(f"sleep:{seconds}"),
+        ensure_top_right_position=lambda: {"ok": True},
+        log=events.append,
+    )
+
+    assert result == "not on watch route (no-op)"
+    assert events == ["stop_music skipped: not on watch route"]
+
+
+def test_run_vacuumtube_stop_music_confirms_pause_and_logs_position() -> None:
+    events: list[str] = []
+    states = iter(
+        [
+            {"hash": "#/watch?v=abc", "video": {"paused": False}},
+            {"hash": "#/watch?v=abc", "video": {"paused": True}},
+        ]
+    )
+
+    result = run_vacuumtube_stop_music(
+        find_window_id=lambda: "0x123",
+        snapshot_state=lambda: next(states),
+        is_watch_state=lambda state: str(state.get("hash", "")).startswith("#/watch"),
+        send_space_key=lambda: events.append("space"),
+        time_now=iter([100.0, 100.1]).__next__,
+        sleep=lambda seconds: events.append(f"sleep:{seconds}"),
+        ensure_top_right_position=lambda: (
+            events.append("ensure_top_right") or {"ok": True, "window_id": "0x123"}
+        ),
+        log=events.append,
+    )
+
+    assert result == "sent Space toggle to VacuumTube (0x123); pause confirmed"
+    assert events[:2] == ["space", "ensure_top_right"]
+    assert any(event.startswith("STOP post-action window position: ") for event in events)
+
+
+def test_run_vacuumtube_stop_music_returns_last_snapshot_when_pause_not_confirmed() -> None:
+    events: list[str] = []
+    last_state = {"hash": "#/watch?v=abc", "video": {"paused": False}}
+
+    result = run_vacuumtube_stop_music(
+        find_window_id=lambda: "0x123",
+        snapshot_state=lambda: last_state,
+        is_watch_state=lambda state: str(state.get("hash", "")).startswith("#/watch"),
+        send_space_key=lambda: events.append("space"),
+        time_now=iter([100.0, 100.1, 104.2]).__next__,
+        sleep=lambda seconds: events.append(f"sleep:{seconds}"),
+        ensure_top_right_position=lambda: {"ok": True},
+        log=events.append,
+    )
+
+    assert result == (
+        'sent Space toggle to VacuumTube (0x123); pause not confirmed ({"hash": "#/watch?v=abc", '
+        '"video": {"paused": false}})'
+    )
+    assert events == ["space", "sleep:0.25"]
