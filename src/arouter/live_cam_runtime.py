@@ -3,6 +3,7 @@ from __future__ import annotations
 import concurrent.futures
 import json
 from collections.abc import Callable
+from pathlib import Path
 from typing import Any
 
 
@@ -53,6 +54,49 @@ def run_live_cam_parallel(
             raise RuntimeError(f"{label} missing result for index {idx}")
         out.append(item)
     return out
+
+
+def parse_key_value_stdout(text: str) -> dict[str, str]:
+    out: dict[str, str] = {}
+    for line in (text or "").splitlines():
+        if "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        out[key.strip()] = value.strip()
+    return out
+
+
+def build_live_cam_start_command(
+    start_silent_script: str | Path,
+    spec: dict[str, Any],
+    *,
+    display: str,
+    sink: str = "vacuumtube_silent",
+) -> list[str]:
+    return [
+        "bash",
+        str(start_silent_script),
+        "--session",
+        str(spec["session"]),
+        "--port",
+        str(spec["port"]),
+        "--sink",
+        str(sink),
+        "--display",
+        str(display),
+        "--instance-dir",
+        str(spec["instance_dir"]),
+    ]
+
+
+def build_live_cam_started_result(
+    spec: dict[str, Any],
+    parsed: dict[str, str],
+) -> dict[str, str]:
+    result = dict(parsed)
+    result["port"] = str(spec["port"])
+    result["session_name"] = str(spec["session"])
+    return result
 
 
 def build_live_cam_open_result(

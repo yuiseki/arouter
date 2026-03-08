@@ -56,6 +56,9 @@ from .live_cam_runtime import (
     build_live_cam_minimize_response,
     build_live_cam_open_result,
     build_live_cam_reopen_result,
+    build_live_cam_start_command,
+    build_live_cam_started_result,
+    parse_key_value_stdout,
     run_live_cam_parallel,
 )
 from .live_cam_selection import (
@@ -139,6 +142,8 @@ __all__ = [
     "build_window_frame_geometry_script",
     "build_live_cam_layout_targets_compact",
     "build_live_cam_layout_targets_full",
+    "build_live_cam_start_command",
+    "build_live_cam_started_result",
     "build_live_cam_hide_response",
     "build_live_cam_layout_response",
     "build_live_cam_minimize_response",
@@ -205,6 +210,7 @@ __all__ = [
     "resolve_biometric_poll_interval",
     "report_segment_error",
     "run_biometric_poll_iteration",
+    "parse_key_value_stdout",
     "run_biometric_poller_loop",
     "run_authorized_command_flow",
     "run_live_cam_parallel",
