@@ -228,6 +228,26 @@ def run_vacuumtube_try_resume_current_video(
         return False
 
 
+def run_vacuumtube_wait_watch_route(
+    *,
+    get_state: Callable[[], dict[str, Any]],
+    now: Callable[[], float],
+    sleep: Callable[[float], None],
+    timeout_sec: float = 8.0,
+) -> bool:
+    deadline = now() + timeout_sec
+    while now() < deadline:
+        try:
+            state = get_state()
+        except Exception:
+            sleep(0.2)
+            continue
+        if str(state.get("hash") or "").startswith("#/watch"):
+            return True
+        sleep(0.2)
+    return False
+
+
 def finalize_vacuumtube_context(context: dict[str, Any]) -> dict[str, Any]:
     finalized = dict(context)
     finalized["available"] = bool(finalized.get("windowFound")) or bool(finalized.get("hash"))

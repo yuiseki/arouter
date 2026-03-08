@@ -28,6 +28,7 @@ from arouter import (
     run_vacuumtube_state_query,
     run_vacuumtube_stop_music,
     run_vacuumtube_try_resume_current_video,
+    run_vacuumtube_wait_watch_route,
     start_vacuumtube_tmux_session,
 )
 
@@ -203,6 +204,42 @@ def test_run_vacuumtube_try_resume_current_video_swallows_errors() -> None:
     )
 
     assert out is False
+
+
+def test_run_vacuumtube_wait_watch_route_returns_true_when_hash_matches() -> None:
+    states = iter(
+        [
+            {"hash": "#/"},
+            {"hash": "#/watch?v=abc"},
+        ]
+    )
+    sleeps: list[float] = []
+    now_values = iter([100.0, 100.1, 100.2, 100.3])
+
+    out = run_vacuumtube_wait_watch_route(
+        get_state=lambda: next(states),
+        now=lambda: next(now_values),
+        sleep=lambda seconds: sleeps.append(seconds),
+        timeout_sec=5.0,
+    )
+
+    assert out is True
+    assert sleeps == [0.2]
+
+
+def test_run_vacuumtube_wait_watch_route_tolerates_state_errors_until_timeout() -> None:
+    sleeps: list[float] = []
+    now_values = iter([100.0, 100.1, 100.3, 100.6])
+
+    out = run_vacuumtube_wait_watch_route(
+        get_state=lambda: (_ for _ in ()).throw(RuntimeError("boom")),
+        now=lambda: next(now_values),
+        sleep=lambda seconds: sleeps.append(seconds),
+        timeout_sec=0.5,
+    )
+
+    assert out is False
+    assert sleeps == [0.2, 0.2]
 
 
 def test_finalize_vacuumtube_context_marks_available_from_window_or_hash() -> None:
