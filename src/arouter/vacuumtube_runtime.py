@@ -189,3 +189,70 @@ def run_vacuumtube_resume_playback(
         confirm_space_resume()
         log_position("RESUME space-toggle")
         return f"resumed playback via Space toggle ({win_id})"
+
+
+def run_vacuumtube_go_home(
+    *,
+    presentation_before: dict[str, Any],
+    hide_overlay_if_needed: Callable[[], None],
+    ensure_home: Callable[[], dict[str, Any]],
+    restore_window_presentation: Callable[..., None],
+    log: Callable[[str], None],
+) -> str:
+    hide_overlay_if_needed()
+    snapshot = ensure_home()
+    try:
+        restore_window_presentation(presentation_before, label="YOUTUBE_HOME")
+    except Exception as err:
+        log(f"YOUTUBE_HOME presentation restore skipped: {err}")
+    return "youtube home verified " + json.dumps(
+        {"hash": snapshot.get("hash"), "tiles": snapshot.get("tilesCount")},
+        ensure_ascii=False,
+    )
+
+
+def run_vacuumtube_play_bgm(
+    *,
+    get_state: Callable[[], dict[str, Any]],
+    send_return_key: Callable[[], None],
+    send_space_key: Callable[[], None],
+    sleep: Callable[[float], None],
+    try_resume_current_video: Callable[[], None],
+    confirm_watch_playback: Callable[..., None],
+    open_from_home: Callable[[], str],
+    ensure_top_right_position: Callable[[], dict[str, Any]],
+    log: Callable[[str], None],
+) -> str:
+    state = get_state()
+    if state.get("accountSelectHint"):
+        send_return_key()
+        sleep(0.6)
+        state = get_state()
+
+    def log_position(prefix: str) -> None:
+        try:
+            position = ensure_top_right_position()
+            payload = json.dumps(position, ensure_ascii=False)
+            log(f"{prefix} window position: {payload}")
+        except Exception as err:
+            log(f"{prefix} position check skipped: {err}")
+
+    if str(state.get("hash") or "").startswith("#/watch"):
+        try_resume_current_video()
+        try:
+            confirm_watch_playback(
+                timeout_sec=4.0,
+                allow_soft_confirm_when_unpaused=True,
+            )
+            log_position("BGM watch-resume")
+            return "watch page detected; confirmed playback"
+        except Exception:
+            send_space_key()
+            confirm_watch_playback(
+                timeout_sec=5.0,
+                allow_soft_confirm_when_unpaused=True,
+            )
+            log_position("BGM watch-toggle")
+            return "watch page detected; sent Space toggle and confirmed playback"
+
+    return open_from_home()

@@ -11,6 +11,8 @@ from arouter import (
     is_recoverable_vacuumtube_error,
     merge_vacuumtube_cdp_state,
     merge_vacuumtube_window_snapshot,
+    run_vacuumtube_go_home,
+    run_vacuumtube_play_bgm,
     run_vacuumtube_resume_playback,
 )
 
@@ -238,3 +240,129 @@ def test_run_vacuumtube_resume_playback_uses_space_toggle_after_dom_resume_fails
     assert result == "resumed playback via Space toggle (0x123)"
     assert events[:4] == ["try_resume", "space", "confirm_space", "ensure_top_right"]
     assert any(event.startswith("RESUME space-toggle window position: ") for event in events)
+
+
+def test_run_vacuumtube_go_home_restores_presentation() -> None:
+    events: list[str] = []
+
+    result = run_vacuumtube_go_home(
+        presentation_before={"fullscreen": True, "window_id": "0x123"},
+        hide_overlay_if_needed=lambda: events.append("hide_overlay"),
+        ensure_home=lambda: {"hash": "#/", "tilesCount": 8},
+        restore_window_presentation=lambda presentation, *, label: events.append(
+            f"restore:{presentation['window_id']}:{label}"
+        ),
+        log=events.append,
+    )
+
+    assert result == 'youtube home verified {"hash": "#/", "tiles": 8}'
+    assert events == ["hide_overlay", "restore:0x123:YOUTUBE_HOME"]
+
+
+def test_run_vacuumtube_go_home_logs_restore_failure_and_returns_snapshot() -> None:
+    events: list[str] = []
+
+    result = run_vacuumtube_go_home(
+        presentation_before={"fullscreen": False, "window_id": "0x123"},
+        hide_overlay_if_needed=lambda: events.append("hide_overlay"),
+        ensure_home=lambda: {"hash": "#/", "tilesCount": 3},
+        restore_window_presentation=lambda _presentation, *, label: (_ for _ in ()).throw(
+            RuntimeError(f"{label}: failed")
+        ),
+        log=events.append,
+    )
+
+    assert result == 'youtube home verified {"hash": "#/", "tiles": 3}'
+    assert events == [
+        "hide_overlay",
+        "YOUTUBE_HOME presentation restore skipped: YOUTUBE_HOME: failed",
+    ]
+
+
+def test_run_vacuumtube_play_bgm_opens_home_flow_when_not_on_watch_route() -> None:
+    events: list[str] = []
+
+    def confirm_watch_playback(
+        *,
+        timeout_sec: float,
+        allow_soft_confirm_when_unpaused: bool,
+    ) -> None:
+        events.append(f"confirm:{timeout_sec}:{allow_soft_confirm_when_unpaused}")
+
+    result = run_vacuumtube_play_bgm(
+        get_state=lambda: {"accountSelectHint": False, "hash": "#/"},
+        send_return_key=lambda: events.append("return"),
+        send_space_key=lambda: events.append("space"),
+        sleep=lambda seconds: events.append(f"sleep:{seconds}"),
+        try_resume_current_video=lambda: events.append("resume"),
+        confirm_watch_playback=confirm_watch_playback,
+        open_from_home=lambda: events.append("open_home") or "opened watch route #/watch?v=bgm",
+        ensure_top_right_position=lambda: {"ok": True},
+        log=events.append,
+    )
+
+    assert result == "opened watch route #/watch?v=bgm"
+    assert events == ["open_home"]
+
+
+def test_run_vacuumtube_play_bgm_watch_route_uses_resume_path() -> None:
+    events: list[str] = []
+
+    def confirm_watch_playback(
+        *,
+        timeout_sec: float,
+        allow_soft_confirm_when_unpaused: bool,
+    ) -> None:
+        events.append(f"confirm:{timeout_sec}:{allow_soft_confirm_when_unpaused}")
+
+    def ensure_top_right_position() -> dict[str, Any]:
+        events.append("ensure_top_right")
+        return {"ok": True, "window_id": "0x123"}
+
+    result = run_vacuumtube_play_bgm(
+        get_state=lambda: {"accountSelectHint": False, "hash": "#/watch?v=abc"},
+        send_return_key=lambda: events.append("return"),
+        send_space_key=lambda: events.append("space"),
+        sleep=lambda seconds: events.append(f"sleep:{seconds}"),
+        try_resume_current_video=lambda: events.append("resume"),
+        confirm_watch_playback=confirm_watch_playback,
+        open_from_home=lambda: (_ for _ in ()).throw(AssertionError("unexpected home open")),
+        ensure_top_right_position=ensure_top_right_position,
+        log=events.append,
+    )
+
+    assert result == "watch page detected; confirmed playback"
+    assert events[:3] == ["resume", "confirm:4.0:True", "ensure_top_right"]
+    assert any(event.startswith("BGM watch-resume window position: ") for event in events)
+
+
+def test_run_vacuumtube_play_bgm_nudges_account_selection_before_home_open() -> None:
+    events: list[str] = []
+    states = iter(
+        [
+            {"accountSelectHint": True, "hash": "#/"},
+            {"accountSelectHint": False, "hash": "#/"},
+        ]
+    )
+
+    def confirm_watch_playback(
+        *,
+        timeout_sec: float,
+        allow_soft_confirm_when_unpaused: bool,
+    ) -> None:
+        events.append(f"confirm:{timeout_sec}:{allow_soft_confirm_when_unpaused}")
+
+    result = run_vacuumtube_play_bgm(
+        get_state=lambda: next(states),
+        send_return_key=lambda: events.append("return"),
+        send_space_key=lambda: events.append("space"),
+        sleep=lambda seconds: events.append(f"sleep:{seconds}"),
+        try_resume_current_video=lambda: events.append("resume"),
+        confirm_watch_playback=confirm_watch_playback,
+        open_from_home=lambda: events.append("open_home") or "opened watch route #/watch?v=bgm",
+        ensure_top_right_position=lambda: {"ok": True},
+        log=events.append,
+    )
+
+    assert result == "opened watch route #/watch?v=bgm"
+    assert events == ["return", "sleep:0.6", "open_home"]
