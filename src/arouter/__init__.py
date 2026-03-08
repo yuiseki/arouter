@@ -79,8 +79,10 @@ from .live_cam_selection import (
     web_watch_retry_video_id,
 )
 from .live_cam_status import (
+    build_live_cam_page_brief,
     build_live_cam_runtime_url_entry,
     find_stuck_live_cam_specs,
+    merge_live_cam_page_snapshot,
     page_matches_live_camera_spec,
     select_live_cam_page_target,
     select_live_cam_page_url,
@@ -210,6 +212,7 @@ __all__ = [
     "build_live_cam_force_retry_failure",
     "build_live_cam_force_video_command",
     "build_live_cam_json_parse_failure",
+    "build_live_cam_page_brief",
     "expand_live_cam_candidates",
     "format_live_cam_selection_error",
     "build_live_cam_runtime_url_entry",
@@ -231,6 +234,7 @@ __all__ = [
     "normalize_transcript",
     "normalize_live_cam_force_video_id",
     "normalize_live_cam_work_area",
+    "merge_live_cam_page_snapshot",
     "parse_command",
     "parse_desktop_size_from_wmctrl_output",
     "parse_screen_size_from_xrandr_output",

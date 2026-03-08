@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from arouter import (
+    build_live_cam_page_brief,
     build_live_cam_runtime_url_entry,
     find_stuck_live_cam_specs,
+    merge_live_cam_page_snapshot,
     page_matches_live_camera_spec,
     select_live_cam_page_target,
     select_live_cam_page_url,
@@ -35,6 +37,48 @@ def test_build_live_cam_runtime_url_entry_returns_error_payload() -> None:
         port=9996,
         targets_or_error=OSError("connection refused"),
     ) == {"port": 9996, "error": "connection refused"}
+
+
+def test_build_live_cam_page_brief_extracts_title_and_url() -> None:
+    assert build_live_cam_page_brief(
+        {
+            "type": "page",
+            "url": "https://www.youtube.com/tv#/watch?v=abc123DEF45",
+            "title": "Shibuya",
+        }
+    ) == {
+        "url": "https://www.youtube.com/tv#/watch?v=abc123DEF45",
+        "title": "Shibuya",
+    }
+
+
+def test_merge_live_cam_page_snapshot_overlays_string_fields() -> None:
+    assert merge_live_cam_page_snapshot(
+        {"url": "https://www.youtube.com/tv#/watch?v=abc123DEF45", "title": "Before"},
+        snapshot={
+            "title": "After",
+            "hash": "#/watch?v=abc123DEF45",
+            "bodyText": "渋谷スクランブル交差点のライブ映像",
+            "watchText": "【LIVE】いまの渋谷",
+        },
+    ) == {
+        "url": "https://www.youtube.com/tv#/watch?v=abc123DEF45",
+        "title": "After",
+        "hash": "#/watch?v=abc123DEF45",
+        "bodyText": "渋谷スクランブル交差点のライブ映像",
+        "watchText": "【LIVE】いまの渋谷",
+    }
+
+
+def test_merge_live_cam_page_snapshot_keeps_brief_and_records_inspect_error() -> None:
+    assert merge_live_cam_page_snapshot(
+        {"url": "https://www.youtube.com/tv#/watch?v=abc123DEF45", "title": "Shibuya"},
+        inspect_error=RuntimeError("cdp failed"),
+    ) == {
+        "url": "https://www.youtube.com/tv#/watch?v=abc123DEF45",
+        "title": "Shibuya",
+        "inspectError": "cdp failed",
+    }
 
 
 def test_page_matches_live_camera_spec_accepts_matching_watch_page() -> None:

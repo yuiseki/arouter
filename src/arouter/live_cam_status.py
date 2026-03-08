@@ -41,6 +41,32 @@ def build_live_cam_runtime_url_entry(
     return {"port": int(port), "url": select_live_cam_page_url(targets_or_error)}
 
 
+def build_live_cam_page_brief(target: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "url": str(target.get("url") or ""),
+        "title": str(target.get("title") or ""),
+    }
+
+
+def merge_live_cam_page_snapshot(
+    brief: dict[str, Any],
+    *,
+    snapshot: dict[str, Any] | None = None,
+    inspect_error: Exception | None = None,
+) -> dict[str, Any]:
+    out = dict(brief)
+    if inspect_error is not None:
+        out["inspectError"] = str(inspect_error)
+        return out
+    if not isinstance(snapshot, dict):
+        return out
+    for key in ("title", "url", "hash", "bodyText", "watchText"):
+        value = snapshot.get(key)
+        if isinstance(value, str):
+            out[key] = value
+    return out
+
+
 def page_matches_live_camera_spec(spec: dict[str, Any], page: dict[str, Any]) -> bool:
     url = str(page.get("url") or "")
     if "youtube.com/tv" not in url or "watch?v=" not in url:
