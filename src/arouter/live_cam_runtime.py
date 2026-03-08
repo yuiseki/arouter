@@ -232,6 +232,37 @@ def run_live_cam_window_action_flow(
     return build_response(window_ids, sorted(pids_by_port.keys()), state)
 
 
+def run_live_cam_raise_windows(
+    pids: list[int],
+    *,
+    window_id_lookup: Callable[[int], str | None],
+    build_activate_command: Callable[[str], list[str]],
+    run_command: Callable[[list[str]], None],
+) -> None:
+    for pid in pids:
+        wid = window_id_lookup(int(pid))
+        if not wid:
+            continue
+        run_command(build_activate_command(wid))
+
+
+def run_live_cam_close_windows(
+    pids: list[int],
+    *,
+    window_id_lookup: Callable[[int], str | None],
+    build_close_command: Callable[[str], list[str]],
+    run_command: Callable[[list[str]], None],
+) -> list[str]:
+    closed: list[str] = []
+    for pid in pids:
+        wid = window_id_lookup(int(pid))
+        if not wid:
+            continue
+        run_command(build_close_command(wid))
+        closed.append(wid)
+    return closed
+
+
 def parse_key_value_stdout(text: str) -> dict[str, str]:
     out: dict[str, str] = {}
     for line in (text or "").splitlines():

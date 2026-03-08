@@ -20,7 +20,9 @@ from arouter import (
     resolve_existing_live_cam_windowed_pids,
     resolve_live_cam_action_state,
     resolve_live_cam_layout_bootstrap,
+    run_live_cam_close_windows,
     run_live_cam_parallel,
+    run_live_cam_raise_windows,
     run_live_cam_window_action_flow,
 )
 
@@ -70,6 +72,33 @@ def test_run_live_cam_parallel_raises_with_port_context() -> None:
         assert "9994" in str(exc)
     else:
         raise AssertionError("expected RuntimeError")
+
+
+def test_run_live_cam_raise_windows_executes_activate_commands_for_visible_windows() -> None:
+    commands: list[list[str]] = []
+
+    run_live_cam_raise_windows(
+        [101, 102],
+        window_id_lookup=lambda pid: {101: "0x1", 102: None}[pid],
+        build_activate_command=lambda wid: ["xdotool", "windowactivate", "--sync", wid],
+        run_command=commands.append,
+    )
+
+    assert commands == [["xdotool", "windowactivate", "--sync", "0x1"]]
+
+
+def test_run_live_cam_close_windows_returns_only_closed_window_ids() -> None:
+    commands: list[list[str]] = []
+
+    closed = run_live_cam_close_windows(
+        [201, 202, 203],
+        window_id_lookup=lambda pid: {201: "0x10", 202: None, 203: "0x30"}[pid],
+        build_close_command=lambda wid: ["wmctrl", "-i", "-c", wid],
+        run_command=commands.append,
+    )
+
+    assert closed == ["0x10", "0x30"]
+    assert commands == [["wmctrl", "-i", "-c", "0x10"], ["wmctrl", "-i", "-c", "0x30"]]
 
 
 def test_parse_key_value_stdout_ignores_non_kv_lines() -> None:
