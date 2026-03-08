@@ -4,6 +4,7 @@ import pytest
 
 from arouter import (
     run_vacuumtube_cdp_client,
+    run_vacuumtube_page_cdp_client,
     run_vacuumtube_page_target_query,
     select_vacuumtube_page_target,
     select_vacuumtube_websocket_url,
@@ -98,3 +99,27 @@ def test_run_vacuumtube_cdp_client_raises_without_websocket_url() -> None:
             create_client=lambda _ws_url: object(),
             enable_client=lambda _client: None,
         )
+
+
+def test_run_vacuumtube_page_cdp_client_queries_target_and_enables_client() -> None:
+    events: list[object] = []
+
+    client = run_vacuumtube_page_cdp_client(
+        fetch_targets=lambda: [
+            {
+                "type": "page",
+                "url": "https://www.youtube.com/tv#/",
+                "webSocketDebuggerUrl": "ws://127.0.0.1:9992/devtools/page/1",
+            }
+        ],
+        select_target=select_vacuumtube_page_target,
+        select_websocket_url=select_vacuumtube_websocket_url,
+        create_client=lambda ws_url: events.append(("create", ws_url)) or {"ws_url": ws_url},
+        enable_client=lambda client: events.append(("enable", client["ws_url"])),
+    )
+
+    assert client == {"ws_url": "ws://127.0.0.1:9992/devtools/page/1"}
+    assert events == [
+        ("create", "ws://127.0.0.1:9992/devtools/page/1"),
+        ("enable", "ws://127.0.0.1:9992/devtools/page/1"),
+    ]

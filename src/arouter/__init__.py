@@ -218,6 +218,7 @@ from .vacuumtube_state import (
 )
 from .vacuumtube_targets import (
     run_vacuumtube_cdp_client,
+    run_vacuumtube_page_cdp_client,
     run_vacuumtube_page_target_query,
     select_vacuumtube_page_target,
     select_vacuumtube_websocket_url,
@@ -498,6 +499,7 @@ __all__ = [
     "run_live_cam_parallel",
     "run_vacuumtube_context_poller_loop",
     "run_vacuumtube_cdp_client",
+    "run_vacuumtube_page_cdp_client",
     "run_vacuumtube_page_target_query",
     "run_vacuumtube_ensure_home",
     "run_vacuumtube_state_query",
