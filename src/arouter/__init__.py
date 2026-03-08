@@ -258,6 +258,7 @@ from .window_query_runtime import (
     read_window_fullscreen_state,
     run_desktop_size_query,
     run_screen_size_query,
+    run_window_row_by_listen_port,
     run_wmctrl_list_query,
     run_work_area_query,
 )
@@ -353,6 +354,7 @@ __all__ = [
     "read_window_fullscreen_state",
     "run_desktop_size_query",
     "run_screen_size_query",
+    "run_window_row_by_listen_port",
     "run_work_area_query",
     "run_window_activate",
     "run_window_close",

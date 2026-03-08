@@ -5,6 +5,7 @@ from arouter import (
     read_window_fullscreen_state,
     run_desktop_size_query,
     run_screen_size_query,
+    run_window_row_by_listen_port,
     run_wmctrl_list_query,
     run_work_area_query,
 )
@@ -63,6 +64,40 @@ def test_run_work_area_query_parses_wmctrl_output() -> None:
 
     assert out == (0, 28, 4096, 2132)
     assert commands == [["wmctrl", "-d"]]
+
+
+def test_run_window_row_by_listen_port_returns_matching_row() -> None:
+    calls: list[object] = []
+
+    row = run_window_row_by_listen_port(
+        port=9992,
+        pid_lookup=lambda port: 456 if port == 9992 else None,
+        row_provider=lambda: calls.append("rows")
+        or ["0x002 0 456 11 21 31 41 host VacuumTube"],
+        find_row=lambda rows, *, pid, title_hint: calls.append((rows, pid, title_hint))
+        or {"id": "0x002", "pid": pid},
+    )
+
+    assert row == {"id": "0x002", "pid": 456}
+    assert calls == [
+        "rows",
+        (["0x002 0 456 11 21 31 41 host VacuumTube"], 456, "VacuumTube"),
+    ]
+
+
+def test_run_window_row_by_listen_port_returns_none_without_listen_pid() -> None:
+    row = run_window_row_by_listen_port(
+        port=9992,
+        pid_lookup=lambda _port: None,
+        row_provider=lambda: ["unused"],
+        find_row=lambda _rows, *, pid, title_hint: {
+            "id": "0x002",
+            "pid": pid,
+            "title_hint": title_hint,
+        },
+    )
+
+    assert row is None
 
 
 def test_build_xprop_wm_state_command_matches_existing_contract() -> None:

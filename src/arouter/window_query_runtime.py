@@ -45,6 +45,23 @@ def run_work_area_query(
     return parse_output(run_command(["wmctrl", "-d"]))
 
 
+def run_window_row_by_listen_port(
+    *,
+    port: int,
+    pid_lookup: Callable[[int], int | None],
+    row_provider: Callable[[], list[str]],
+    find_row: Callable[..., dict[str, object] | None],
+) -> dict[str, object] | None:
+    pid = pid_lookup(int(port))
+    if not pid:
+        return None
+    return find_row(
+        row_provider(),
+        pid=int(pid),
+        title_hint="VacuumTube",
+    )
+
+
 def build_xprop_wm_state_command(win_id: str) -> list[str]:
     return ["xprop", "-id", win_id, "_NET_WM_STATE"]
 
