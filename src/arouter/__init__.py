@@ -153,6 +153,7 @@ from .window_presentation import (
     resolve_window_restore_plan,
     top_right_region_from_screen_and_work_area,
 )
+from .window_queries import build_wmctrl_list_command
 from .window_rows import (
     chromium_window_ids_from_wmctrl_lines,
     detect_new_window_id,
@@ -204,6 +205,7 @@ __all__ = [
     "build_window_close_command",
     "build_window_fullscreen_command",
     "build_window_key_command",
+    "build_wmctrl_list_command",
     "build_window_move_resize_command",
     "build_window_minimize_command",
     "build_top_right_position_attempt_plan",
