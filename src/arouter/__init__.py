@@ -236,7 +236,10 @@ from .window_queries import build_wmctrl_list_command
 from .window_query_runtime import (
     build_xprop_wm_state_command,
     read_window_fullscreen_state,
+    run_desktop_size_query,
+    run_screen_size_query,
     run_wmctrl_list_query,
+    run_work_area_query,
 )
 from .window_rows import (
     chromium_window_ids_from_wmctrl_lines,
@@ -325,6 +328,9 @@ __all__ = [
     "build_window_minimize_command",
     "run_wmctrl_list_query",
     "read_window_fullscreen_state",
+    "run_desktop_size_query",
+    "run_screen_size_query",
+    "run_work_area_query",
     "run_window_activate",
     "run_window_close",
     "run_window_fullscreen",

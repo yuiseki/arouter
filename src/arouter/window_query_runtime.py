@@ -15,6 +15,36 @@ def run_wmctrl_list_query(
     ).splitlines()
 
 
+def run_desktop_size_query(
+    *,
+    run_command: Callable[[list[str]], str],
+    parse_output: Callable[[str], tuple[int, int] | None],
+) -> tuple[int, int]:
+    size = parse_output(run_command(["wmctrl", "-d"]))
+    if size:
+        return size
+    raise RuntimeError("desktop size not found via wmctrl -d")
+
+
+def run_screen_size_query(
+    *,
+    run_command: Callable[[list[str]], str],
+    parse_output: Callable[[str], tuple[int, int] | None],
+) -> tuple[int, int]:
+    size = parse_output(run_command(["xrandr", "--current"]))
+    if size:
+        return size
+    raise RuntimeError("primary screen size not found via xrandr --current")
+
+
+def run_work_area_query(
+    *,
+    run_command: Callable[[list[str]], str],
+    parse_output: Callable[[str], tuple[int, int, int, int] | None],
+) -> tuple[int, int, int, int] | None:
+    return parse_output(run_command(["wmctrl", "-d"]))
+
+
 def build_xprop_wm_state_command(win_id: str) -> list[str]:
     return ["xprop", "-id", win_id, "_NET_WM_STATE"]
 
