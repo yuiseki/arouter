@@ -306,6 +306,20 @@ def build_live_cam_started_result(
     return result
 
 
+def run_live_cam_start_flow(
+    spec: dict[str, Any],
+    *,
+    build_command: Callable[[dict[str, Any]], list[str]],
+    run_command: Callable[[list[str]], Any],
+    parse_stdout: Callable[[str], dict[str, str]],
+    build_result: Callable[[dict[str, Any], dict[str, str]], dict[str, Any]],
+) -> dict[str, Any]:
+    command = build_command(spec)
+    completed = run_command(command)
+    parsed = parse_stdout(str(getattr(completed, "stdout", "") or ""))
+    return build_result(spec, parsed)
+
+
 def run_live_cam_open_flow(
     specs: list[dict[str, Any]],
     *,

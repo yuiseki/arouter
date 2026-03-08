@@ -25,6 +25,7 @@ from arouter import (
     run_live_cam_open_flow,
     run_live_cam_parallel,
     run_live_cam_raise_windows,
+    run_live_cam_start_flow,
     run_live_cam_window_action_flow,
 )
 
@@ -143,6 +144,23 @@ def test_build_live_cam_started_result_merges_runtime_fields() -> None:
     )
 
     assert result == {
+        "PID": "12345",
+        "port": "9996",
+        "session_name": "vacuumtube-bg-5",
+    }
+
+
+def test_run_live_cam_start_flow_builds_and_executes_command() -> None:
+    out = run_live_cam_start_flow(
+        {"session": "vacuumtube-bg-5", "port": 9996},
+        build_command=lambda spec: ["bash", f"/tmp/{spec['session']}.sh"],
+        run_command=lambda cmd: type("CP", (), {"stdout": f"CMD={' '.join(cmd)}\nPID=12345\n"})(),
+        parse_stdout=parse_key_value_stdout,
+        build_result=build_live_cam_started_result,
+    )
+
+    assert out == {
+        "CMD": "bash /tmp/vacuumtube-bg-5.sh",
         "PID": "12345",
         "port": "9996",
         "session_name": "vacuumtube-bg-5",
