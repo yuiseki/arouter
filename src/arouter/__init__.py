@@ -51,7 +51,9 @@ from .live_cam_layout import (
     compact_live_cam_region_from_screen_and_work_area,
 )
 from .live_cam_runtime import (
+    build_live_cam_hide_response,
     build_live_cam_layout_response,
+    build_live_cam_minimize_response,
     build_live_cam_open_result,
     build_live_cam_reopen_result,
     run_live_cam_parallel,
@@ -137,7 +139,9 @@ __all__ = [
     "build_window_frame_geometry_script",
     "build_live_cam_layout_targets_compact",
     "build_live_cam_layout_targets_full",
+    "build_live_cam_hide_response",
     "build_live_cam_layout_response",
+    "build_live_cam_minimize_response",
     "build_live_cam_open_result",
     "build_live_cam_reopen_result",
     "build_load_check_wmctrl_commands",

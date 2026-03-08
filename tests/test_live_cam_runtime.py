@@ -3,7 +3,9 @@ from __future__ import annotations
 import time
 
 from arouter import (
+    build_live_cam_hide_response,
     build_live_cam_layout_response,
+    build_live_cam_minimize_response,
     build_live_cam_open_result,
     build_live_cam_reopen_result,
     run_live_cam_parallel,
@@ -102,4 +104,30 @@ def test_build_live_cam_layout_response_includes_optional_open_errors() -> None:
         '"started": [], "opened": [{"label": "akihabara", "port": 9996}], '
         '"windows": [{"id": "0x1"}], "urls": [], '
         '"openErrors": ["live_cam_reopen failed (akihabara:9996): timed out"]}'
+    )
+
+
+def test_build_live_cam_hide_response_serializes_closed_windows() -> None:
+    result = build_live_cam_hide_response(
+        window_ids=["0x1", "0x2"],
+        ports=[9993, 9994],
+        state={"windows": [], "urls": []},
+    )
+
+    assert result == (
+        'live camera wall hide {"closed": 2, "windowIds": ["0x1", "0x2"], '
+        '"ports": [9993, 9994], "windows": [], "urls": []}'
+    )
+
+
+def test_build_live_cam_minimize_response_serializes_minimized_windows() -> None:
+    result = build_live_cam_minimize_response(
+        window_ids=["0x1"],
+        ports=[9993],
+        state={"windows": [], "urls": []},
+    )
+
+    assert result == (
+        'live camera wall minimize {"minimized": 1, "windowIds": ["0x1"], '
+        '"ports": [9993], "windows": [], "urls": []}'
     )

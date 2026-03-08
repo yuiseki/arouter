@@ -107,3 +107,33 @@ def build_live_cam_layout_response(
     if open_errors:
         payload["openErrors"] = open_errors
     return "live camera wall " + json.dumps(payload, ensure_ascii=False)
+
+
+def build_live_cam_hide_response(
+    *,
+    window_ids: list[str],
+    ports: list[int],
+    state: dict[str, Any],
+) -> str:
+    payload = {
+        "closed": len(window_ids),
+        "windowIds": window_ids,
+        "ports": ports,
+        **state,
+    }
+    return "live camera wall hide " + json.dumps(payload, ensure_ascii=False)
+
+
+def build_live_cam_minimize_response(
+    *,
+    window_ids: list[str],
+    ports: list[int],
+    state: dict[str, Any],
+) -> str:
+    payload = {
+        "minimized": len(window_ids),
+        "windowIds": window_ids,
+        "ports": ports,
+        **state,
+    }
+    return "live camera wall minimize " + json.dumps(payload, ensure_ascii=False)
