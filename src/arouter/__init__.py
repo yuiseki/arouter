@@ -36,6 +36,11 @@ from .biometric_signal import (
 from .errors import report_segment_error
 from .execution import command_has_system_prefix, execute_command, execute_news_command
 from .flow import run_authorized_command_flow
+from .live_cam_layout import (
+    build_live_cam_layout_targets_compact,
+    build_live_cam_layout_targets_full,
+    compact_live_cam_region_from_screen_and_work_area,
+)
 from .load_check import (
     build_load_check_wmctrl_commands,
     find_konsole_rows_for_tmux_client_pids,
@@ -94,6 +99,8 @@ __all__ = [
     "encrypt_biometric_password_payload",
     "ensure_biometric_runtime_attrs",
     "build_overlay_ipc_line",
+    "build_live_cam_layout_targets_compact",
+    "build_live_cam_layout_targets_full",
     "build_load_check_wmctrl_commands",
     "build_window_activate_command",
     "build_window_close_command",
@@ -103,6 +110,7 @@ __all__ = [
     "build_window_minimize_command",
     "command_has_system_prefix",
     "chromium_window_ids_from_wmctrl_lines",
+    "compact_live_cam_region_from_screen_and_work_area",
     "consume_signal_file",
     "detect_new_window_id",
     "compose_overlay_notify_text",
