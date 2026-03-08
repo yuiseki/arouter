@@ -129,6 +129,11 @@ from .router import (
 )
 from .segment import process_pcm_segment, process_transcribed_segment
 from .storage import handle_authorization_denied, store_authfail_wav, store_authorized_wav
+from .tmux_commands import (
+    build_tmux_has_session_command,
+    build_tmux_kill_session_command,
+    build_vacuumtube_tmux_start_command,
+)
 from .vacuumtube_cache import (
     build_vacuumtube_context_error,
     resolve_vacuumtube_context_cache,
@@ -217,6 +222,9 @@ __all__ = [
     "build_live_cam_minimize_script",
     "build_minimize_other_windows_script",
     "build_window_frame_geometry_script",
+    "build_tmux_has_session_command",
+    "build_tmux_kill_session_command",
+    "build_vacuumtube_tmux_start_command",
     "build_live_cam_layout_targets_compact",
     "build_live_cam_layout_targets_full",
     "build_live_cam_start_command",
