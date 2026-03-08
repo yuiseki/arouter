@@ -157,6 +157,12 @@ from .vacuumtube_targets import (
     select_vacuumtube_page_target,
     select_vacuumtube_websocket_url,
 )
+from .weather_windows import (
+    build_weather_pages_closed_response,
+    build_weather_pages_tiled_response,
+    build_weather_tile_result,
+    prune_weather_window_history,
+)
 from .window_actions import (
     build_window_activate_command,
     build_window_close_command,
@@ -240,6 +246,9 @@ __all__ = [
     "build_top_right_position_result",
     "build_vacuumtube_context_error",
     "build_vacuumtube_context_base",
+    "build_weather_pages_closed_response",
+    "build_weather_pages_tiled_response",
+    "build_weather_tile_result",
     "build_window_presentation_snapshot",
     "command_has_system_prefix",
     "chromium_window_ids_from_wmctrl_lines",
@@ -306,6 +315,7 @@ __all__ = [
     "process_pcm_segment",
     "process_transcribed_segment",
     "page_matches_live_camera_spec",
+    "prune_weather_window_history",
     "parse_konsole_window_rows",
     "parse_tmux_client_pids",
     "pid_ancestor_chain",
