@@ -168,6 +168,8 @@ from .weather_windows import (
     build_weather_pages_closed_response,
     build_weather_pages_tiled_response,
     build_weather_tile_result,
+    close_weather_pages_flow,
+    open_weather_pages_flow,
     prune_weather_window_history,
 )
 from .window_actions import (
@@ -260,6 +262,8 @@ __all__ = [
     "build_weather_pages_closed_response",
     "build_weather_pages_tiled_response",
     "build_weather_tile_result",
+    "close_weather_pages_flow",
+    "open_weather_pages_flow",
     "build_window_presentation_snapshot",
     "command_has_system_prefix",
     "chromium_window_ids_from_wmctrl_lines",

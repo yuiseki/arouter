@@ -4,6 +4,8 @@ from arouter import (
     build_weather_pages_closed_response,
     build_weather_pages_tiled_response,
     build_weather_tile_result,
+    close_weather_pages_flow,
+    open_weather_pages_flow,
     prune_weather_window_history,
 )
 
@@ -38,3 +40,61 @@ def test_build_weather_pages_closed_response_wraps_count_and_ids() -> None:
         build_weather_pages_closed_response(["0x1", "0x2"])
         == 'weather pages closed {"closed": 2, "ids": ["0x1", "0x2"]}'
     )
+
+
+def test_open_weather_pages_flow_returns_history_and_response() -> None:
+    launched: list[str] = []
+    moved_calls: list[tuple[str, dict[str, int]]] = []
+
+    def move_window(win_id: str, geom: dict[str, int]) -> dict[str, str]:
+        moved_calls.append((win_id, geom))
+        return {"window_id": win_id}
+
+    out = open_weather_pages_flow(
+        [
+            {
+                "label": "amesh",
+                "url": "https://example.test/amesh",
+                "geom": {"x": 0, "y": 0, "w": 640, "h": 360},
+            }
+        ],
+        current_window_ids=lambda: {"0x0bad"},
+        launch_window=launched.append,
+        detect_new_window=lambda before_ids, timeout_sec: "0xBEEF",
+        move_window=move_window,
+        build_tile_result=lambda spec, moved: {"label": spec["label"], **moved},
+        build_response=build_weather_pages_tiled_response,
+    )
+
+    assert launched == ["https://example.test/amesh"]
+    assert moved_calls == [("0xBEEF", {"x": 0, "y": 0, "w": 640, "h": 360})]
+    assert out == {
+        "opened_ids": ["0xbeef"],
+        "results": [{"label": "amesh", "window_id": "0xBEEF"}],
+        "response": 'weather pages tiled [{"label": "amesh", "window_id": "0xBEEF"}]',
+    }
+
+
+def test_close_weather_pages_flow_closes_candidates_and_prunes_history() -> None:
+    closed: list[str] = []
+    after_close_calls: list[str] = []
+
+    out = close_weather_pages_flow(
+        ["0x1 0 host 東京アメッシュ - Chromium"],
+        ["0x1", "0x2"],
+        select_candidate_window_ids=lambda lines, last_ids: ["0x1"],
+        close_window=closed.append,
+        current_window_ids=lambda: {"0x2"},
+        prune_history=prune_weather_window_history,
+        build_response=build_weather_pages_closed_response,
+        after_close=lambda: after_close_calls.append("slept"),
+    )
+
+    assert closed == ["0x1"]
+    assert after_close_calls == ["slept"]
+    assert out == {
+        "candidate_ids": ["0x1"],
+        "remaining_ids": {"0x2"},
+        "history": ["0x2"],
+        "response": 'weather pages closed {"closed": 1, "ids": ["0x1"]}',
+    }
