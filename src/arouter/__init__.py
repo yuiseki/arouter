@@ -127,6 +127,12 @@ from .router import (
 )
 from .segment import process_pcm_segment, process_transcribed_segment
 from .storage import handle_authorization_denied, store_authfail_wav, store_authorized_wav
+from .vacuumtube_poller import (
+    resolve_vacuumtube_context_poll_interval,
+    run_vacuumtube_context_poller_loop,
+    start_vacuumtube_context_poller,
+    stop_vacuumtube_context_poller,
+)
 from .vacuumtube_runtime import (
     build_vacuumtube_context_base,
     finalize_vacuumtube_context,
@@ -302,12 +308,14 @@ __all__ = [
     "resolve_live_cam_layout_plan",
     "resolve_window_restore_plan",
     "resolve_biometric_poll_interval",
+    "resolve_vacuumtube_context_poll_interval",
     "report_segment_error",
     "run_biometric_poll_iteration",
     "parse_key_value_stdout",
     "run_biometric_poller_loop",
     "run_authorized_command_flow",
     "run_live_cam_parallel",
+    "run_vacuumtube_context_poller_loop",
     "resolve_segment_transcript",
     "SegmentTranscriptResolution",
     "looks_like_weather_chromium_title",
@@ -315,9 +323,11 @@ __all__ = [
     "should_ack_before_action",
     "should_wait_ack_before_action",
     "start_biometric_poller",
+    "start_vacuumtube_context_poller",
     "store_authfail_wav",
     "store_authorized_wav",
     "stop_biometric_poller",
+    "stop_vacuumtube_context_poller",
     "run_system_load_check_flow",
     "set_system_locked",
     "seed_signal_seen_mtime",
