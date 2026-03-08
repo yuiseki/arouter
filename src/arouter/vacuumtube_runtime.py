@@ -456,6 +456,38 @@ def run_vacuumtube_good_night_pause(
     return out if isinstance(out, dict) else {"ok": False, "result": out}
 
 
+def run_vacuumtube_select_account_if_needed(
+    *,
+    snapshot_state: Callable[[], dict[str, Any]],
+    send_return_key: Callable[[], None],
+    log: Callable[[str], None],
+    now: Callable[[], float],
+    sleep: Callable[[float], None],
+    timeout_sec: float = 8.0,
+    poll_interval_sec: float = 0.4,
+) -> bool:
+    try:
+        state = snapshot_state()
+        if not state.get("accountSelectHint"):
+            return False
+        log("VacuumTube account selection detected; sending Enter for default focus")
+    except Exception as e:
+        log(f"account selection check failed (continuing): {e}")
+        return False
+
+    send_return_key()
+    deadline = now() + timeout_sec
+    while now() < deadline:
+        try:
+            state = snapshot_state()
+            if not state.get("accountSelectHint"):
+                return True
+        except Exception:
+            pass
+        sleep(poll_interval_sec)
+    return False
+
+
 def finalize_vacuumtube_context(context: dict[str, Any]) -> dict[str, Any]:
     finalized = dict(context)
     finalized["available"] = bool(finalized.get("windowFound")) or bool(finalized.get("hash"))

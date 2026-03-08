@@ -31,6 +31,7 @@ from arouter import (
     run_vacuumtube_quadrant,
     run_vacuumtube_resume_playback,
     run_vacuumtube_route_to_home,
+    run_vacuumtube_select_account_if_needed,
     run_vacuumtube_state_query,
     run_vacuumtube_stop_music,
     run_vacuumtube_try_resume_current_video,
@@ -326,6 +327,51 @@ def test_run_vacuumtube_good_night_pause_wraps_non_dict_payload() -> None:
     out = run_vacuumtube_good_night_pause(evaluate=lambda _expr: "oops")
 
     assert out == {"ok": False, "result": "oops"}
+
+
+def test_run_vacuumtube_select_account_if_needed_sends_enter_until_hint_clears() -> None:
+    logs: list[str] = []
+    events: list[str] = []
+    sleep_calls: list[float] = []
+    states = iter(
+        [
+            {"accountSelectHint": True},
+            {"accountSelectHint": True},
+            {"accountSelectHint": False},
+        ]
+    )
+    now_values = iter([100.0, 100.1, 100.6, 100.9])
+
+    out = run_vacuumtube_select_account_if_needed(
+        snapshot_state=lambda: next(states),
+        send_return_key=lambda: events.append("return"),
+        log=logs.append,
+        now=lambda: next(now_values),
+        sleep=lambda seconds: sleep_calls.append(seconds),
+        timeout_sec=2.0,
+    )
+
+    assert out is True
+    assert events == ["return"]
+    assert sleep_calls == [0.4]
+    assert logs == [
+        "VacuumTube account selection detected; sending Enter for default focus"
+    ]
+
+
+def test_run_vacuumtube_select_account_if_needed_logs_and_returns_false_on_error() -> None:
+    logs: list[str] = []
+
+    out = run_vacuumtube_select_account_if_needed(
+        snapshot_state=lambda: (_ for _ in ()).throw(RuntimeError("boom")),
+        send_return_key=lambda: None,
+        log=logs.append,
+        now=lambda: 100.0,
+        sleep=lambda _seconds: None,
+    )
+
+    assert out is False
+    assert logs == ["account selection check failed (continuing): boom"]
 
 
 def test_finalize_vacuumtube_context_marks_available_from_window_or_hash() -> None:
