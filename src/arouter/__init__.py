@@ -127,6 +127,10 @@ from .router import (
 )
 from .segment import process_pcm_segment, process_transcribed_segment
 from .storage import handle_authorization_denied, store_authfail_wav, store_authorized_wav
+from .vacuumtube_cache import (
+    build_vacuumtube_context_error,
+    resolve_vacuumtube_context_cache,
+)
 from .vacuumtube_poller import (
     resolve_vacuumtube_context_poll_interval,
     run_vacuumtube_context_poller_loop,
@@ -231,6 +235,7 @@ __all__ = [
     "build_window_minimize_command",
     "build_top_right_position_attempt_plan",
     "build_top_right_position_result",
+    "build_vacuumtube_context_error",
     "build_vacuumtube_context_base",
     "build_window_presentation_snapshot",
     "command_has_system_prefix",
@@ -310,6 +315,7 @@ __all__ = [
     "resolve_live_cam_layout_plan",
     "resolve_window_restore_plan",
     "resolve_biometric_poll_interval",
+    "resolve_vacuumtube_context_cache",
     "resolve_vacuumtube_context_poll_interval",
     "report_segment_error",
     "run_biometric_poll_iteration",
