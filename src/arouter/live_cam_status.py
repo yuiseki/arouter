@@ -111,6 +111,37 @@ def merge_live_cam_page_snapshot(
     return out
 
 
+def run_live_cam_page_snapshot_query(
+    *,
+    evaluate: Callable[[str], Any],
+) -> dict[str, Any]:
+    expr = r"""
+(() => {
+  const txt = ((document.body && document.body.innerText) || '').replace(/\s+/g, ' ').trim();
+  const bodyText = txt.slice(0, 4000);
+  const tags = ['ytlr-video-title-tray', 'ytlr-watch-metadata', 'ytlr-video-owner-renderer'];
+  const watchParts = [];
+  for (const tag of tags) {
+    try {
+      document.querySelectorAll(tag).forEach((el) => {
+        const t = ((el.innerText || el.textContent) || '').replace(/\s+/g, ' ').trim();
+        if (t) watchParts.push(t);
+      });
+    } catch (_) {}
+  }
+  return {
+    title: document.title || '',
+    url: location.href || '',
+    hash: location.hash || '',
+    bodyText,
+    watchText: watchParts.join(' | ').slice(0, 1000),
+  };
+})()
+"""
+    data = evaluate(expr)
+    return data if isinstance(data, dict) else {}
+
+
 def run_live_cam_target_inspection(
     *,
     target: dict[str, Any],

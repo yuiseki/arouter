@@ -10,6 +10,7 @@ from arouter import (
     merge_live_cam_page_snapshot,
     page_matches_live_camera_spec,
     run_live_cam_page_brief_flow,
+    run_live_cam_page_snapshot_query,
     run_live_cam_target_inspection,
     select_live_cam_page_target,
     select_live_cam_page_url,
@@ -135,6 +136,28 @@ def test_merge_live_cam_page_snapshot_keeps_brief_and_records_inspect_error() ->
         "title": "Shibuya",
         "inspectError": "cdp failed",
     }
+
+
+def test_run_live_cam_page_snapshot_query_returns_dict_payload() -> None:
+    out = run_live_cam_page_snapshot_query(
+        evaluate=lambda expr: {
+            "title": "Shibuya",
+            "watchText": "watch:Shibuya",
+            "expr_seen": "ytlr-watch-metadata" in expr,
+        }
+    )
+
+    assert out == {
+        "title": "Shibuya",
+        "watchText": "watch:Shibuya",
+        "expr_seen": True,
+    }
+
+
+def test_run_live_cam_page_snapshot_query_returns_empty_dict_for_non_dict_payload() -> None:
+    out = run_live_cam_page_snapshot_query(evaluate=lambda _expr: ["not", "dict"])
+
+    assert out == {}
 
 
 def test_page_matches_live_camera_spec_accepts_matching_watch_page() -> None:
