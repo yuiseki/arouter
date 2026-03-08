@@ -118,6 +118,7 @@ from .live_cam_status import (
     merge_live_cam_page_snapshot,
     page_matches_live_camera_spec,
     run_live_cam_page_brief_flow,
+    run_live_cam_target_inspection,
     select_live_cam_page_target,
     select_live_cam_page_url,
 )
@@ -401,6 +402,7 @@ __all__ = [
     "build_live_cam_runtime_url_entry",
     "find_stuck_live_cam_specs",
     "run_live_cam_page_brief_flow",
+    "run_live_cam_target_inspection",
     "find_window_geometry_from_wmctrl_lines",
     "find_window_id_by_pid_and_title",
     "find_window_row_by_pid_and_title",

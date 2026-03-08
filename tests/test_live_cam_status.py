@@ -10,6 +10,7 @@ from arouter import (
     merge_live_cam_page_snapshot,
     page_matches_live_camera_spec,
     run_live_cam_page_brief_flow,
+    run_live_cam_target_inspection,
     select_live_cam_page_target,
     select_live_cam_page_url,
 )
@@ -279,3 +280,21 @@ def test_run_live_cam_page_brief_flow_records_inspect_error() -> None:
         "title": "Akihabara",
         "inspectError": "cdp failed",
     }
+
+
+def test_run_live_cam_target_inspection_uses_websocket_url() -> None:
+    out = run_live_cam_target_inspection(
+        target={"webSocketDebuggerUrl": "ws://127.0.0.1:9993/devtools/page/1"},
+        inspect_websocket=lambda ws_url: {"watchText": ws_url},
+    )
+
+    assert out == {"watchText": "ws://127.0.0.1:9993/devtools/page/1"}
+
+
+def test_run_live_cam_target_inspection_returns_none_without_websocket_url() -> None:
+    out = run_live_cam_target_inspection(
+        target={"title": "no websocket"},
+        inspect_websocket=lambda _ws_url: {"watchText": "unused"},
+    )
+
+    assert out is None

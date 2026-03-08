@@ -111,6 +111,18 @@ def merge_live_cam_page_snapshot(
     return out
 
 
+def run_live_cam_target_inspection(
+    *,
+    target: dict[str, Any],
+    inspect_websocket: Callable[[str], dict[str, Any] | None],
+) -> dict[str, Any] | None:
+    ws_url = target.get("webSocketDebuggerUrl")
+    if not isinstance(ws_url, str) or not ws_url:
+        return None
+    snapshot = inspect_websocket(ws_url)
+    return snapshot if isinstance(snapshot, dict) else None
+
+
 def run_live_cam_page_brief_flow(
     *,
     port: int,
