@@ -4,6 +4,7 @@ from arouter import (
     build_live_cam_page_brief,
     build_live_cam_runtime_url_entry,
     collect_live_cam_pages_by_port,
+    collect_live_cam_runtime_state,
     collect_live_cam_runtime_urls,
     find_stuck_live_cam_specs,
     merge_live_cam_page_snapshot,
@@ -68,6 +69,28 @@ def test_collect_live_cam_pages_by_port_converts_page_briefs_and_errors() -> Non
     assert pages_by_port[9993] == {"url": "https://www.youtube.com/tv#/watch?v=abc123DEF45"}
     assert isinstance(pages_by_port[9994], OSError)
     assert str(pages_by_port[9994]) == "connection refused"
+
+
+def test_collect_live_cam_runtime_state_combines_windows_and_urls() -> None:
+    specs = [{"port": 9993}, {"port": 9994}]
+    rows = [{"id": "0x1", "pid": 101}]
+
+    def fetch_targets(port: int) -> object:
+        if port == 9993:
+            return [{"type": "page", "url": "https://www.youtube.com/tv#/watch?v=abc123DEF45"}]
+        raise OSError("connection refused")
+
+    assert collect_live_cam_runtime_state(
+        specs,
+        rows=rows,
+        fetch_targets=fetch_targets,
+    ) == {
+        "windows": [{"id": "0x1", "pid": 101}],
+        "urls": [
+            {"port": 9993, "url": "https://www.youtube.com/tv#/watch?v=abc123DEF45"},
+            {"port": 9994, "error": "connection refused"},
+        ],
+    }
 
 
 def test_build_live_cam_page_brief_extracts_title_and_url() -> None:

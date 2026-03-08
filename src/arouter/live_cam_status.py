@@ -58,6 +58,18 @@ def collect_live_cam_runtime_urls(
     return urls
 
 
+def collect_live_cam_runtime_state(
+    specs: list[dict[str, Any]],
+    *,
+    rows: list[dict[str, Any]],
+    fetch_targets: Callable[[int], Any],
+) -> dict[str, Any]:
+    return {
+        "windows": list(rows),
+        "urls": collect_live_cam_runtime_urls(specs, fetch_targets=fetch_targets),
+    }
+
+
 def collect_live_cam_pages_by_port(
     specs: list[dict[str, Any]],
     *,
