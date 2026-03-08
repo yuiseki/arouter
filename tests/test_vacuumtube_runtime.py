@@ -27,6 +27,7 @@ from arouter import (
     run_vacuumtube_resume_playback,
     run_vacuumtube_state_query,
     run_vacuumtube_stop_music,
+    run_vacuumtube_try_resume_current_video,
     start_vacuumtube_tmux_session,
 )
 
@@ -183,6 +184,25 @@ def test_run_vacuumtube_ensure_home_recovers_from_account_select_after_hard_relo
     assert any("forcing hard reload to home" in line for line in logs)
     assert any("trying default account focus" in line for line in logs)
     assert any(line.startswith("state after ensure_home: ") for line in logs)
+
+
+def test_run_vacuumtube_try_resume_current_video_returns_ok_flag() -> None:
+    out = run_vacuumtube_try_resume_current_video(
+        evaluate_async=lambda expr: {
+            "ok": "window.yt" in expr,
+            "paused": False,
+        }
+    )
+
+    assert out is True
+
+
+def test_run_vacuumtube_try_resume_current_video_swallows_errors() -> None:
+    out = run_vacuumtube_try_resume_current_video(
+        evaluate_async=lambda _expr: (_ for _ in ()).throw(RuntimeError("boom"))
+    )
+
+    assert out is False
 
 
 def test_finalize_vacuumtube_context_marks_available_from_window_or_hash() -> None:

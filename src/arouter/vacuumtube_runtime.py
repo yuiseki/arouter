@@ -203,6 +203,31 @@ def run_vacuumtube_ensure_home(
     )
 
 
+def run_vacuumtube_try_resume_current_video(
+    *,
+    evaluate_async: Callable[[str], Any],
+) -> bool:
+    expr = r"""
+(async () => {
+  const v =
+    (window.yt &&
+      window.yt.player &&
+      window.yt.player.utils &&
+      window.yt.player.utils.videoElement_) ||
+    document.querySelector('video');
+  if (!v) return {ok:false, reason:'no-video'};
+  v.muted = false;
+  try { await v.play(); } catch (e) {}
+  return {ok:true, paused: !!v.paused, muted: !!v.muted, currentTime: Number(v.currentTime || 0)};
+})()
+"""
+    try:
+        out = evaluate_async(expr)
+        return bool(isinstance(out, dict) and out.get("ok"))
+    except Exception:
+        return False
+
+
 def finalize_vacuumtube_context(context: dict[str, Any]) -> dict[str, Any]:
     finalized = dict(context)
     finalized["available"] = bool(finalized.get("windowFound")) or bool(finalized.get("hash"))

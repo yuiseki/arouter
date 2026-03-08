@@ -193,6 +193,7 @@ from .vacuumtube_runtime import (
     run_vacuumtube_resume_playback,
     run_vacuumtube_state_query,
     run_vacuumtube_stop_music,
+    run_vacuumtube_try_resume_current_video,
     start_vacuumtube_tmux_session,
 )
 from .vacuumtube_state import (
@@ -470,6 +471,7 @@ __all__ = [
     "run_vacuumtube_ensure_home",
     "run_vacuumtube_state_query",
     "run_vacuumtube_hide_overlay",
+    "run_vacuumtube_try_resume_current_video",
     "resolve_segment_transcript",
     "SegmentTranscriptResolution",
     "looks_like_weather_chromium_title",
