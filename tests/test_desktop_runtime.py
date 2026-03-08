@@ -10,6 +10,7 @@ from arouter import (
     run_kwin_shortcut,
     run_tmp_main_layout,
     run_tmux_has_session_query,
+    run_tmux_konsole_open,
 )
 
 
@@ -183,4 +184,56 @@ def test_run_tmp_main_layout_raises_on_failure() -> None:
             mode="frontmost",
             path_exists=lambda _path: True,
             run_command=lambda _command: _CompletedProcess(returncode=1, stderr="boom"),
+        )
+
+
+def test_run_tmux_konsole_open_runs_open_subcommand_and_returns_stdout() -> None:
+    events: list[object] = []
+
+    out = run_tmux_konsole_open(
+        script_path="/tmp/tmux_htop_nvitop_konsole.sh",
+        session_name="sysmon",
+        cwd="/tmp/work",
+        path_exists=lambda path: path == "/tmp/tmux_htop_nvitop_konsole.sh",
+        run_command=lambda command, cwd: (
+            events.append((command, cwd))
+            or _CompletedProcess(returncode=0, stdout="tmux opened\n")
+        ),
+    )
+
+    assert out == "tmux opened"
+    assert events == [
+        (
+            [
+                "bash",
+                "/tmp/tmux_htop_nvitop_konsole.sh",
+                "open",
+                "--session",
+                "sysmon",
+                "--recreate",
+            ],
+            "/tmp/work",
+        )
+    ]
+
+
+def test_run_tmux_konsole_open_raises_when_script_missing() -> None:
+    with pytest.raises(RuntimeError, match="tmux konsole script not found"):
+        run_tmux_konsole_open(
+            script_path="/tmp/missing.sh",
+            session_name="sysmon",
+            cwd="/tmp/work",
+            path_exists=lambda _path: False,
+            run_command=lambda _command, _cwd: _CompletedProcess(returncode=0),
+        )
+
+
+def test_run_tmux_konsole_open_raises_on_failure() -> None:
+    with pytest.raises(RuntimeError, match="tmux konsole open failed: boom"):
+        run_tmux_konsole_open(
+            script_path="/tmp/tmux_htop_nvitop_konsole.sh",
+            session_name="sysmon",
+            cwd="/tmp/work",
+            path_exists=lambda _path: True,
+            run_command=lambda _command, _cwd: _CompletedProcess(returncode=1, stderr="boom"),
         )

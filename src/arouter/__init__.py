@@ -42,6 +42,7 @@ from .desktop_runtime import (
     run_kwin_shortcut,
     run_tmp_main_layout,
     run_tmux_has_session_query,
+    run_tmux_konsole_open,
 )
 from .display_env import build_x11_env, resolve_x11_display
 from .display_runtime import probe_x11_display
@@ -296,6 +297,7 @@ __all__ = [
     "run_active_window_id_query",
     "run_arrange_script",
     "run_kwin_shortcut",
+    "run_tmux_konsole_open",
     "run_tmux_has_session_query",
     "run_tmp_main_layout",
     "build_kwin_load_script_command",

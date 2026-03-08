@@ -90,3 +90,23 @@ def run_tmp_main_layout(
         err = (getattr(cp, "stderr", "") or "").strip()
         raise RuntimeError(f"tmp_main.sh layout {flag} failed: {err}")
     return f"god_mode layout {mode}: ok"
+
+
+def run_tmux_konsole_open(
+    *,
+    script_path: str,
+    session_name: str,
+    cwd: str,
+    path_exists: Callable[[str], bool],
+    run_command: Callable[[list[str], str], Any],
+) -> str:
+    if not path_exists(script_path):
+        raise RuntimeError(f"tmux konsole script not found: {script_path}")
+    cp = run_command(
+        ["bash", script_path, "open", "--session", session_name, "--recreate"],
+        cwd,
+    )
+    if int(getattr(cp, "returncode", 1)) != 0:
+        err = (getattr(cp, "stderr", "") or getattr(cp, "stdout", "") or "").strip()
+        raise RuntimeError(f"tmux konsole open failed: {err}")
+    return (getattr(cp, "stdout", "") or "").strip()
