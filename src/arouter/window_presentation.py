@@ -160,6 +160,46 @@ def run_top_right_position_flow(
     return result
 
 
+def run_window_restore_flow(
+    *,
+    presentation: dict[str, Any] | None,
+    fallback_window_id: str,
+    is_fullscreenish: bool,
+    activate_window: Callable[[str], None],
+    set_fullscreen: Callable[[str, bool], None],
+    wait_fullscreen: Callable[[str, bool, float], bool],
+    geometry_fetcher: Callable[[str], dict[str, Any] | None],
+    ensure_top_right_position: Callable[[], dict[str, Any]],
+) -> dict[str, Any]:
+    plan = resolve_window_restore_plan(
+        presentation,
+        fallback_window_id=fallback_window_id,
+        is_fullscreenish=is_fullscreenish,
+    )
+    action = str(plan["action"])
+    window_id = str(plan["window_id"])
+
+    if action == "fullscreen":
+        activate_window(window_id)
+        set_fullscreen(window_id, True)
+        ok = wait_fullscreen(window_id, True, 3.0)
+        return {
+            "action": "fullscreen",
+            "window_id": window_id,
+            "fullscreen": ok,
+            "after": geometry_fetcher(window_id),
+        }
+
+    if action == "skip_top_right":
+        return {"action": "skip_top_right", "window_id": window_id}
+
+    return {
+        "action": "top_right",
+        "window_id": window_id,
+        "position": ensure_top_right_position(),
+    }
+
+
 def resolve_window_restore_plan(
     presentation: dict[str, Any] | None,
     *,

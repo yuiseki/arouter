@@ -17,6 +17,7 @@ from arouter import (
     resolve_expected_top_right_geometry,
     resolve_window_restore_plan,
     run_top_right_position_flow,
+    run_window_restore_flow,
     top_right_region_from_screen_and_work_area,
 )
 
@@ -27,6 +28,14 @@ def _record_wmctrl_move(
     geom: dict[str, Any],
 ) -> None:
     events.append(f"wmctrl:{win_id}:{geom['x']}")
+
+
+def _unexpected_restore_callback(*_args: object, **_kwargs: object) -> None:
+    raise AssertionError("unexpected")
+
+
+def _unexpected_restore_result(*_args: object, **_kwargs: object) -> bool:
+    raise AssertionError("unexpected")
 
 
 def test_geometry_close_within_tolerance() -> None:
@@ -336,3 +345,67 @@ def test_run_top_right_position_flow_returns_last_failed_geometry_when_all_attem
         "kwin_tile",
         "sleep:0.35",
     ]
+
+
+def test_run_window_restore_flow_executes_fullscreen_branch() -> None:
+    events: list[str] = []
+
+    result = run_window_restore_flow(
+        presentation={"window_id": "0x123", "fullscreen": True},
+        fallback_window_id="0x999",
+        is_fullscreenish=False,
+        activate_window=lambda win_id: events.append(f"activate:{win_id}"),
+        set_fullscreen=lambda win_id, enabled: events.append(f"fullscreen:{win_id}:{enabled}"),
+        wait_fullscreen=lambda win_id, enabled, timeout_sec: events.append(
+            f"wait:{win_id}:{enabled}:{timeout_sec}"
+        )
+        or True,
+        geometry_fetcher=lambda win_id: {"window_id": win_id, "x": 0, "y": 0},
+        ensure_top_right_position=lambda: {"ok": True},
+    )
+
+    assert result == {
+        "action": "fullscreen",
+        "window_id": "0x123",
+        "fullscreen": True,
+        "after": {"window_id": "0x123", "x": 0, "y": 0},
+    }
+    assert events == [
+        "activate:0x123",
+        "fullscreen:0x123:True",
+        "wait:0x123:True:3.0",
+    ]
+
+
+def test_run_window_restore_flow_skips_top_right_when_guarded() -> None:
+    result = run_window_restore_flow(
+        presentation={"window_id": "0x123", "fullscreen": False},
+        fallback_window_id="0x999",
+        is_fullscreenish=True,
+        activate_window=_unexpected_restore_callback,
+        set_fullscreen=_unexpected_restore_callback,
+        wait_fullscreen=_unexpected_restore_result,
+        geometry_fetcher=_unexpected_restore_callback,
+        ensure_top_right_position=_unexpected_restore_callback,
+    )
+
+    assert result == {"action": "skip_top_right", "window_id": "0x123"}
+
+
+def test_run_window_restore_flow_uses_top_right_branch() -> None:
+    result = run_window_restore_flow(
+        presentation={"window_id": "0x123", "fullscreen": False},
+        fallback_window_id="0x999",
+        is_fullscreenish=False,
+        activate_window=_unexpected_restore_callback,
+        set_fullscreen=_unexpected_restore_callback,
+        wait_fullscreen=_unexpected_restore_result,
+        geometry_fetcher=_unexpected_restore_callback,
+        ensure_top_right_position=lambda: {"ok": True, "method": "delegated"},
+    )
+
+    assert result == {
+        "action": "top_right",
+        "window_id": "0x123",
+        "position": {"ok": True, "method": "delegated"},
+    }
