@@ -248,6 +248,20 @@ def run_vacuumtube_wait_watch_route(
     return False
 
 
+def run_vacuumtube_route_to_home(
+    *,
+    evaluate: Callable[[str], Any],
+) -> None:
+    evaluate("location.hash = '#/'")
+
+
+def run_vacuumtube_hard_reload_home(
+    *,
+    evaluate: Callable[[str], Any],
+) -> None:
+    evaluate("location.href = 'https://www.youtube.com/tv#/'")
+
+
 def finalize_vacuumtube_context(context: dict[str, Any]) -> dict[str, Any]:
     finalized = dict(context)
     finalized["available"] = bool(finalized.get("windowFound")) or bool(finalized.get("hash"))

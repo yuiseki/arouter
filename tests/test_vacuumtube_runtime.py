@@ -18,6 +18,7 @@ from arouter import (
     run_vacuumtube_ensure_home,
     run_vacuumtube_fullscreen,
     run_vacuumtube_go_home,
+    run_vacuumtube_hard_reload_home,
     run_vacuumtube_hide_overlay,
     run_vacuumtube_minimize,
     run_vacuumtube_open_from_home,
@@ -25,6 +26,7 @@ from arouter import (
     run_vacuumtube_play_news,
     run_vacuumtube_quadrant,
     run_vacuumtube_resume_playback,
+    run_vacuumtube_route_to_home,
     run_vacuumtube_state_query,
     run_vacuumtube_stop_music,
     run_vacuumtube_try_resume_current_video,
@@ -240,6 +242,22 @@ def test_run_vacuumtube_wait_watch_route_tolerates_state_errors_until_timeout() 
 
     assert out is False
     assert sleeps == [0.2, 0.2]
+
+
+def test_run_vacuumtube_route_to_home_invokes_hash_assignment() -> None:
+    seen: list[str] = []
+
+    run_vacuumtube_route_to_home(evaluate=seen.append)
+
+    assert seen == ["location.hash = '#/'"]
+
+
+def test_run_vacuumtube_hard_reload_home_invokes_full_home_url() -> None:
+    seen: list[str] = []
+
+    run_vacuumtube_hard_reload_home(evaluate=seen.append)
+
+    assert seen == ["location.href = 'https://www.youtube.com/tv#/'"]
 
 
 def test_finalize_vacuumtube_context_marks_available_from_window_or_hash() -> None:
