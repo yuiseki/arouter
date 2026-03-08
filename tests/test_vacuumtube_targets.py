@@ -4,6 +4,7 @@ import pytest
 
 from arouter import (
     run_vacuumtube_cdp_client,
+    run_vacuumtube_page_target_query,
     select_vacuumtube_page_target,
     select_vacuumtube_websocket_url,
 )
@@ -53,6 +54,23 @@ def test_select_vacuumtube_websocket_url_returns_string_field() -> None:
 def test_select_vacuumtube_websocket_url_returns_none_for_missing_or_empty_field() -> None:
     assert select_vacuumtube_websocket_url({"webSocketDebuggerUrl": ""}) is None
     assert select_vacuumtube_websocket_url({"url": "https://example.com"}) is None
+
+
+def test_run_vacuumtube_page_target_query_returns_selected_target() -> None:
+    target = run_vacuumtube_page_target_query(
+        fetch_targets=lambda: [{"type": "page", "url": "https://www.youtube.com/tv#/"}],
+        select_target=select_vacuumtube_page_target,
+    )
+
+    assert target == {"type": "page", "url": "https://www.youtube.com/tv#/"}
+
+
+def test_run_vacuumtube_page_target_query_raises_without_target() -> None:
+    with pytest.raises(RuntimeError, match="no VacuumTube/YouTube TV page target found in CDP"):
+        run_vacuumtube_page_target_query(
+            fetch_targets=lambda: [],
+            select_target=select_vacuumtube_page_target,
+        )
 
 
 def test_run_vacuumtube_cdp_client_selects_websocket_and_enables_client() -> None:

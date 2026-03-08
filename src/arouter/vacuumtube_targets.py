@@ -33,6 +33,17 @@ def select_vacuumtube_websocket_url(target: Any) -> str | None:
     return ws_url
 
 
+def run_vacuumtube_page_target_query(
+    *,
+    fetch_targets: Callable[[], Any],
+    select_target: Callable[[Any], dict[str, Any] | None],
+) -> dict[str, Any]:
+    target = select_target(fetch_targets())
+    if target is None:
+        raise RuntimeError("no VacuumTube/YouTube TV page target found in CDP")
+    return target
+
+
 def run_vacuumtube_cdp_client(
     *,
     target: dict[str, Any],
