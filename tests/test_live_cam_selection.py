@@ -1,8 +1,16 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from arouter import (
     annotate_live_cam_payload_selection,
+    build_live_cam_browse_command,
+    build_live_cam_command_failure,
+    build_live_cam_force_retry_failure,
+    build_live_cam_force_video_command,
+    build_live_cam_json_parse_failure,
     expand_live_cam_candidates,
+    format_live_cam_selection_error,
     normalize_live_cam_force_video_id,
     web_watch_retry_video_id,
 )
@@ -81,3 +89,92 @@ def test_annotate_live_cam_payload_selection_sets_default_metadata() -> None:
 
     assert payload["selectedKeyword"] == "浅草・雷門前の様子"
     assert payload["selectedVerifyRegex"] == "浅草|雷門|Asakusa"
+
+
+def test_build_live_cam_force_video_command_returns_expected_args() -> None:
+    command = build_live_cam_force_video_command(
+        Path("/tmp/open_tv_channel_live_tile_fast.js"),
+        {"port": 9996, "keyword": "浅草・雷門前の様子"},
+        force_video_id="urE7veQRlrQ",
+    )
+
+    assert command == [
+        "node",
+        "/tmp/open_tv_channel_live_tile_fast.js",
+        "--cdp-port",
+        "9996",
+        "--force-video-id",
+        "urE7veQRlrQ",
+        "--keyword",
+        "浅草・雷門前の様子",
+    ]
+
+
+def test_build_live_cam_browse_command_returns_expected_args() -> None:
+    command = build_live_cam_browse_command(
+        Path("/tmp/open_tv_channel_live_tile_fast.js"),
+        {
+            "port": 9994,
+            "browse_url": "https://example.test/shinjuku",
+            "keyword": "新宿駅前のライブカメラ",
+            "verify_regex": "新宿駅前|新宿|Shinjuku",
+        },
+    )
+
+    assert command == [
+        "node",
+        "/tmp/open_tv_channel_live_tile_fast.js",
+        "--cdp-port",
+        "9994",
+        "--browse-url",
+        "https://example.test/shinjuku",
+        "--keyword",
+        "新宿駅前のライブカメラ",
+        "--verify-regex",
+        "新宿駅前|新宿|Shinjuku",
+    ]
+
+
+def test_build_live_cam_failure_helpers_return_expected_payloads() -> None:
+    candidate = {"keyword": "浅草・雷門前の様子"}
+
+    assert build_live_cam_json_parse_failure(
+        candidate,
+        returncode=1,
+        error="Expecting value",
+    ) == {
+        "keyword": "浅草・雷門前の様子",
+        "returncode": 1,
+        "error": "json-parse: Expecting value",
+    }
+    assert build_live_cam_force_retry_failure(
+        candidate,
+        video_id="TBSVID12345",
+    ) == {
+        "keyword": "浅草・雷門前の様子",
+        "reason": "web-watch-rejected-force-failed",
+        "videoId": "TBSVID12345",
+    }
+    assert build_live_cam_command_failure(
+        candidate,
+        returncode=2,
+        payload={"ok": False},
+        stderr=" no-match ",
+    ) == {
+        "keyword": "浅草・雷門前の様子",
+        "returncode": 2,
+        "payload": {"ok": False},
+        "stderr": "no-match",
+    }
+
+
+def test_format_live_cam_selection_error_serializes_failures() -> None:
+    message = format_live_cam_selection_error(
+        9994,
+        [{"keyword": "新宿駅前のライブカメラ", "returncode": 1}],
+    )
+
+    assert message == (
+        'live camera select failed on port 9994: '
+        '[{"keyword": "新宿駅前のライブカメラ", "returncode": 1}]'
+    )

@@ -52,7 +52,13 @@ from .live_cam_layout import (
 )
 from .live_cam_selection import (
     annotate_live_cam_payload_selection,
+    build_live_cam_browse_command,
+    build_live_cam_command_failure,
+    build_live_cam_force_retry_failure,
+    build_live_cam_force_video_command,
+    build_live_cam_json_parse_failure,
     expand_live_cam_candidates,
+    format_live_cam_selection_error,
     normalize_live_cam_force_video_id,
     web_watch_retry_video_id,
 )
@@ -149,7 +155,13 @@ __all__ = [
     "execute_news_command",
     "extract_password_unlock_secret",
     "annotate_live_cam_payload_selection",
+    "build_live_cam_browse_command",
+    "build_live_cam_command_failure",
+    "build_live_cam_force_retry_failure",
+    "build_live_cam_force_video_command",
+    "build_live_cam_json_parse_failure",
     "expand_live_cam_candidates",
+    "format_live_cam_selection_error",
     "find_stuck_live_cam_specs",
     "find_window_geometry_from_wmctrl_lines",
     "find_window_id_by_pid_and_title",
