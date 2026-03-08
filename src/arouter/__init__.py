@@ -36,6 +36,10 @@ from .biometric_signal import (
 from .errors import report_segment_error
 from .execution import command_has_system_prefix, execute_command, execute_news_command
 from .flow import run_authorized_command_flow
+from .load_check import (
+    is_vacuumtube_quadrant_mode_for_load_check,
+    load_check_bottom_left_geom,
+)
 from .models import VoiceCommand
 from .overlay import build_overlay_ipc_line, compose_overlay_notify_text, trim_notify_text
 from .parser import extract_password_unlock_secret, normalize_transcript, parse_command
@@ -78,7 +82,9 @@ __all__ = [
     "extract_password_unlock_secret",
     "good_night_voice_text",
     "handle_authorization_denied",
+    "is_vacuumtube_quadrant_mode_for_load_check",
     "load_password_candidates",
+    "load_check_bottom_left_geom",
     "maybe_auto_lock",
     "maybe_lock_from_signal",
     "maybe_unlock_from_signal",
