@@ -37,6 +37,7 @@ from .errors import report_segment_error
 from .execution import command_has_system_prefix, execute_command, execute_news_command
 from .flow import run_authorized_command_flow
 from .load_check import (
+    build_load_check_wmctrl_commands,
     find_konsole_rows_for_tmux_client_pids,
     is_vacuumtube_quadrant_mode_for_load_check,
     load_check_bottom_left_geom,
@@ -73,6 +74,7 @@ __all__ = [
     "encrypt_biometric_password_payload",
     "ensure_biometric_runtime_attrs",
     "build_overlay_ipc_line",
+    "build_load_check_wmctrl_commands",
     "command_has_system_prefix",
     "consume_signal_file",
     "compose_overlay_notify_text",

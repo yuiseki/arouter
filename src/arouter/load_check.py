@@ -178,6 +178,20 @@ def prepare_load_check_konsole_placement(
     }
 
 
+def build_load_check_wmctrl_commands(
+    *,
+    window_id: str,
+    target: dict[str, int],
+) -> list[list[str]]:
+    spec = f"0,{target['x']},{target['y']},{target['w']},{target['h']}"
+    return [
+        ["wmctrl", "-i", "-r", window_id, "-b", "remove,maximized_vert,maximized_horz"],
+        ["wmctrl", "-i", "-r", window_id, "-b", "remove,fullscreen"],
+        ["wmctrl", "-i", "-r", window_id, "-e", spec],
+        ["wmctrl", "-i", "-r", window_id, "-e", spec],
+    ]
+
+
 def is_vacuumtube_quadrant_mode_for_load_check(
     runtime: VacuumTubeLoadCheckRuntime,
     *,

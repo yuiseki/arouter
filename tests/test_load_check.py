@@ -4,6 +4,7 @@ from types import SimpleNamespace
 from unittest import mock
 
 from arouter import (
+    build_load_check_wmctrl_commands,
     find_konsole_rows_for_tmux_client_pids,
     is_vacuumtube_quadrant_mode_for_load_check,
     load_check_bottom_left_geom,
@@ -261,3 +262,17 @@ def test_prepare_load_check_konsole_placement_reports_missing_window_after_wait(
     )
 
     assert result == {"applied": False, "reason": "konsole_window_not_found"}
+
+
+def test_build_load_check_wmctrl_commands_returns_expected_sequence() -> None:
+    commands = build_load_check_wmctrl_commands(
+        window_id="0x00a",
+        target={"x": 0, "y": 1080, "w": 2048, "h": 1080},
+    )
+
+    assert commands == [
+        ["wmctrl", "-i", "-r", "0x00a", "-b", "remove,maximized_vert,maximized_horz"],
+        ["wmctrl", "-i", "-r", "0x00a", "-b", "remove,fullscreen"],
+        ["wmctrl", "-i", "-r", "0x00a", "-e", "0,0,1080,2048,1080"],
+        ["wmctrl", "-i", "-r", "0x00a", "-e", "0,0,1080,2048,1080"],
+    ]
