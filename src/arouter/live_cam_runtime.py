@@ -122,6 +122,76 @@ def resolve_existing_live_cam_windowed_pids(
     return pids_by_port
 
 
+def resolve_live_cam_layout_bootstrap(
+    *,
+    mode: str,
+    instances: list[dict[str, Any]],
+    resolve_existing_windowed_pids: Callable[[], dict[int, int] | None],
+    find_stuck_specs: Callable[[], list[dict[str, Any]]],
+    reopen_specs: Callable[[list[dict[str, Any]]], list[dict[str, Any]]],
+    ensure_scripts_present: Callable[[], None],
+    ensure_instances_started: Callable[[], list[dict[str, Any]]],
+    ensure_targets_opened: Callable[[], list[dict[str, Any]]],
+    pid_lookup: Callable[[int], int | None],
+    log: Callable[[str], None] | None = None,
+) -> dict[str, Any]:
+    def _log(message: str) -> None:
+        if log is not None:
+            log(message)
+
+    started: list[dict[str, Any]] = []
+    opened: list[dict[str, Any]] = []
+    open_errors: list[str] = []
+    fast_path = False
+
+    pids_by_port: dict[int, int] | None = None
+    if mode in {"full", "compact"}:
+        pids_by_port = resolve_existing_windowed_pids()
+        if pids_by_port:
+            fast_path = True
+            _log(
+                f"LIVE_CAM {mode} fast-path: reusing existing windows and applying layout only"
+            )
+            stuck_specs = find_stuck_specs()
+            if stuck_specs:
+                _log(
+                    f"LIVE_CAM fast-path: re-opening {len(stuck_specs)} stuck instance(s): "
+                    + ", ".join(str(spec["label"]) for spec in stuck_specs)
+                )
+                try:
+                    opened = reopen_specs(stuck_specs)
+                except Exception as exc:
+                    open_errors.append(str(exc))
+                    _log(
+                        "LIVE_CAM fast-path reopen partial failure (layout will still be applied): "
+                        f"{exc}"
+                    )
+
+    if not pids_by_port:
+        ensure_scripts_present()
+        started = ensure_instances_started()
+        try:
+            opened = ensure_targets_opened()
+        except Exception as exc:
+            open_errors.append(str(exc))
+            _log(f"LIVE_CAM channel open partial failure (layout will still be applied): {exc}")
+        pids_by_port = {}
+        for spec in instances:
+            port = int(spec["port"])
+            pid = pid_lookup(port)
+            if not pid:
+                raise RuntimeError(f"live camera port {port} PID not found after start")
+            pids_by_port[port] = pid
+
+    return {
+        "fast_path": fast_path,
+        "started": started,
+        "opened": opened,
+        "open_errors": open_errors,
+        "pids_by_port": pids_by_port,
+    }
+
+
 def resolve_live_cam_action_state(
     instances: list[dict[str, Any]],
     *,

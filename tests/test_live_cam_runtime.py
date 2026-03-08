@@ -19,8 +19,17 @@ from arouter import (
     parse_key_value_stdout,
     resolve_existing_live_cam_windowed_pids,
     resolve_live_cam_action_state,
+    resolve_live_cam_layout_bootstrap,
     run_live_cam_parallel,
 )
+
+
+def _unexpected_callback(message: str):
+    return lambda: (_ for _ in ()).throw(AssertionError(message))
+
+
+def _unexpected_reopen(message: str):
+    return lambda _specs: (_ for _ in ()).throw(RuntimeError(message))
 
 
 def test_run_live_cam_parallel_preserves_input_order() -> None:
@@ -178,6 +187,83 @@ def test_resolve_live_cam_action_state_returns_empty_state_when_pid_missing() ->
     assert out == {
         "pids_by_port": {},
         "state": {"windows": [], "urls": []},
+    }
+
+
+def test_resolve_live_cam_layout_bootstrap_uses_fast_path_when_windows_exist() -> None:
+    logs: list[str] = []
+
+    out = resolve_live_cam_layout_bootstrap(
+        mode="compact",
+        instances=[{"label": "shibuya", "port": 9993}],
+        resolve_existing_windowed_pids=lambda: {9993: 101},
+        find_stuck_specs=lambda: [],
+        reopen_specs=lambda specs: [{"label": specs[0]["label"], "port": specs[0]["port"]}],
+        ensure_scripts_present=_unexpected_callback("should not start cold"),
+        ensure_instances_started=_unexpected_callback("should not start cold"),
+        ensure_targets_opened=_unexpected_callback("should not open cold"),
+        pid_lookup=lambda _port: 101,
+        log=logs.append,
+    )
+
+    assert out == {
+        "fast_path": True,
+        "started": [],
+        "opened": [],
+        "open_errors": [],
+        "pids_by_port": {9993: 101},
+    }
+    assert logs == ["LIVE_CAM compact fast-path: reusing existing windows and applying layout only"]
+
+
+def test_resolve_live_cam_layout_bootstrap_reopen_failure_is_non_fatal() -> None:
+    logs: list[str] = []
+
+    out = resolve_live_cam_layout_bootstrap(
+        mode="compact",
+        instances=[{"label": "akihabara", "port": 9996}],
+        resolve_existing_windowed_pids=lambda: {9996: 404},
+        find_stuck_specs=lambda: [{"label": "akihabara", "port": 9996}],
+        reopen_specs=_unexpected_reopen(
+            "live_cam_reopen failed (akihabara:9996): timed out"
+        ),
+        ensure_scripts_present=lambda: None,
+        ensure_instances_started=lambda: [],
+        ensure_targets_opened=lambda: [],
+        pid_lookup=lambda _port: 404,
+        log=logs.append,
+    )
+
+    assert out["fast_path"] is True
+    assert out["opened"] == []
+    assert out["open_errors"] == ["live_cam_reopen failed (akihabara:9996): timed out"]
+    assert any("re-opening 1 stuck instance(s): akihabara" in entry for entry in logs)
+
+
+def test_resolve_live_cam_layout_bootstrap_cold_start_collects_pids_and_open_errors() -> None:
+    started = [{"port": "9993"}]
+
+    out = resolve_live_cam_layout_bootstrap(
+        mode="compact",
+        instances=[{"label": "shibuya", "port": 9993}, {"label": "shinjuku", "port": 9994}],
+        resolve_existing_windowed_pids=lambda: None,
+        find_stuck_specs=lambda: [],
+        reopen_specs=lambda _specs: [],
+        ensure_scripts_present=lambda: None,
+        ensure_instances_started=lambda: started,
+        ensure_targets_opened=lambda: (_ for _ in ()).throw(
+            RuntimeError("live_cam_open failed (shinjuku:9994): timed out after 45.0 seconds")
+        ),
+        pid_lookup=lambda port: {9993: 601, 9994: 602}.get(port),
+        log=lambda _message: None,
+    )
+
+    assert out == {
+        "fast_path": False,
+        "started": started,
+        "opened": [],
+        "open_errors": ["live_cam_open failed (shinjuku:9994): timed out after 45.0 seconds"],
+        "pids_by_port": {9993: 601, 9994: 602},
     }
 
 
