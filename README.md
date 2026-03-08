@@ -22,6 +22,8 @@ Current migrated slice:
 - authorized command execution flow helper
 - biometric/speaker/password command authorization helper
 - biometric signal-file helpers for manual lock/unlock edge triggers
+- biometric password fallback helpers for encrypt/load/verify flows
+- biometric poll interval and single-cycle poller helpers
 - segment WAV storage and auth-denied handling helpers
 - segment error reporting helper
 - transcript resolution helper for mic-loop command gating
@@ -43,6 +45,8 @@ Current migrated slice:
 - authorized-command execution flow for the mic loop
 - command authorization policy for locked/unlocked execution
 - signal-file consume/write helpers for biometric lock runtime glue
+- password fallback helpers for biometric lock runtime glue
+- biometric poller helpers for lock runtime orchestration
 - successful/auth-denied WAV retention handling
 - subprocess/runtime error reporting
 - transcript parse/contextualize/suppress/authorize resolution

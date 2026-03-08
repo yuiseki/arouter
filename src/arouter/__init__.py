@@ -1,4 +1,11 @@
 from .authorization import authorize_command
+from .biometric_password import (
+    encrypt_password_file,
+    load_password_candidates,
+    read_password_secret_lines,
+    verify_unlock_password,
+)
+from .biometric_poller import resolve_biometric_poll_interval, run_biometric_poll_iteration
 from .biometric_signal import consume_signal_file, write_signal_file
 from .errors import report_segment_error
 from .execution import command_has_system_prefix, execute_command, execute_news_command
@@ -31,6 +38,7 @@ __all__ = [
     "command_has_system_prefix",
     "consume_signal_file",
     "compose_overlay_notify_text",
+    "encrypt_password_file",
     "contextualize_command_with_vacuumtube_state",
     "detect_non_command_reaction",
     "execute_command",
@@ -38,12 +46,16 @@ __all__ = [
     "extract_password_unlock_secret",
     "good_night_voice_text",
     "handle_authorization_denied",
+    "load_password_candidates",
     "normalize_transcript",
     "parse_command",
     "post_action_voice_text",
     "process_pcm_segment",
     "process_transcribed_segment",
+    "read_password_secret_lines",
+    "resolve_biometric_poll_interval",
     "report_segment_error",
+    "run_biometric_poll_iteration",
     "run_authorized_command_flow",
     "resolve_segment_transcript",
     "SegmentTranscriptResolution",
@@ -52,5 +64,6 @@ __all__ = [
     "store_authfail_wav",
     "store_authorized_wav",
     "trim_notify_text",
+    "verify_unlock_password",
     "write_signal_file",
 ]

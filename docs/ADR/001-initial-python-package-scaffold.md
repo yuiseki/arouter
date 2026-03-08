@@ -40,6 +40,8 @@ The first migrated slice is limited to:
 - authorized-command execution flow
 - biometric/speaker/password command authorization
 - biometric signal-file consume/write helpers
+- biometric password fallback helpers
+- biometric poller helpers
 - successful/auth-denied WAV storage handling
 - segment error reporting
 - transcript parse/contextualize/suppress/authorize resolution
