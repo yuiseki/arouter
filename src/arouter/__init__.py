@@ -36,6 +36,14 @@ from .biometric_signal import (
 from .errors import report_segment_error
 from .execution import command_has_system_prefix, execute_command, execute_news_command
 from .flow import run_authorized_command_flow
+from .kwin_scripts import (
+    build_kwin_load_script_command,
+    build_kwin_start_script_command,
+    build_kwin_unload_script_command,
+    build_live_cam_layout_script,
+    build_live_cam_minimize_script,
+    build_minimize_other_windows_script,
+)
 from .live_cam_layout import (
     build_live_cam_layout_targets_compact,
     build_live_cam_layout_targets_full,
@@ -100,6 +108,12 @@ __all__ = [
     "encrypt_biometric_password_payload",
     "ensure_biometric_runtime_attrs",
     "build_overlay_ipc_line",
+    "build_kwin_load_script_command",
+    "build_kwin_start_script_command",
+    "build_kwin_unload_script_command",
+    "build_live_cam_layout_script",
+    "build_live_cam_minimize_script",
+    "build_minimize_other_windows_script",
     "build_live_cam_layout_targets_compact",
     "build_live_cam_layout_targets_full",
     "build_load_check_wmctrl_commands",
