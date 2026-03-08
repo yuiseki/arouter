@@ -86,6 +86,20 @@ def find_missing_live_cam_window_ports(
     return [port for port, pid in pids_by_port.items() if int(pid) not in visible_pids]
 
 
+def resolve_existing_live_cam_windowed_pids(
+    pids_by_port: dict[int, int] | None,
+    *,
+    expected_count: int,
+    rows: list[dict[str, Any]],
+) -> dict[int, int] | None:
+    if not pids_by_port or len(pids_by_port) != int(expected_count):
+        return None
+    missing_ports = find_missing_live_cam_window_ports(pids_by_port, rows)
+    if missing_ports:
+        return None
+    return pids_by_port
+
+
 def parse_key_value_stdout(text: str) -> dict[str, str]:
     out: dict[str, str] = {}
     for line in (text or "").splitlines():

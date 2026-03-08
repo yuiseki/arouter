@@ -14,6 +14,7 @@ from arouter import (
     collect_live_cam_pids,
     find_missing_live_cam_window_ports,
     parse_key_value_stdout,
+    resolve_existing_live_cam_windowed_pids,
     run_live_cam_parallel,
 )
 
@@ -119,6 +120,26 @@ def test_find_missing_live_cam_window_ports_uses_visible_window_ids() -> None:
     )
 
     assert missing == [9994]
+
+
+def test_resolve_existing_live_cam_windowed_pids_returns_none_when_any_window_is_missing() -> None:
+    out = resolve_existing_live_cam_windowed_pids(
+        {9993: 101, 9994: 102},
+        expected_count=2,
+        rows=[{"id": "0x1", "pid": 101}],
+    )
+
+    assert out is None
+
+
+def test_resolve_existing_live_cam_windowed_pids_returns_pid_map_when_all_windows_visible() -> None:
+    out = resolve_existing_live_cam_windowed_pids(
+        {9993: 101, 9994: 102},
+        expected_count=2,
+        rows=[{"id": "0x1", "pid": 101}, {"id": "0x2", "pid": 102}],
+    )
+
+    assert out == {9993: 101, 9994: 102}
 
 
 def test_build_live_cam_open_result_extracts_final_href() -> None:
