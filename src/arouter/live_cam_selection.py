@@ -2,8 +2,26 @@ from __future__ import annotations
 
 import json
 import re
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
+
+LiveCamCommandRunner = Callable[[list[str], float], tuple[int, str, str]]
+LiveCamPageVerifier = Callable[[dict[str, Any]], bool]
+LiveCamCandidateExpander = Callable[[dict[str, Any]], list[dict[str, Any]]]
+LiveCamForceIdNormalizer = Callable[[dict[str, Any]], str]
+LiveCamForceCommandBuilder = Callable[[dict[str, Any], str], list[str]]
+LiveCamBrowseCommandBuilder = Callable[[dict[str, Any]], list[str]]
+LiveCamJsonParseFailureBuilder = Callable[[dict[str, Any], int, str], dict[str, Any]]
+LiveCamForceRetryFailureBuilder = Callable[[dict[str, Any], str], dict[str, Any]]
+LiveCamCommandFailureBuilder = Callable[
+    [dict[str, Any], int, dict[str, Any] | None, str],
+    dict[str, Any],
+]
+LiveCamRetryVideoResolver = Callable[[dict[str, Any]], str]
+LiveCamPayloadAnnotator = Callable[[dict[str, Any], dict[str, Any]], dict[str, Any]]
+LiveCamSelectionErrorFormatter = Callable[[int, list[dict[str, Any]]], str]
+LiveCamLogger = Callable[[str], None]
 
 
 def expand_live_cam_candidates(spec: dict[str, Any]) -> list[dict[str, Any]]:
@@ -122,3 +140,117 @@ def build_live_cam_command_failure(
 def format_live_cam_selection_error(port: int, failures: list[dict[str, Any]]) -> str:
     failures_json = json.dumps(failures, ensure_ascii=False)
     return f"live camera select failed on port {int(port)}: {failures_json}"
+
+
+def _parse_live_cam_payload(stdout: str) -> tuple[dict[str, Any] | None, str | None]:
+    try:
+        payload = json.loads((stdout or "").strip() or "{}")
+    except Exception as exc:
+        return None, str(exc)
+    if isinstance(payload, dict):
+        return payload, None
+    return None, "payload is not an object"
+
+
+def select_live_cam_payload(
+    spec: dict[str, Any],
+    *,
+    expand_candidates: LiveCamCandidateExpander,
+    normalize_force_video_id: LiveCamForceIdNormalizer,
+    build_force_video_command: LiveCamForceCommandBuilder,
+    build_browse_command: LiveCamBrowseCommandBuilder,
+    build_json_parse_failure: LiveCamJsonParseFailureBuilder,
+    build_force_retry_failure: LiveCamForceRetryFailureBuilder,
+    build_command_failure: LiveCamCommandFailureBuilder,
+    web_watch_retry_video_id: LiveCamRetryVideoResolver,
+    annotate_payload_selection: LiveCamPayloadAnnotator,
+    format_selection_error: LiveCamSelectionErrorFormatter,
+    run_command: LiveCamCommandRunner,
+    verify_force_candidate_page: LiveCamPageVerifier,
+    log: LiveCamLogger | None = None,
+) -> dict[str, Any]:
+    def _log(message: str) -> None:
+        if log is not None:
+            log(message)
+
+    def _try_force_video_candidate(candidate: dict[str, Any]) -> dict[str, Any] | None:
+        force_video_id = normalize_force_video_id(candidate)
+        if not force_video_id:
+            return None
+
+        command = build_force_video_command(candidate, force_video_id)
+        _log(
+            f"LIVE_CAM force_video_id primary for {candidate.get('label', candidate['port'])}: "
+            f"{force_video_id}"
+        )
+        _returncode, stdout, _stderr = run_command(command, 20.0)
+        payload, _error = _parse_live_cam_payload(stdout)
+        if not (isinstance(payload, dict) and bool(payload.get("ok"))):
+            _log(
+                f"LIVE_CAM force_video_id failed for {candidate.get('label', candidate['port'])}, "
+                "falling back to browse search"
+            )
+            return None
+        if not verify_force_candidate_page(candidate):
+            _log(
+                f"LIVE_CAM force_video_id landed on unexpected page for "
+                f"{candidate.get('label', candidate['port'])}, falling back to browse search"
+            )
+            return None
+        return annotate_payload_selection(payload, candidate)
+
+    candidates = expand_candidates(spec)
+    failures: list[dict[str, Any]] = []
+
+    for candidate in candidates:
+        force_payload = _try_force_video_candidate(candidate)
+        if force_payload:
+            return force_payload
+
+        command = build_browse_command(candidate)
+        returncode, stdout, stderr = run_command(command, 45.0)
+        payload, parse_error = _parse_live_cam_payload(stdout)
+        if payload is None:
+            failures.append(
+                build_json_parse_failure(
+                    candidate,
+                    int(returncode),
+                    str(parse_error or "unknown parse error"),
+                )
+            )
+            continue
+
+        if bool(payload.get("ok")):
+            video_id = web_watch_retry_video_id(payload)
+            if video_id:
+                force_command = build_force_video_command(candidate, video_id)
+                _log(
+                    f"LIVE_CAM web-watch rejected for {candidate.get('label', candidate['port'])}, "
+                    f"retrying as TV URL via --force-video-id {video_id}"
+                )
+                _force_returncode, force_stdout, _force_stderr = run_command(
+                    force_command,
+                    15.0,
+                )
+                force_payload, _force_error = _parse_live_cam_payload(force_stdout)
+                if isinstance(force_payload, dict) and bool(force_payload.get("ok")):
+                    return annotate_payload_selection(force_payload, candidate)
+                failures.append(
+                    build_force_retry_failure(
+                        candidate,
+                        str(payload.get("videoId") or ""),
+                    )
+                )
+                continue
+            return annotate_payload_selection(payload, candidate)
+
+        failures.append(
+            build_command_failure(
+                candidate,
+                int(returncode),
+                payload,
+                str(stderr or ""),
+            )
+        )
+
+    raise RuntimeError(format_selection_error(int(spec["port"]), failures))

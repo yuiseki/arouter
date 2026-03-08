@@ -84,6 +84,7 @@ from .live_cam_selection import (
     expand_live_cam_candidates,
     format_live_cam_selection_error,
     normalize_live_cam_force_video_id,
+    select_live_cam_payload,
     web_watch_retry_video_id,
 )
 from .live_cam_status import (
@@ -289,6 +290,7 @@ __all__ = [
     "collect_live_cam_runtime_state",
     "expand_live_cam_candidates",
     "format_live_cam_selection_error",
+    "select_live_cam_payload",
     "collect_live_cam_runtime_urls",
     "build_live_cam_runtime_url_entry",
     "find_stuck_live_cam_specs",
