@@ -33,7 +33,7 @@ from .biometric_signal import (
     seed_signal_seen_mtime,
     write_signal_file,
 )
-from .cdp_targets import require_cdp_target_list
+from .cdp_targets import require_cdp_target_list, run_cdp_target_list_query
 from .desktop_runtime import (
     launch_chromium_new_window,
     read_active_window_id,
@@ -378,6 +378,7 @@ __all__ = [
     "resolve_x11_display",
     "contextualize_command_with_vacuumtube_state",
     "require_cdp_target_list",
+    "run_cdp_target_list_query",
     "detect_non_command_reaction",
     "execute_command",
     "execute_news_command",
