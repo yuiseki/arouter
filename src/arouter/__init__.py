@@ -200,6 +200,7 @@ from .vacuumtube_state import (
     vacuumtube_video_playing,
 )
 from .vacuumtube_targets import (
+    run_vacuumtube_cdp_client,
     select_vacuumtube_page_target,
     select_vacuumtube_websocket_url,
 )
@@ -462,6 +463,7 @@ __all__ = [
     "run_authorized_command_flow",
     "run_live_cam_parallel",
     "run_vacuumtube_context_poller_loop",
+    "run_vacuumtube_cdp_client",
     "resolve_segment_transcript",
     "SegmentTranscriptResolution",
     "looks_like_weather_chromium_title",

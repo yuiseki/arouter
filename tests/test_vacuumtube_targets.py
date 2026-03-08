@@ -1,6 +1,12 @@
 from __future__ import annotations
 
-from arouter import select_vacuumtube_page_target, select_vacuumtube_websocket_url
+import pytest
+
+from arouter import (
+    run_vacuumtube_cdp_client,
+    select_vacuumtube_page_target,
+    select_vacuumtube_websocket_url,
+)
 
 
 def test_select_vacuumtube_page_target_prefers_youtube_tv_url() -> None:
@@ -47,3 +53,30 @@ def test_select_vacuumtube_websocket_url_returns_string_field() -> None:
 def test_select_vacuumtube_websocket_url_returns_none_for_missing_or_empty_field() -> None:
     assert select_vacuumtube_websocket_url({"webSocketDebuggerUrl": ""}) is None
     assert select_vacuumtube_websocket_url({"url": "https://example.com"}) is None
+
+
+def test_run_vacuumtube_cdp_client_selects_websocket_and_enables_client() -> None:
+    events: list[object] = []
+
+    client = run_vacuumtube_cdp_client(
+        target={"webSocketDebuggerUrl": "ws://127.0.0.1:9992/devtools/page/1"},
+        select_websocket_url=select_vacuumtube_websocket_url,
+        create_client=lambda ws_url: events.append(("create", ws_url)) or {"ws_url": ws_url},
+        enable_client=lambda cdp: events.append(("enable", cdp["ws_url"])),
+    )
+
+    assert client == {"ws_url": "ws://127.0.0.1:9992/devtools/page/1"}
+    assert events == [
+        ("create", "ws://127.0.0.1:9992/devtools/page/1"),
+        ("enable", "ws://127.0.0.1:9992/devtools/page/1"),
+    ]
+
+
+def test_run_vacuumtube_cdp_client_raises_without_websocket_url() -> None:
+    with pytest.raises(RuntimeError, match="CDP target missing webSocketDebuggerUrl"):
+        run_vacuumtube_cdp_client(
+            target={"title": "no websocket"},
+            select_websocket_url=select_vacuumtube_websocket_url,
+            create_client=lambda _ws_url: object(),
+            enable_client=lambda _client: None,
+        )

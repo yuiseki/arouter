@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any
 
 
@@ -30,3 +31,18 @@ def select_vacuumtube_websocket_url(target: Any) -> str | None:
     if not isinstance(ws_url, str) or not ws_url:
         return None
     return ws_url
+
+
+def run_vacuumtube_cdp_client(
+    *,
+    target: dict[str, Any],
+    select_websocket_url: Callable[[Any], str | None],
+    create_client: Callable[[str], Any],
+    enable_client: Callable[[Any], None],
+) -> Any:
+    ws_url = select_websocket_url(target)
+    if not isinstance(ws_url, str) or not ws_url:
+        raise RuntimeError("CDP target missing webSocketDebuggerUrl")
+    client = create_client(ws_url)
+    enable_client(client)
+    return client
