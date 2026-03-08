@@ -3,6 +3,7 @@ from __future__ import annotations
 from arouter import (
     build_live_cam_page_brief,
     build_live_cam_runtime_url_entry,
+    collect_live_cam_runtime_urls,
     find_stuck_live_cam_specs,
     merge_live_cam_page_snapshot,
     page_matches_live_camera_spec,
@@ -37,6 +38,20 @@ def test_build_live_cam_runtime_url_entry_returns_error_payload() -> None:
         port=9996,
         targets_or_error=OSError("connection refused"),
     ) == {"port": 9996, "error": "connection refused"}
+
+
+def test_collect_live_cam_runtime_urls_converts_targets_and_errors() -> None:
+    specs = [{"port": 9993}, {"port": 9994}]
+
+    def fetch_targets(port: int) -> object:
+        if port == 9993:
+            return [{"type": "page", "url": "https://www.youtube.com/tv#/watch?v=abc123DEF45"}]
+        raise OSError("connection refused")
+
+    assert collect_live_cam_runtime_urls(specs, fetch_targets=fetch_targets) == [
+        {"port": 9993, "url": "https://www.youtube.com/tv#/watch?v=abc123DEF45"},
+        {"port": 9994, "error": "connection refused"},
+    ]
 
 
 def test_build_live_cam_page_brief_extracts_title_and_url() -> None:

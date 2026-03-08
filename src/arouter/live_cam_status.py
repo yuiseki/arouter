@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 from typing import Any
 
 
@@ -39,6 +40,22 @@ def build_live_cam_runtime_url_entry(
     if isinstance(targets_or_error, Exception):
         return {"port": int(port), "error": str(targets_or_error)}
     return {"port": int(port), "url": select_live_cam_page_url(targets_or_error)}
+
+
+def collect_live_cam_runtime_urls(
+    specs: list[dict[str, Any]],
+    *,
+    fetch_targets: Callable[[int], Any],
+) -> list[dict[str, Any]]:
+    urls: list[dict[str, Any]] = []
+    for spec in specs:
+        port = int(spec["port"])
+        try:
+            targets_or_error = fetch_targets(port)
+        except Exception as exc:
+            targets_or_error = exc
+        urls.append(build_live_cam_runtime_url_entry(port=port, targets_or_error=targets_or_error))
+    return urls
 
 
 def build_live_cam_page_brief(target: dict[str, Any]) -> dict[str, Any]:

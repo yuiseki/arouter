@@ -81,6 +81,7 @@ from .live_cam_selection import (
 from .live_cam_status import (
     build_live_cam_page_brief,
     build_live_cam_runtime_url_entry,
+    collect_live_cam_runtime_urls,
     find_stuck_live_cam_specs,
     merge_live_cam_page_snapshot,
     page_matches_live_camera_spec,
@@ -215,6 +216,7 @@ __all__ = [
     "build_live_cam_page_brief",
     "expand_live_cam_candidates",
     "format_live_cam_selection_error",
+    "collect_live_cam_runtime_urls",
     "build_live_cam_runtime_url_entry",
     "find_stuck_live_cam_specs",
     "find_window_geometry_from_wmctrl_lines",
