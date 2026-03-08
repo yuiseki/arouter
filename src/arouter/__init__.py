@@ -5,7 +5,13 @@ from .biometric_password import (
     read_password_secret_lines,
     verify_unlock_password,
 )
-from .biometric_poller import resolve_biometric_poll_interval, run_biometric_poll_iteration
+from .biometric_poller import (
+    resolve_biometric_poll_interval,
+    run_biometric_poll_iteration,
+    run_biometric_poller_loop,
+    start_biometric_poller,
+    stop_biometric_poller,
+)
 from .biometric_runtime import (
     default_lock_screen_text,
     default_locked_denied_text,
@@ -75,13 +81,16 @@ __all__ = [
     "resolve_biometric_poll_interval",
     "report_segment_error",
     "run_biometric_poll_iteration",
+    "run_biometric_poller_loop",
     "run_authorized_command_flow",
     "resolve_segment_transcript",
     "SegmentTranscriptResolution",
     "should_ack_before_action",
     "should_wait_ack_before_action",
+    "start_biometric_poller",
     "store_authfail_wav",
     "store_authorized_wav",
+    "stop_biometric_poller",
     "set_system_locked",
     "seed_signal_seen_mtime",
     "trim_notify_text",
