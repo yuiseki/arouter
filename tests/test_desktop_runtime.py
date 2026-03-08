@@ -5,9 +5,11 @@ import pytest
 from arouter import (
     launch_chromium_new_window,
     read_active_window_id,
+    run_active_window_id_query,
     run_arrange_script,
     run_kwin_shortcut,
     run_tmp_main_layout,
+    run_tmux_has_session_query,
 )
 
 
@@ -61,6 +63,29 @@ def test_read_active_window_id_returns_hex_id() -> None:
 
 def test_read_active_window_id_returns_none_for_invalid_output() -> None:
     assert read_active_window_id(read_output=lambda: "not-a-number") is None
+
+
+def test_run_active_window_id_query_uses_parser() -> None:
+    assert (
+        run_active_window_id_query(
+            read_output=lambda: "123\n",
+            parse_output=read_active_window_id,
+        )
+        == "0x7b"
+    )
+
+
+def test_run_tmux_has_session_query_checks_returncode() -> None:
+    commands: list[list[str]] = []
+
+    ok = run_tmux_has_session_query(
+        session_name="vacuumtube-main",
+        build_command=lambda session_name: ["tmux", "has-session", "-t", session_name],
+        run_command=lambda command: commands.append(command) or _CompletedProcess(returncode=0),
+    )
+
+    assert ok is True
+    assert commands == [["tmux", "has-session", "-t", "vacuumtube-main"]]
 
 
 def test_run_kwin_shortcut_builds_and_runs_command() -> None:

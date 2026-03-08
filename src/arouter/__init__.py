@@ -37,9 +37,11 @@ from .cdp_targets import require_cdp_target_list
 from .desktop_runtime import (
     launch_chromium_new_window,
     read_active_window_id,
+    run_active_window_id_query,
     run_arrange_script,
     run_kwin_shortcut,
     run_tmp_main_layout,
+    run_tmux_has_session_query,
 )
 from .display_env import build_x11_env, resolve_x11_display
 from .display_runtime import probe_x11_display
@@ -274,8 +276,10 @@ __all__ = [
     "probe_x11_display",
     "launch_chromium_new_window",
     "read_active_window_id",
+    "run_active_window_id_query",
     "run_arrange_script",
     "run_kwin_shortcut",
+    "run_tmux_has_session_query",
     "run_tmp_main_layout",
     "build_kwin_load_script_command",
     "build_kwin_invoke_shortcut_command",

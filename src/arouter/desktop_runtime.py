@@ -29,6 +29,24 @@ def read_active_window_id(
     return f"0x{active_id:x}"
 
 
+def run_active_window_id_query(
+    *,
+    read_output: Callable[[], str],
+    parse_output: Callable[..., str | None],
+) -> str | None:
+    return parse_output(read_output=read_output)
+
+
+def run_tmux_has_session_query(
+    *,
+    session_name: str,
+    build_command: Callable[[str], list[str]],
+    run_command: Callable[[list[str]], Any],
+) -> bool:
+    cp = run_command(build_command(session_name))
+    return int(getattr(cp, "returncode", 1)) == 0
+
+
 def run_kwin_shortcut(
     *,
     shortcut_name: str,
