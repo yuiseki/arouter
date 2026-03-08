@@ -36,3 +36,22 @@ def run_kwin_shortcut(
     run_command: Callable[[list[str]], Any],
 ) -> None:
     run_command(build_command(shortcut_name))
+
+
+def run_arrange_script(
+    *,
+    script_path: str,
+    label: str,
+    path_exists: Callable[[str], bool],
+    run_command: Callable[[list[str]], Any],
+) -> str:
+    if not path_exists(script_path):
+        raise RuntimeError(f"{label} script not found: {script_path}")
+    cp = run_command(["bash", script_path])
+    if int(getattr(cp, "returncode", 1)) != 0:
+        err = (getattr(cp, "stderr", "") or getattr(cp, "stdout", "") or "").strip()
+        raise RuntimeError(f"{label} failed: {err}")
+    out = (getattr(cp, "stdout", "") or "").strip()
+    if out:
+        return out
+    return f"{label} arranged"
