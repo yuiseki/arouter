@@ -127,6 +127,20 @@ from .router import (
 )
 from .segment import process_pcm_segment, process_transcribed_segment
 from .storage import handle_authorization_denied, store_authfail_wav, store_authorized_wav
+from .vacuumtube_runtime import (
+    build_vacuumtube_context_base,
+    finalize_vacuumtube_context,
+    is_recoverable_vacuumtube_error,
+    merge_vacuumtube_cdp_state,
+    merge_vacuumtube_window_snapshot,
+)
+from .vacuumtube_state import (
+    vacuumtube_is_home_browse_state,
+    vacuumtube_is_watch_state,
+    vacuumtube_needs_hard_reload_home,
+    vacuumtube_video_current_time,
+    vacuumtube_video_playing,
+)
 from .vacuumtube_targets import (
     select_vacuumtube_page_target,
     select_vacuumtube_websocket_url,
@@ -210,6 +224,7 @@ __all__ = [
     "build_window_minimize_command",
     "build_top_right_position_attempt_plan",
     "build_top_right_position_result",
+    "build_vacuumtube_context_base",
     "build_window_presentation_snapshot",
     "command_has_system_prefix",
     "chromium_window_ids_from_wmctrl_lines",
@@ -229,6 +244,7 @@ __all__ = [
     "execute_news_command",
     "extract_password_unlock_secret",
     "finalize_top_right_position_result",
+    "finalize_vacuumtube_context",
     "annotate_live_cam_payload_selection",
     "build_live_cam_browse_command",
     "build_live_cam_command_failure",
@@ -250,6 +266,7 @@ __all__ = [
     "good_night_voice_text",
     "handle_authorization_denied",
     "find_konsole_rows_for_tmux_client_pids",
+    "is_recoverable_vacuumtube_error",
     "is_vacuumtube_quadrant_mode_for_load_check",
     "is_window_fullscreenish",
     "load_password_candidates",
@@ -261,6 +278,8 @@ __all__ = [
     "normalize_live_cam_force_video_id",
     "normalize_live_cam_work_area",
     "merge_live_cam_page_snapshot",
+    "merge_vacuumtube_cdp_state",
+    "merge_vacuumtube_window_snapshot",
     "parse_command",
     "parse_desktop_size_from_wmctrl_output",
     "parse_listen_pid_output",
@@ -304,6 +323,11 @@ __all__ = [
     "seed_signal_seen_mtime",
     "select_vacuumtube_page_target",
     "select_vacuumtube_websocket_url",
+    "vacuumtube_is_home_browse_state",
+    "vacuumtube_is_watch_state",
+    "vacuumtube_needs_hard_reload_home",
+    "vacuumtube_video_current_time",
+    "vacuumtube_video_playing",
     "wait_for_window_id",
     "wait_for_new_window_row",
     "window_rows_for_pids_from_wmctrl_lines",
