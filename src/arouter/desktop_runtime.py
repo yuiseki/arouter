@@ -55,3 +55,20 @@ def run_arrange_script(
     if out:
         return out
     return f"{label} arranged"
+
+
+def run_tmp_main_layout(
+    *,
+    script_path: str,
+    mode: str,
+    path_exists: Callable[[str], bool],
+    run_command: Callable[[list[str]], Any],
+) -> str:
+    if not path_exists(script_path):
+        raise RuntimeError(f"tmp_main.sh layout script not found: {script_path}")
+    flag = f"--{mode}"
+    cp = run_command(["bash", script_path, "layout", flag])
+    if int(getattr(cp, "returncode", 1)) != 0:
+        err = (getattr(cp, "stderr", "") or "").strip()
+        raise RuntimeError(f"tmp_main.sh layout {flag} failed: {err}")
+    return f"god_mode layout {mode}: ok"

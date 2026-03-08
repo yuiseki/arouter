@@ -39,6 +39,7 @@ from .desktop_runtime import (
     read_active_window_id,
     run_arrange_script,
     run_kwin_shortcut,
+    run_tmp_main_layout,
 )
 from .display_env import build_x11_env, resolve_x11_display
 from .display_runtime import probe_x11_display
@@ -149,6 +150,7 @@ from .router import (
 )
 from .segment import process_pcm_segment, process_transcribed_segment
 from .storage import handle_authorization_denied, store_authfail_wav, store_authorized_wav
+from .system_modes import run_system_normal_mode, run_system_webcam_mode
 from .tmux_commands import (
     build_tmux_has_session_command,
     build_tmux_kill_session_command,
@@ -269,6 +271,7 @@ __all__ = [
     "read_active_window_id",
     "run_arrange_script",
     "run_kwin_shortcut",
+    "run_tmp_main_layout",
     "build_kwin_load_script_command",
     "build_kwin_invoke_shortcut_command",
     "build_kwin_script_command_plan",
@@ -446,6 +449,8 @@ __all__ = [
     "SegmentTranscriptResolution",
     "looks_like_weather_chromium_title",
     "select_weather_candidate_window_ids",
+    "run_system_normal_mode",
+    "run_system_webcam_mode",
     "should_ack_before_action",
     "should_wait_ack_before_action",
     "suppress_transcribed_command_reason",

@@ -7,6 +7,7 @@ from arouter import (
     read_active_window_id,
     run_arrange_script,
     run_kwin_shortcut,
+    run_tmp_main_layout,
 )
 
 
@@ -121,6 +122,40 @@ def test_run_arrange_script_raises_with_stderr_on_failure() -> None:
         run_arrange_script(
             script_path="/tmp/arrange.sh",
             label="world situation mode",
+            path_exists=lambda _path: True,
+            run_command=lambda _command: _CompletedProcess(returncode=1, stderr="boom"),
+        )
+
+
+def test_run_tmp_main_layout_runs_layout_subcommand() -> None:
+    events: list[object] = []
+
+    out = run_tmp_main_layout(
+        script_path="/tmp/tmp_main.sh",
+        mode="frontmost",
+        path_exists=lambda path: path == "/tmp/tmp_main.sh",
+        run_command=lambda command: events.append(command) or _CompletedProcess(returncode=0),
+    )
+
+    assert out == "god_mode layout frontmost: ok"
+    assert events == [["bash", "/tmp/tmp_main.sh", "layout", "--frontmost"]]
+
+
+def test_run_tmp_main_layout_raises_when_script_missing() -> None:
+    with pytest.raises(RuntimeError, match="tmp_main.sh layout script not found"):
+        run_tmp_main_layout(
+            script_path="/tmp/missing.sh",
+            mode="frontmost",
+            path_exists=lambda _path: False,
+            run_command=lambda _command: _CompletedProcess(returncode=0),
+        )
+
+
+def test_run_tmp_main_layout_raises_on_failure() -> None:
+    with pytest.raises(RuntimeError, match="tmp_main.sh layout --frontmost failed: boom"):
+        run_tmp_main_layout(
+            script_path="/tmp/tmp_main.sh",
+            mode="frontmost",
             path_exists=lambda _path: True,
             run_command=lambda _command: _CompletedProcess(returncode=1, stderr="boom"),
         )
