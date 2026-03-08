@@ -16,6 +16,7 @@ from arouter import (
     recover_vacuumtube_unresponsive_state,
     restart_vacuumtube_tmux_session,
     run_vacuumtube_click_tile_center,
+    run_vacuumtube_confirm_watch_playback,
     run_vacuumtube_dom_click_tile,
     run_vacuumtube_ensure_home,
     run_vacuumtube_enumerate_tiles,
@@ -372,6 +373,77 @@ def test_run_vacuumtube_select_account_if_needed_logs_and_returns_false_on_error
 
     assert out is False
     assert logs == ["account selection check failed (continuing): boom"]
+
+
+def test_run_vacuumtube_confirm_watch_playback_returns_confirmed_snapshot() -> None:
+    logs: list[str] = []
+    sleep_calls: list[float] = []
+    states = iter(
+        [
+            {"hash": "#/watch?v=abc", "video": {"paused": True, "currentTime": 1}},
+            {
+                "hash": "#/watch?v=abc",
+                "video": {"paused": False, "currentTime": 3},
+                "confirmed": True,
+            },
+        ]
+    )
+    now_values = iter([100.0, 100.1, 100.5])
+
+    out = run_vacuumtube_confirm_watch_playback(
+        snapshot_state=lambda: next(states),
+        is_watch_state=lambda snap: str(snap.get("hash") or "").startswith("#/watch"),
+        playback_confirmed=lambda first, snap: bool(snap.get("confirmed")),
+        try_resume_current_video=lambda: (_ for _ in ()).throw(AssertionError("should not resume")),
+        log=logs.append,
+        now=lambda: next(now_values),
+        sleep=lambda seconds: sleep_calls.append(seconds),
+        timeout_sec=3.0,
+        allow_resume_attempts=False,
+    )
+
+    assert out["confirmed"] is True
+    assert sleep_calls == [0.35]
+    assert logs == [
+        "watch playback confirmed: "
+        + json.dumps(
+            {"hash": "#/watch?v=abc", "video": {"paused": False, "currentTime": 3}},
+            ensure_ascii=False,
+        )
+    ]
+
+
+def test_run_vacuumtube_confirm_watch_playback_soft_confirms_unpaused_video() -> None:
+    logs: list[str] = []
+    states = iter(
+        [
+            {"hash": "#/watch?v=abc", "video": {"paused": True, "currentTime": 1}},
+            {"hash": "#/watch?v=abc", "video": {"paused": False, "currentTime": 1}},
+        ]
+    )
+    now_values = iter([100.0, 100.1, 100.5])
+
+    out = run_vacuumtube_confirm_watch_playback(
+        snapshot_state=lambda: next(states),
+        is_watch_state=lambda snap: str(snap.get("hash") or "").startswith("#/watch"),
+        playback_confirmed=lambda first, snap: False,
+        try_resume_current_video=lambda: (_ for _ in ()).throw(AssertionError("should not resume")),
+        log=logs.append,
+        now=lambda: next(now_values),
+        sleep=lambda _seconds: None,
+        timeout_sec=3.0,
+        allow_resume_attempts=False,
+        allow_soft_confirm_when_unpaused=True,
+    )
+
+    assert out["video"]["paused"] is False
+    assert logs == [
+        "watch playback soft-confirmed: "
+        + json.dumps(
+            {"hash": "#/watch?v=abc", "video": {"paused": False, "currentTime": 1}},
+            ensure_ascii=False,
+        )
+    ]
 
 
 def test_finalize_vacuumtube_context_marks_available_from_window_or_hash() -> None:

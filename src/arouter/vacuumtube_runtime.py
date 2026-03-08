@@ -488,6 +488,61 @@ def run_vacuumtube_select_account_if_needed(
     return False
 
 
+def run_vacuumtube_confirm_watch_playback(
+    *,
+    snapshot_state: Callable[[], dict[str, Any]],
+    is_watch_state: Callable[[dict[str, Any]], bool],
+    playback_confirmed: Callable[[dict[str, Any], dict[str, Any]], bool],
+    try_resume_current_video: Callable[[], None],
+    log: Callable[[str], None],
+    now: Callable[[], float],
+    sleep: Callable[[float], None],
+    timeout_sec: float = 8.0,
+    allow_resume_attempts: bool = True,
+    allow_soft_confirm_when_unpaused: bool = False,
+    resume_interval_sec: float = 1.0,
+    poll_interval_sec: float = 0.35,
+) -> dict[str, Any]:
+    deadline = now() + timeout_sec
+    first_watch_snapshot: dict[str, Any] | None = None
+    last_snapshot: dict[str, Any] | None = None
+    last_resume_try = 0.0
+    while now() < deadline:
+        snap = snapshot_state()
+        last_snapshot = snap
+        if is_watch_state(snap):
+            if first_watch_snapshot is None:
+                first_watch_snapshot = snap
+            if playback_confirmed(first_watch_snapshot, snap):
+                log(
+                    "watch playback confirmed: "
+                    + json.dumps(
+                        {"hash": snap.get("hash"), "video": snap.get("video")},
+                        ensure_ascii=False,
+                    )
+                )
+                return snap
+            if allow_soft_confirm_when_unpaused:
+                video = snap.get("video")
+                if isinstance(video, dict) and not bool(video.get("paused", True)):
+                    log(
+                        "watch playback soft-confirmed: "
+                        + json.dumps(
+                            {"hash": snap.get("hash"), "video": video},
+                            ensure_ascii=False,
+                        )
+                    )
+                    return snap
+            if allow_resume_attempts and (now() - last_resume_try) >= resume_interval_sec:
+                try_resume_current_video()
+                last_resume_try = now()
+        sleep(poll_interval_sec)
+    raise RuntimeError(
+        "watch route reached but playback not confirmed: "
+        + json.dumps(last_snapshot or {}, ensure_ascii=False)
+    )
+
+
 def finalize_vacuumtube_context(context: dict[str, Any]) -> dict[str, Any]:
     finalized = dict(context)
     finalized["available"] = bool(finalized.get("windowFound")) or bool(finalized.get("hash"))
