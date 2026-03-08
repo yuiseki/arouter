@@ -140,3 +140,52 @@ def ensure_vacuumtube_started_and_positioned(
         log(f"tile top-right skipped: {err}")
 
     return capture_window_presentation(win_id)
+
+
+def run_vacuumtube_resume_playback(
+    *,
+    find_window_id: Callable[[], str | None],
+    snapshot_state: Callable[[], dict[str, Any]],
+    is_watch_state: Callable[[dict[str, Any]], bool],
+    confirm_already_playing: Callable[[], None],
+    try_resume_current_video: Callable[[], None],
+    confirm_dom_resume: Callable[[], None],
+    send_space_key: Callable[[], None],
+    confirm_space_resume: Callable[[], None],
+    ensure_top_right_position: Callable[[], dict[str, Any]],
+    log: Callable[[str], None],
+) -> str:
+    win_id = find_window_id()
+    if not win_id:
+        return "VacuumTube window not found (no-op)"
+
+    before = snapshot_state()
+    if not is_watch_state(before):
+        log("resume_playback skipped: not on watch route")
+        return "not on watch route (no-op)"
+
+    def log_position(prefix: str) -> None:
+        try:
+            position = ensure_top_right_position()
+            payload = json.dumps(position, ensure_ascii=False)
+            log(f"{prefix} window position: {payload}")
+        except Exception as err:
+            log(f"{prefix} position check skipped: {err}")
+
+    try:
+        confirm_already_playing()
+        log_position("RESUME already-playing")
+        return "watch route already playing (no-op)"
+    except Exception:
+        pass
+
+    try_resume_current_video()
+    try:
+        confirm_dom_resume()
+        log_position("RESUME post-action")
+        return f"resumed playback via DOM ({win_id})"
+    except Exception:
+        send_space_key()
+        confirm_space_resume()
+        log_position("RESUME space-toggle")
+        return f"resumed playback via Space toggle ({win_id})"

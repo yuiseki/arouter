@@ -11,6 +11,7 @@ from arouter import (
     is_recoverable_vacuumtube_error,
     merge_vacuumtube_cdp_state,
     merge_vacuumtube_window_snapshot,
+    run_vacuumtube_resume_playback,
 )
 
 
@@ -177,3 +178,63 @@ def test_ensure_vacuumtube_started_and_positioned_preserves_fullscreen_window() 
         event.startswith("VacuumTube window position preserved (fullscreen): ")
         for event in events
     )
+
+
+def test_run_vacuumtube_resume_playback_returns_noop_when_window_missing() -> None:
+    result = run_vacuumtube_resume_playback(
+        find_window_id=lambda: None,
+        snapshot_state=lambda: {"hash": "#/watch"},
+        is_watch_state=lambda state: bool(state),
+        confirm_already_playing=lambda: None,
+        try_resume_current_video=lambda: None,
+        confirm_dom_resume=lambda: None,
+        send_space_key=lambda: None,
+        confirm_space_resume=lambda: None,
+        ensure_top_right_position=lambda: {"ok": True},
+        log=lambda _msg: None,
+    )
+
+    assert result == "VacuumTube window not found (no-op)"
+
+
+def test_run_vacuumtube_resume_playback_skips_when_not_on_watch_route() -> None:
+    events: list[str] = []
+
+    result = run_vacuumtube_resume_playback(
+        find_window_id=lambda: "0x123",
+        snapshot_state=lambda: {"hash": "#/"},
+        is_watch_state=lambda _state: False,
+        confirm_already_playing=lambda: (_ for _ in ()).throw(AssertionError("unexpected")),
+        try_resume_current_video=lambda: (_ for _ in ()).throw(AssertionError("unexpected")),
+        confirm_dom_resume=lambda: (_ for _ in ()).throw(AssertionError("unexpected")),
+        send_space_key=lambda: (_ for _ in ()).throw(AssertionError("unexpected")),
+        confirm_space_resume=lambda: (_ for _ in ()).throw(AssertionError("unexpected")),
+        ensure_top_right_position=lambda: (_ for _ in ()).throw(AssertionError("unexpected")),
+        log=events.append,
+    )
+
+    assert result == "not on watch route (no-op)"
+    assert events == ["resume_playback skipped: not on watch route"]
+
+
+def test_run_vacuumtube_resume_playback_uses_space_toggle_after_dom_resume_fails() -> None:
+    events: list[str] = []
+
+    result = run_vacuumtube_resume_playback(
+        find_window_id=lambda: "0x123",
+        snapshot_state=lambda: {"hash": "#/watch?v=abc"},
+        is_watch_state=lambda _state: True,
+        confirm_already_playing=lambda: (_ for _ in ()).throw(RuntimeError("still paused")),
+        try_resume_current_video=lambda: events.append("try_resume"),
+        confirm_dom_resume=lambda: (_ for _ in ()).throw(RuntimeError("dom failed")),
+        send_space_key=lambda: events.append("space"),
+        confirm_space_resume=lambda: events.append("confirm_space"),
+        ensure_top_right_position=lambda: (
+            events.append("ensure_top_right") or {"ok": True, "window_id": "0x123"}
+        ),
+        log=events.append,
+    )
+
+    assert result == "resumed playback via Space toggle (0x123)"
+    assert events[:4] == ["try_resume", "space", "confirm_space", "ensure_top_right"]
+    assert any(event.startswith("RESUME space-toggle window position: ") for event in events)

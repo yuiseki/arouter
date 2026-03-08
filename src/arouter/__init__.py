@@ -154,6 +154,7 @@ from .vacuumtube_runtime import (
     is_recoverable_vacuumtube_error,
     merge_vacuumtube_cdp_state,
     merge_vacuumtube_window_snapshot,
+    run_vacuumtube_resume_playback,
 )
 from .vacuumtube_state import (
     vacuumtube_is_home_browse_state,
@@ -265,6 +266,7 @@ __all__ = [
     "build_vacuumtube_context_error",
     "build_vacuumtube_context_base",
     "ensure_vacuumtube_started_and_positioned",
+    "run_vacuumtube_resume_playback",
     "build_weather_pages_closed_response",
     "build_weather_pages_tiled_response",
     "build_weather_tile_result",
