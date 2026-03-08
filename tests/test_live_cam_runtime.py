@@ -15,6 +15,7 @@ from arouter import (
     find_missing_live_cam_window_ports,
     parse_key_value_stdout,
     resolve_existing_live_cam_windowed_pids,
+    resolve_live_cam_action_state,
     run_live_cam_parallel,
 )
 
@@ -140,6 +141,32 @@ def test_resolve_existing_live_cam_windowed_pids_returns_pid_map_when_all_window
     )
 
     assert out == {9993: 101, 9994: 102}
+
+
+def test_resolve_live_cam_action_state_fetches_state_when_pids_exist() -> None:
+    out = resolve_live_cam_action_state(
+        [{"port": 9993}, {"port": 9994}],
+        pid_lookup=lambda port: {9993: 101, 9994: 102}.get(port),
+        state_fetcher=lambda pids: {"windows": [{"pid": 101}], "urls": [], "ports": sorted(pids)},
+    )
+
+    assert out == {
+        "pids_by_port": {9993: 101, 9994: 102},
+        "state": {"windows": [{"pid": 101}], "urls": [], "ports": [9993, 9994]},
+    }
+
+
+def test_resolve_live_cam_action_state_returns_empty_state_when_pid_missing() -> None:
+    out = resolve_live_cam_action_state(
+        [{"port": 9993}, {"port": 9994}],
+        pid_lookup=lambda port: {9993: 101}.get(port),
+        state_fetcher=lambda _pids: {"unexpected": True},
+    )
+
+    assert out == {
+        "pids_by_port": {},
+        "state": {"windows": [], "urls": []},
+    }
 
 
 def test_build_live_cam_open_result_extracts_final_href() -> None:

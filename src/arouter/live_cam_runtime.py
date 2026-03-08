@@ -100,6 +100,24 @@ def resolve_existing_live_cam_windowed_pids(
     return pids_by_port
 
 
+def resolve_live_cam_action_state(
+    instances: list[dict[str, Any]],
+    *,
+    pid_lookup: Callable[[int], int | None],
+    state_fetcher: Callable[[dict[int, int]], dict[str, Any]],
+) -> dict[str, Any]:
+    pids_by_port = collect_live_cam_pids(instances, pid_lookup=pid_lookup) or {}
+    if not pids_by_port:
+        return {
+            "pids_by_port": {},
+            "state": {"windows": [], "urls": []},
+        }
+    return {
+        "pids_by_port": pids_by_port,
+        "state": state_fetcher(pids_by_port),
+    }
+
+
 def parse_key_value_stdout(text: str) -> dict[str, str]:
     out: dict[str, str] = {}
     for line in (text or "").splitlines():

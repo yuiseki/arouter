@@ -64,6 +64,7 @@ from .live_cam_runtime import (
     find_missing_live_cam_window_ports,
     parse_key_value_stdout,
     resolve_existing_live_cam_windowed_pids,
+    resolve_live_cam_action_state,
     run_live_cam_parallel,
 )
 from .live_cam_selection import (
@@ -181,6 +182,7 @@ __all__ = [
     "build_live_cam_reopen_result",
     "collect_live_cam_pids",
     "find_missing_live_cam_window_ports",
+    "resolve_live_cam_action_state",
     "resolve_existing_live_cam_windowed_pids",
     "build_load_check_wmctrl_commands",
     "build_window_activate_command",
