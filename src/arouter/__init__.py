@@ -43,6 +43,7 @@ from .kwin_scripts import (
     build_live_cam_layout_script,
     build_live_cam_minimize_script,
     build_minimize_other_windows_script,
+    build_window_frame_geometry_script,
 )
 from .live_cam_layout import (
     build_live_cam_layout_targets_compact,
@@ -114,6 +115,7 @@ __all__ = [
     "build_live_cam_layout_script",
     "build_live_cam_minimize_script",
     "build_minimize_other_windows_script",
+    "build_window_frame_geometry_script",
     "build_live_cam_layout_targets_compact",
     "build_live_cam_layout_targets_full",
     "build_load_check_wmctrl_commands",

@@ -7,6 +7,7 @@ from arouter import (
     build_live_cam_layout_script,
     build_live_cam_minimize_script,
     build_minimize_other_windows_script,
+    build_window_frame_geometry_script,
 )
 
 
@@ -70,3 +71,17 @@ def test_build_minimize_other_windows_script_embeds_skip_pid_filter() -> None:
     assert "skipPids.indexOf(c.pid) !== -1" in script
     assert "c.fullScreen = false;" in script
     assert "c.minimized = true;" in script
+
+
+def test_build_window_frame_geometry_script_embeds_target_pid_and_geometry() -> None:
+    script = build_window_frame_geometry_script(
+        pid=321,
+        geom={"x": 1, "y": 2, "w": 3, "h": 4},
+        no_border=False,
+    )
+
+    assert "var targetPid = 321;" in script
+    assert "var noBorder = false;" in script
+    assert "var target = { x: 1, y: 2, w: 3, h: 4 };" in script
+    assert "if (c.pid !== targetPid) continue;" in script
+    assert "c.noBorder = noBorder;" in script

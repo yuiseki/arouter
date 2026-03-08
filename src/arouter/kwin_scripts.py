@@ -109,3 +109,33 @@ def build_minimize_other_windows_script(skip_pids: list[int]) -> str:
         "}",
     ]
     return "\n".join(js_lines)
+
+
+def build_window_frame_geometry_script(
+    *,
+    pid: int,
+    geom: dict[str, int],
+    no_border: bool = True,
+) -> str:
+    js_lines = [
+        f"var targetPid = {int(pid)};",
+        f"var noBorder = {'true' if no_border else 'false'};",
+        "var target = { "
+        f"x: {int(geom['x'])}, y: {int(geom['y'])}, "
+        f"w: {int(geom['w'])}, h: {int(geom['h'])} "
+        "};",
+        "var clients = workspace.clientList();",
+        "for (var i = 0; i < clients.length; ++i) {",
+        "  var c = clients[i];",
+        "  if (c.pid !== targetPid) continue;",
+        "  try { c.fullScreen = false; } catch (e1) {}",
+        "  try { c.minimized = false; } catch (e2) {}",
+        "  try { c.noBorder = noBorder; } catch (e3) {}",
+        "  var g = c.frameGeometry;",
+        "  g.x = target.x; g.y = target.y; g.width = target.w; g.height = target.h;",
+        "  c.frameGeometry = g;",
+        "  break;",
+        "}",
+        "",
+    ]
+    return "\n".join(js_lines)
