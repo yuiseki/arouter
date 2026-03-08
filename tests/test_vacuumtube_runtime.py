@@ -23,6 +23,7 @@ from arouter import (
     run_vacuumtube_play_news,
     run_vacuumtube_quadrant,
     run_vacuumtube_resume_playback,
+    run_vacuumtube_state_query,
     run_vacuumtube_stop_music,
     start_vacuumtube_tmux_session,
 )
@@ -77,6 +78,28 @@ def test_merge_vacuumtube_cdp_state_sets_routes_and_video_flags() -> None:
     assert merged["videoPlaying"] is True
     assert merged["videoPaused"] is False
     assert merged["watchUiHint"] is True
+
+
+def test_run_vacuumtube_state_query_returns_dict_payload() -> None:
+    out = run_vacuumtube_state_query(
+        evaluate=lambda expr: {
+            "hash": "#/watch?v=abc",
+            "bodyText": "body",
+            "expr_seen": "overlayVisible" in expr,
+        }
+    )
+
+    assert out == {
+        "hash": "#/watch?v=abc",
+        "bodyText": "body",
+        "expr_seen": True,
+    }
+
+
+def test_run_vacuumtube_state_query_returns_empty_dict_for_non_dict_payload() -> None:
+    out = run_vacuumtube_state_query(evaluate=lambda _expr: ["not", "dict"])
+
+    assert out == {}
 
 
 def test_finalize_vacuumtube_context_marks_available_from_window_or_hash() -> None:

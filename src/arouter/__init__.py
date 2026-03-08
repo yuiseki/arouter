@@ -189,6 +189,7 @@ from .vacuumtube_runtime import (
     run_vacuumtube_play_news,
     run_vacuumtube_quadrant,
     run_vacuumtube_resume_playback,
+    run_vacuumtube_state_query,
     run_vacuumtube_stop_music,
     start_vacuumtube_tmux_session,
 )
@@ -464,6 +465,7 @@ __all__ = [
     "run_live_cam_parallel",
     "run_vacuumtube_context_poller_loop",
     "run_vacuumtube_cdp_client",
+    "run_vacuumtube_state_query",
     "resolve_segment_transcript",
     "SegmentTranscriptResolution",
     "looks_like_weather_chromium_title",

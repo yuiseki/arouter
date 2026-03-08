@@ -72,6 +72,58 @@ def merge_vacuumtube_cdp_state(
     return merged
 
 
+def run_vacuumtube_state_query(
+    *,
+    evaluate: Callable[[str], Any],
+) -> dict[str, Any]:
+    expr = r"""
+(() => {
+  const txt = ((document.body && document.body.innerText) || '').replace(/\s+/g, ' ').trim();
+  const bodyText = txt.slice(0, 4000);
+  const ov = document.getElementById('vt-settings-overlay-root');
+  const ovVisible = !!(
+    ov &&
+    getComputedStyle(ov).display !== 'none' &&
+    getComputedStyle(ov).visibility !== 'hidden'
+  );
+  const v =
+    (window.yt &&
+      window.yt.player &&
+      window.yt.player.utils &&
+      window.yt.player.utils.videoElement_) ||
+    document.querySelector('video');
+  return {
+    title: document.title || '',
+    href: location.href,
+    hash: location.hash || '',
+    bodyText,
+    accountSelectHint:
+      bodyText.includes('アカウントを追加') ||
+      bodyText.includes('ゲストとして視聴'),
+    homeHint: bodyText.includes('あなたへのおすすめ'),
+    watchUiHint:
+      bodyText.includes('次の動画') ||
+      bodyText.includes('チャンネル登録') ||
+      bodyText.includes('高く評価') ||
+      bodyText.includes('低く評価') ||
+      bodyText.includes('一時停止') ||
+      bodyText.includes('再生中'),
+    overlayVisible: ovVisible,
+    video: v
+      ? {
+          paused: !!v.paused,
+          muted: !!v.muted,
+          currentTime: Number(v.currentTime || 0),
+          readyState: Number(v.readyState || 0),
+        }
+      : null,
+  };
+})()
+"""
+    data = evaluate(expr)
+    return data if isinstance(data, dict) else {}
+
+
 def finalize_vacuumtube_context(context: dict[str, Any]) -> dict[str, Any]:
     finalized = dict(context)
     finalized["available"] = bool(finalized.get("windowFound")) or bool(finalized.get("hash"))
