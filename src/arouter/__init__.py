@@ -69,6 +69,10 @@ from .storage import handle_authorization_denied, store_authfail_wav, store_auth
 from .window_rows import (
     chromium_window_ids_from_wmctrl_lines,
     detect_new_window_id,
+    find_window_geometry_from_wmctrl_lines,
+    find_window_id_by_pid_and_title,
+    find_window_id_by_title,
+    wait_for_window_id,
     window_title_from_wmctrl_lines,
 )
 
@@ -96,6 +100,9 @@ __all__ = [
     "execute_command",
     "execute_news_command",
     "extract_password_unlock_secret",
+    "find_window_geometry_from_wmctrl_lines",
+    "find_window_id_by_pid_and_title",
+    "find_window_id_by_title",
     "good_night_voice_text",
     "handle_authorization_denied",
     "find_konsole_rows_for_tmux_client_pids",
@@ -133,6 +140,7 @@ __all__ = [
     "run_system_load_check_flow",
     "set_system_locked",
     "seed_signal_seen_mtime",
+    "wait_for_window_id",
     "wait_for_new_window_row",
     "window_title_from_wmctrl_lines",
     "trim_notify_text",
