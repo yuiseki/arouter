@@ -29,6 +29,27 @@ def resolve_window_restore_plan(
     return {"window_id": window_id, "action": "top_right"}
 
 
+def resolve_expected_top_right_geometry(
+    *,
+    screen: tuple[int, int] | None,
+    work_area: tuple[int, int, int, int] | None,
+    fallback_geometry: dict[str, int],
+) -> dict[str, int]:
+    if not screen:
+        return dict(fallback_geometry)
+    try:
+        x, y, w, h = top_right_region_from_screen_and_work_area(
+            screen_w=int(screen[0]),
+            screen_h=int(screen[1]),
+            work_area=work_area,
+        )
+    except Exception:
+        return dict(fallback_geometry)
+    if w <= 0 or h <= 0:
+        return dict(fallback_geometry)
+    return {"x": x, "y": y, "w": w, "h": h}
+
+
 def top_right_region_from_screen_and_work_area(
     *,
     screen_w: int,

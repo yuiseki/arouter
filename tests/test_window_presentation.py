@@ -5,6 +5,7 @@ import pytest
 from arouter import (
     build_window_presentation_snapshot,
     is_window_fullscreenish,
+    resolve_expected_top_right_geometry,
     resolve_window_restore_plan,
     top_right_region_from_screen_and_work_area,
 )
@@ -39,6 +40,22 @@ def test_resolve_window_restore_plan_uses_fallback_window_id_for_top_right() -> 
         fallback_window_id="0x999",
         is_fullscreenish=False,
     ) == {"window_id": "0x999", "action": "top_right"}
+
+
+def test_resolve_expected_top_right_geometry_uses_intersection_when_available() -> None:
+    assert resolve_expected_top_right_geometry(
+        screen=(4096, 2160),
+        work_area=(0, 0, 4096, 2116),
+        fallback_geometry={"x": 1, "y": 2, "w": 3, "h": 4},
+    ) == {"x": 2048, "y": 0, "w": 2048, "h": 1080}
+
+
+def test_resolve_expected_top_right_geometry_falls_back_when_screen_missing() -> None:
+    assert resolve_expected_top_right_geometry(
+        screen=None,
+        work_area=None,
+        fallback_geometry={"x": 1, "y": 2, "w": 3, "h": 4},
+    ) == {"x": 1, "y": 2, "w": 3, "h": 4}
 
 
 def test_top_right_region_intersects_work_area() -> None:

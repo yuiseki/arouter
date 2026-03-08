@@ -117,6 +117,7 @@ from .window_actions import (
 from .window_presentation import (
     build_window_presentation_snapshot,
     is_window_fullscreenish,
+    resolve_expected_top_right_geometry,
     resolve_window_restore_plan,
     top_right_region_from_screen_and_work_area,
 )
@@ -219,6 +220,7 @@ __all__ = [
     "read_password_secret_lines",
     "reassert_lock_screen",
     "request_biometric_lock_payload",
+    "resolve_expected_top_right_geometry",
     "resolve_window_restore_plan",
     "resolve_biometric_poll_interval",
     "report_segment_error",
