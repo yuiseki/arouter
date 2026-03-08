@@ -21,6 +21,7 @@ from arouter import (
     run_vacuumtube_enumerate_tiles,
     run_vacuumtube_fullscreen,
     run_vacuumtube_go_home,
+    run_vacuumtube_good_night_pause,
     run_vacuumtube_hard_reload_home,
     run_vacuumtube_hide_overlay,
     run_vacuumtube_minimize,
@@ -308,6 +309,23 @@ def test_run_vacuumtube_dom_click_tile_passes_title_and_text_to_expression() -> 
     assert len(seen) == 1
     assert '"Best Tile"' in seen[0]
     assert '"Best Tile Text"' in seen[0]
+
+
+def test_run_vacuumtube_good_night_pause_returns_payload_dict() -> None:
+    out = run_vacuumtube_good_night_pause(
+        evaluate=lambda expr: {
+            "ok": "window.yt" in expr,
+            "afterPaused": True,
+        }
+    )
+
+    assert out == {"ok": True, "afterPaused": True}
+
+
+def test_run_vacuumtube_good_night_pause_wraps_non_dict_payload() -> None:
+    out = run_vacuumtube_good_night_pause(evaluate=lambda _expr: "oops")
+
+    assert out == {"ok": False, "result": "oops"}
 
 
 def test_finalize_vacuumtube_context_marks_available_from_window_or_hash() -> None:

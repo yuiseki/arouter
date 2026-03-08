@@ -422,6 +422,40 @@ def run_vacuumtube_dom_click_tile(
     return evaluate(expr)
 
 
+def run_vacuumtube_good_night_pause(
+    *,
+    evaluate: Callable[[str], Any],
+) -> dict[str, Any]:
+    expr = r"""
+(() => {
+  try {
+    const v =
+      (window.yt &&
+        window.yt.player &&
+        window.yt.player.utils &&
+        window.yt.player.utils.videoElement_) ||
+      document.querySelector('video');
+    if (!v) {
+      return {ok: false, reason: 'video-not-found', hash: location.hash || ''};
+    }
+    const beforePaused = !!v.paused;
+    v.pause();
+    return {
+      ok: true,
+      beforePaused,
+      afterPaused: !!v.paused,
+      currentTime: Number(v.currentTime || 0),
+      hash: location.hash || ''
+    };
+  } catch (e) {
+    return {ok: false, reason: String(e), hash: location.hash || ''};
+  }
+})()
+"""
+    out = evaluate(expr)
+    return out if isinstance(out, dict) else {"ok": False, "result": out}
+
+
 def finalize_vacuumtube_context(context: dict[str, Any]) -> dict[str, Any]:
     finalized = dict(context)
     finalized["available"] = bool(finalized.get("windowFound")) or bool(finalized.get("hash"))
