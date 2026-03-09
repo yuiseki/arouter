@@ -17,6 +17,7 @@ from arouter import (
     restart_vacuumtube_tmux_session,
     run_vacuumtube_click_tile_center,
     run_vacuumtube_confirm_watch_playback,
+    run_vacuumtube_context_query,
     run_vacuumtube_dom_click_tile,
     run_vacuumtube_ensure_home,
     run_vacuumtube_enumerate_tiles,
@@ -165,6 +166,80 @@ def test_run_vacuumtube_snapshot_state_tolerates_tile_enumeration_errors() -> No
         "video": None,
         "tilesCount": 0,
         "tilesSample": [],
+    }
+
+
+def test_run_vacuumtube_context_query_combines_window_and_cdp_state() -> None:
+    out = run_vacuumtube_context_query(
+        ts=1.0,
+        cdp_port=9992,
+        find_window_row_by_cdp_port=lambda port: {
+            "id": "0x123",
+            "x": "10",
+            "y": 20,
+            "w": "300",
+            "h": 400,
+        }
+        if port == 9992
+        else None,
+        find_window_id=lambda: "0x999",
+        get_window_geometry=lambda wid: {"x": 0, "y": 0, "w": 1, "h": 1},
+        current_window_is_fullscreenish=lambda wid: False,
+        read_fullscreen_state=lambda wid: "",
+        quadrant_mode_enabled=lambda: True,
+        cdp_ready=lambda: True,
+        query_cdp_state=lambda: {
+            "hash": "#/watch?v=abc",
+            "video": {"paused": False},
+            "accountSelectHint": False,
+            "homeHint": False,
+            "watchUiHint": True,
+        },
+    )
+
+    assert out == {
+        "ts": 1.0,
+        "available": True,
+        "windowFound": True,
+        "fullscreenish": False,
+        "quadrantish": True,
+        "watchRoute": True,
+        "homeRoute": False,
+        "videoPlaying": True,
+        "videoPaused": False,
+        "geom": {"x": 10, "y": 20, "w": 300, "h": 400},
+        "hash": "#/watch?v=abc",
+        "accountSelectHint": False,
+        "homeHint": False,
+        "watchUiHint": True,
+    }
+
+
+def test_run_vacuumtube_context_query_falls_back_to_window_lookup_and_xprop_state() -> None:
+    out = run_vacuumtube_context_query(
+        ts=2.0,
+        cdp_port=None,
+        find_window_row_by_cdp_port=lambda _port: None,
+        find_window_id=lambda: "0xabc",
+        get_window_geometry=lambda wid: {"x": 1, "y": 2, "w": 3, "h": 4},
+        current_window_is_fullscreenish=lambda wid: False,
+        read_fullscreen_state=lambda wid: "_NET_WM_STATE_FULLSCREEN",
+        quadrant_mode_enabled=lambda: False,
+        cdp_ready=lambda: False,
+        query_cdp_state=lambda: {"hash": "#/watch?v=ignored"},
+    )
+
+    assert out == {
+        "ts": 2.0,
+        "available": True,
+        "windowFound": True,
+        "fullscreenish": True,
+        "quadrantish": False,
+        "watchRoute": False,
+        "homeRoute": False,
+        "videoPlaying": False,
+        "videoPaused": None,
+        "geom": {"x": 1, "y": 2, "w": 3, "h": 4},
     }
 
 

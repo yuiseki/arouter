@@ -171,6 +171,73 @@ def run_vacuumtube_snapshot_state(
     }
 
 
+def run_vacuumtube_context_query(
+    *,
+    ts: float,
+    cdp_port: int | None,
+    find_window_row_by_cdp_port: Callable[[int], dict[str, Any] | None],
+    find_window_id: Callable[[], str],
+    get_window_geometry: Callable[[str], dict[str, Any] | None],
+    current_window_is_fullscreenish: Callable[[str], bool],
+    read_fullscreen_state: Callable[[str], str],
+    quadrant_mode_enabled: Callable[[], bool],
+    cdp_ready: Callable[[], bool],
+    query_cdp_state: Callable[[], dict[str, Any] | None],
+) -> dict[str, Any]:
+    context = build_vacuumtube_context_base(ts=ts)
+
+    try:
+        geom: dict[str, Any] | None
+        row = find_window_row_by_cdp_port(int(cdp_port)) if cdp_port else None
+        if row:
+            window_id = str(row.get("id") or "")
+            geom = {
+                "x": row.get("x"),
+                "y": row.get("y"),
+                "w": row.get("w"),
+                "h": row.get("h"),
+            }
+        else:
+            window_id = str(find_window_id() or "")
+            geom = get_window_geometry(window_id) if window_id else None
+
+        fullscreenish = False
+        if window_id:
+            try:
+                fullscreenish = bool(current_window_is_fullscreenish(window_id))
+            except Exception:
+                pass
+            try:
+                if "_NET_WM_STATE_FULLSCREEN" in str(read_fullscreen_state(window_id) or ""):
+                    fullscreenish = True
+            except Exception:
+                pass
+
+        try:
+            quadrantish = bool(quadrant_mode_enabled())
+        except Exception:
+            quadrantish = False
+
+        context = merge_vacuumtube_window_snapshot(
+            context,
+            window_id=window_id,
+            geom=geom,
+            fullscreenish=fullscreenish,
+            quadrantish=quadrantish,
+        )
+    except Exception:
+        pass
+
+    try:
+        if cdp_ready():
+            context = merge_vacuumtube_cdp_state(context, query_cdp_state())
+        context = finalize_vacuumtube_context(context)
+    except Exception:
+        pass
+
+    return context
+
+
 def run_vacuumtube_ensure_home(
     *,
     snapshot_state: Callable[[], dict[str, Any]],
