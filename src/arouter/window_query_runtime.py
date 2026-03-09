@@ -1,6 +1,15 @@
 from __future__ import annotations
 
+import subprocess
 from collections.abc import Callable
+from typing import Any
+
+from .window_presentation import (
+    parse_desktop_size_from_wmctrl_output,
+    parse_screen_size_from_xrandr_output,
+    parse_work_area_from_wmctrl_output,
+)
+from .window_queries import build_wmctrl_list_command
 
 
 def run_wmctrl_list_query(
@@ -15,6 +24,27 @@ def run_wmctrl_list_query(
     ).splitlines()
 
 
+def run_wmctrl_list_host_runtime_query(
+    *,
+    runtime: Any,
+    geometry: bool,
+    with_pid: bool,
+) -> list[str]:
+    return run_wmctrl_list_query(
+        geometry=geometry,
+        with_pid=with_pid,
+        build_command=build_wmctrl_list_command,
+        run_command=lambda command: subprocess.run(
+            command,
+            check=False,
+            text=True,
+            capture_output=True,
+            env=runtime._x11_env(),
+        ).stdout
+        or "",
+    )
+
+
 def run_desktop_size_query(
     *,
     run_command: Callable[[list[str]], str],
@@ -24,6 +54,20 @@ def run_desktop_size_query(
     if size:
         return size
     raise RuntimeError("desktop size not found via wmctrl -d")
+
+
+def run_desktop_size_host_runtime_query(*, runtime: Any) -> tuple[int, int]:
+    return run_desktop_size_query(
+        run_command=lambda command: subprocess.run(
+            command,
+            check=False,
+            text=True,
+            capture_output=True,
+            env=runtime._x11_env(),
+        ).stdout
+        or "",
+        parse_output=parse_desktop_size_from_wmctrl_output,
+    )
 
 
 def run_screen_size_query(
@@ -37,12 +81,40 @@ def run_screen_size_query(
     raise RuntimeError("primary screen size not found via xrandr --current")
 
 
+def run_screen_size_host_runtime_query(*, runtime: Any) -> tuple[int, int]:
+    return run_screen_size_query(
+        run_command=lambda command: subprocess.run(
+            command,
+            check=False,
+            text=True,
+            capture_output=True,
+            env=runtime._x11_env(),
+        ).stdout
+        or "",
+        parse_output=parse_screen_size_from_xrandr_output,
+    )
+
+
 def run_work_area_query(
     *,
     run_command: Callable[[list[str]], str],
     parse_output: Callable[[str], tuple[int, int, int, int] | None],
 ) -> tuple[int, int, int, int] | None:
     return parse_output(run_command(["wmctrl", "-d"]))
+
+
+def run_work_area_host_runtime_query(*, runtime: Any) -> tuple[int, int, int, int] | None:
+    return run_work_area_query(
+        run_command=lambda command: subprocess.run(
+            command,
+            check=False,
+            text=True,
+            capture_output=True,
+            env=runtime._x11_env(),
+        ).stdout
+        or "",
+        parse_output=parse_work_area_from_wmctrl_output,
+    )
 
 
 def run_window_row_by_listen_port(

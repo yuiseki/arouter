@@ -11,6 +11,7 @@ from arouter import (
     run_kwin_shortcut,
     run_tmp_main_layout,
     run_tmp_main_layout_host_runtime,
+    run_tmux_has_session_host_runtime,
     run_tmux_has_session_query,
     run_tmux_konsole_open,
 )
@@ -89,6 +90,33 @@ def test_run_tmux_has_session_query_checks_returncode() -> None:
 
     assert ok is True
     assert commands == [["tmux", "has-session", "-t", "vacuumtube-main"]]
+
+
+def test_run_tmux_has_session_host_runtime_uses_runtime_session_name() -> None:
+    runtime = type("_Runtime", (), {"tmux_session": "vacuumtube-main"})()
+
+    with pytest.MonkeyPatch.context() as mp:
+        calls: list[tuple[list[str], dict[str, object]]] = []
+
+        def _run(command: list[str], **kwargs: object) -> _CompletedProcess:
+            calls.append((command, kwargs))
+            return _CompletedProcess(returncode=0)
+
+        mp.setattr("subprocess.run", _run)
+
+        ok = run_tmux_has_session_host_runtime(runtime=runtime)
+
+    assert ok is True
+    assert calls == [
+        (
+            ["tmux", "has-session", "-t", "vacuumtube-main"],
+            {
+                "check": False,
+                "text": True,
+                "capture_output": True,
+            },
+        )
+    ]
 
 
 def test_run_kwin_shortcut_builds_and_runs_command() -> None:

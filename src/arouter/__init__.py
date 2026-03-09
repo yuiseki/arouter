@@ -68,6 +68,7 @@ from .desktop_runtime import (
     run_kwin_shortcut,
     run_tmp_main_layout,
     run_tmp_main_layout_host_runtime,
+    run_tmux_has_session_host_runtime,
     run_tmux_has_session_query,
     run_tmux_konsole_open,
 )
@@ -120,7 +121,12 @@ from .kwin_scripts import (
     build_minimize_other_windows_script,
     build_window_frame_geometry_script,
 )
-from .listen_ports import build_listen_pid_command, parse_listen_pid_output, resolve_listen_pid
+from .listen_ports import (
+    build_listen_pid_command,
+    parse_listen_pid_output,
+    resolve_listen_pid,
+    run_listen_pid_host_runtime_query,
+)
 from .live_cam_layout import (
     build_live_cam_layout_targets_compact,
     build_live_cam_layout_targets_full,
@@ -401,7 +407,9 @@ from .window_queries import build_wmctrl_list_command
 from .window_query_runtime import (
     build_xprop_wm_state_command,
     read_window_fullscreen_state,
+    run_desktop_size_host_runtime_query,
     run_desktop_size_query,
+    run_screen_size_host_runtime_query,
     run_screen_size_query,
     run_vacuumtube_window_id_query,
     run_window_geometry_query,
@@ -409,7 +417,9 @@ from .window_query_runtime import (
     run_window_row_by_listen_port,
     run_window_rows_query_for_pids,
     run_window_title_query,
+    run_wmctrl_list_host_runtime_query,
     run_wmctrl_list_query,
+    run_work_area_host_runtime_query,
     run_work_area_query,
 )
 from .window_rows import (
@@ -456,6 +466,7 @@ __all__ = [
     "run_kwin_shortcut",
     "run_tmux_konsole_open",
     "run_tmux_has_session_query",
+    "run_tmux_has_session_host_runtime",
     "run_tmp_main_layout",
     "run_tmp_main_layout_host_runtime",
     "build_kwin_load_script_command",
@@ -537,9 +548,12 @@ __all__ = [
     "build_window_move_resize_command",
     "build_window_minimize_command",
     "run_wmctrl_list_query",
+    "run_wmctrl_list_host_runtime_query",
     "read_window_fullscreen_state",
     "run_desktop_size_query",
+    "run_desktop_size_host_runtime_query",
     "run_screen_size_query",
+    "run_screen_size_host_runtime_query",
     "run_vacuumtube_window_id_query",
     "run_window_geometry_query",
     "run_window_id_query_by_pid_title",
@@ -547,6 +561,7 @@ __all__ = [
     "run_window_rows_query_for_pids",
     "run_window_row_by_listen_port",
     "run_work_area_query",
+    "run_work_area_host_runtime_query",
     "run_window_activate",
     "run_window_close",
     "run_window_fullscreen",
@@ -691,6 +706,7 @@ __all__ = [
     "parse_desktop_size_from_wmctrl_output",
     "parse_listen_pid_output",
     "resolve_listen_pid",
+    "run_listen_pid_host_runtime_query",
     "parse_screen_size_from_xrandr_output",
     "parse_work_area_from_wmctrl_output",
     "post_action_voice_text",

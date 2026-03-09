@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+import pytest
+
 from arouter import (
     build_xprop_wm_state_command,
     read_window_fullscreen_state,
+    run_desktop_size_host_runtime_query,
     run_desktop_size_query,
+    run_screen_size_host_runtime_query,
     run_screen_size_query,
     run_vacuumtube_window_id_query,
     run_window_geometry_query,
@@ -11,7 +15,9 @@ from arouter import (
     run_window_row_by_listen_port,
     run_window_rows_query_for_pids,
     run_window_title_query,
+    run_wmctrl_list_host_runtime_query,
     run_wmctrl_list_query,
+    run_work_area_host_runtime_query,
     run_work_area_query,
 )
 
@@ -32,6 +38,41 @@ def test_run_wmctrl_list_query_builds_command_and_splits_lines() -> None:
     assert commands == [["wmctrl", "-lpG"]]
 
 
+def test_run_wmctrl_list_host_runtime_query_uses_runtime_env() -> None:
+    runtime = type("_Runtime", (), {"_x11_env": lambda self: {"DISPLAY": ":0"}})()
+
+    with pytest.MonkeyPatch.context() as mp:
+        calls: list[tuple[list[str], dict[str, object]]] = []
+
+        class _CP:
+            stdout = "0x1\n0x2\n"
+
+        def _run(command: list[str], **kwargs: object) -> _CP:
+            calls.append((command, kwargs))
+            return _CP()
+
+        mp.setattr("subprocess.run", _run)
+
+        out = run_wmctrl_list_host_runtime_query(
+            runtime=runtime,
+            geometry=True,
+            with_pid=True,
+        )
+
+    assert out == ["0x1", "0x2"]
+    assert calls == [
+        (
+            ["wmctrl", "-lpG"],
+            {
+                "check": False,
+                "text": True,
+                "capture_output": True,
+                "env": {"DISPLAY": ":0"},
+            },
+        )
+    ]
+
+
 def test_run_desktop_size_query_parses_wmctrl_output() -> None:
     commands: list[list[str]] = []
 
@@ -43,6 +84,37 @@ def test_run_desktop_size_query_parses_wmctrl_output() -> None:
 
     assert out == (4096, 2160)
     assert commands == [["wmctrl", "-d"]]
+
+
+def test_run_desktop_size_host_runtime_query_uses_runtime_env() -> None:
+    runtime = type("_Runtime", (), {"_x11_env": lambda self: {"DISPLAY": ":0"}})()
+
+    with pytest.MonkeyPatch.context() as mp:
+        calls: list[tuple[list[str], dict[str, object]]] = []
+
+        class _CP:
+            stdout = "0  * DG: 4096x2160  VP: 0,0  WA: 0,28 4096x2132  Workspace 1\n"
+
+        def _run(command: list[str], **kwargs: object) -> _CP:
+            calls.append((command, kwargs))
+            return _CP()
+
+        mp.setattr("subprocess.run", _run)
+
+        out = run_desktop_size_host_runtime_query(runtime=runtime)
+
+    assert out == (4096, 2160)
+    assert calls == [
+        (
+            ["wmctrl", "-d"],
+            {
+                "check": False,
+                "text": True,
+                "capture_output": True,
+                "env": {"DISPLAY": ":0"},
+            },
+        )
+    ]
 
 
 def test_run_screen_size_query_parses_xrandr_output() -> None:
@@ -58,6 +130,37 @@ def test_run_screen_size_query_parses_xrandr_output() -> None:
     assert commands == [["xrandr", "--current"]]
 
 
+def test_run_screen_size_host_runtime_query_uses_runtime_env() -> None:
+    runtime = type("_Runtime", (), {"_x11_env": lambda self: {"DISPLAY": ":0"}})()
+
+    with pytest.MonkeyPatch.context() as mp:
+        calls: list[tuple[list[str], dict[str, object]]] = []
+
+        class _CP:
+            stdout = "DP-0 connected primary 4096x2160+0+0\n"
+
+        def _run(command: list[str], **kwargs: object) -> _CP:
+            calls.append((command, kwargs))
+            return _CP()
+
+        mp.setattr("subprocess.run", _run)
+
+        out = run_screen_size_host_runtime_query(runtime=runtime)
+
+    assert out == (4096, 2160)
+    assert calls == [
+        (
+            ["xrandr", "--current"],
+            {
+                "check": False,
+                "text": True,
+                "capture_output": True,
+                "env": {"DISPLAY": ":0"},
+            },
+        )
+    ]
+
+
 def test_run_work_area_query_parses_wmctrl_output() -> None:
     commands: list[list[str]] = []
 
@@ -69,6 +172,37 @@ def test_run_work_area_query_parses_wmctrl_output() -> None:
 
     assert out == (0, 28, 4096, 2132)
     assert commands == [["wmctrl", "-d"]]
+
+
+def test_run_work_area_host_runtime_query_uses_runtime_env() -> None:
+    runtime = type("_Runtime", (), {"_x11_env": lambda self: {"DISPLAY": ":0"}})()
+
+    with pytest.MonkeyPatch.context() as mp:
+        calls: list[tuple[list[str], dict[str, object]]] = []
+
+        class _CP:
+            stdout = "0  * DG: 4096x2160  VP: 0,0  WA: 0,28 4096x2132  Workspace 1\n"
+
+        def _run(command: list[str], **kwargs: object) -> _CP:
+            calls.append((command, kwargs))
+            return _CP()
+
+        mp.setattr("subprocess.run", _run)
+
+        out = run_work_area_host_runtime_query(runtime=runtime)
+
+    assert out == (0, 28, 4096, 2132)
+    assert calls == [
+        (
+            ["wmctrl", "-d"],
+            {
+                "check": False,
+                "text": True,
+                "capture_output": True,
+                "env": {"DISPLAY": ":0"},
+            },
+        )
+    ]
 
 
 def test_run_window_row_by_listen_port_returns_matching_row() -> None:

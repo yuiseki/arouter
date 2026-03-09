@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import subprocess
 from collections.abc import Callable
 
 
@@ -22,3 +23,16 @@ def resolve_listen_pid(
     run_command: Callable[[list[str]], str],
 ) -> int | None:
     return parse_listen_pid_output(run_command(build_listen_pid_command(port)))
+
+
+def run_listen_pid_host_runtime_query(port: int) -> int | None:
+    return resolve_listen_pid(
+        port,
+        run_command=lambda command: subprocess.run(
+            command,
+            check=False,
+            text=True,
+            capture_output=True,
+        ).stdout
+        or "",
+    )

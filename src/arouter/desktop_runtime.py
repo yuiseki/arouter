@@ -5,6 +5,8 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from .tmux_commands import build_tmux_has_session_command
+
 
 def launch_chromium_new_window(
     *,
@@ -47,6 +49,19 @@ def run_tmux_has_session_query(
 ) -> bool:
     cp = run_command(build_command(session_name))
     return int(getattr(cp, "returncode", 1)) == 0
+
+
+def run_tmux_has_session_host_runtime(*, runtime: Any) -> bool:
+    return run_tmux_has_session_query(
+        session_name=str(runtime.tmux_session),
+        build_command=build_tmux_has_session_command,
+        run_command=lambda command: subprocess.run(
+            command,
+            check=False,
+            text=True,
+            capture_output=True,
+        ),
+    )
 
 
 def run_kwin_shortcut(

@@ -1,6 +1,13 @@
 from __future__ import annotations
 
-from arouter import build_listen_pid_command, parse_listen_pid_output, resolve_listen_pid
+import pytest
+
+from arouter import (
+    build_listen_pid_command,
+    parse_listen_pid_output,
+    resolve_listen_pid,
+    run_listen_pid_host_runtime_query,
+)
 
 
 def test_build_listen_pid_command_returns_lsof_listen_query() -> None:
@@ -31,3 +38,31 @@ def test_resolve_listen_pid_uses_shared_command_and_parser() -> None:
 
     assert out == 54321
     assert commands == [["lsof", "-nP", "-iTCP:9992", "-sTCP:LISTEN", "-t"]]
+
+
+def test_run_listen_pid_host_runtime_query_uses_subprocess() -> None:
+    with pytest.MonkeyPatch.context() as mp:
+        calls: list[tuple[list[str], dict[str, object]]] = []
+
+        class _CP:
+            stdout = "54321\n"
+
+        def _run(command: list[str], **kwargs: object) -> _CP:
+            calls.append((command, kwargs))
+            return _CP()
+
+        mp.setattr("subprocess.run", _run)
+
+        out = run_listen_pid_host_runtime_query(9992)
+
+    assert out == 54321
+    assert calls == [
+        (
+            ["lsof", "-nP", "-iTCP:9992", "-sTCP:LISTEN", "-t"],
+            {
+                "check": False,
+                "text": True,
+                "capture_output": True,
+            },
+        )
+    ]
