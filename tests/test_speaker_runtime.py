@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from contextlib import nullcontext
 from pathlib import Path
+from types import SimpleNamespace
 from unittest import mock
 
 import numpy as np
@@ -146,7 +147,7 @@ def test_run_speaker_identity_verification_delegates_to_helper() -> None:
 
 
 class _FakeSignal:
-    def to(self, _device: str) -> "_FakeSignal":
+    def to(self, _device: str) -> _FakeSignal:
         return self
 
 
@@ -154,10 +155,10 @@ class _FakeEmbeddings:
     def __init__(self, values: np.ndarray) -> None:
         self._values = values
 
-    def squeeze(self) -> "_FakeEmbeddings":
+    def squeeze(self) -> _FakeEmbeddings:
         return self
 
-    def cpu(self) -> "_FakeEmbeddings":
+    def cpu(self) -> _FakeEmbeddings:
         return self
 
     def numpy(self) -> np.ndarray:
@@ -178,18 +179,20 @@ class _FakeTorch:
         return nullcontext()
 
 
+def _fake_resample(_src: int, _dest: int) -> None:
+    raise AssertionError("Resample should not be called in this test")
+
+
 class _FakeTorchaudio:
-    class transforms:
-        @staticmethod
-        def Resample(_src: int, _dest: int):
-            raise AssertionError("Resample should not be called in this test")
+    transforms = SimpleNamespace(Resample=_fake_resample)
 
     @staticmethod
     def load(_path: str) -> tuple[_FakeSignal, int]:
         return _FakeSignal(), 16_000
 
 
-def test_run_speaker_identity_verification_fallback_passes_when_similarity_exceeds_threshold() -> None:
+def test_run_speaker_identity_verification_fallback_passes_when_similarity_exceeds_threshold(
+) -> None:
     logs: list[str] = []
 
     ok, err = run_speaker_identity_verification(
@@ -241,7 +244,8 @@ def test_run_speaker_identity_verification_fallback_rejects_below_threshold() ->
     assert err == "auth failed"
     assert len(logs) == 1
     assert logs[0].startswith(
-        "test AUTH FAILED: intent=system_status_report similarity=0.0000 (threshold=0.5) SV_elapsed="
+        "test AUTH FAILED: intent=system_status_report "
+        "similarity=0.0000 (threshold=0.5) SV_elapsed="
     )
 
 

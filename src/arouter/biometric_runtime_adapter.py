@@ -465,7 +465,11 @@ class BiometricRuntimeAdapter:
         args = self._args()
         if self.prefer_arouter_helpers:
             candidates = self.run_biometric_password_candidate_load(
-                cached_candidates=getattr(self.runtime, "_biometric_password_candidates_cache", None),
+                cached_candidates=getattr(
+                    self.runtime,
+                    "_biometric_password_candidates_cache",
+                    None,
+                ),
                 args=args,
                 debug=getattr(self.runtime, "debug", self._debug),
                 log=getattr(self.runtime, "log", self._log),
@@ -824,7 +828,10 @@ class BiometricRuntimeAdapter:
             return bool(
                 self.maybe_unlock_from_signal_fn(self, set_locked=self._set_locked_callback)
             )
-        if not self._biometric_lock_enabled() or not bool(getattr(self.runtime, "_system_locked", False)):
+        if (
+            not self._biometric_lock_enabled()
+            or not bool(getattr(self.runtime, "_system_locked", False))
+        ):
             return False
         if not self._consume_biometric_unlock_signal():
             return False
@@ -842,7 +849,10 @@ class BiometricRuntimeAdapter:
             return bool(
                 self.maybe_lock_from_signal_fn(self, set_locked=self._set_locked_callback)
             )
-        if not self._biometric_lock_enabled() or bool(getattr(self.runtime, "_system_locked", False)):
+        if (
+            not self._biometric_lock_enabled()
+            or bool(getattr(self.runtime, "_system_locked", False))
+        ):
             return False
         if not self._consume_biometric_lock_signal():
             return False

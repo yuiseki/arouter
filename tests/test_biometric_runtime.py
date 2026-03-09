@@ -8,17 +8,17 @@ from unittest import mock
 from arouter import (
     biometric_lock_enabled,
     biometric_unlock_success_text,
-    record_successful_command_activity,
     default_lock_screen_text,
     default_locked_denied_text,
     maybe_auto_lock,
     maybe_lock_from_signal,
     maybe_unlock_from_signal,
     reassert_lock_screen,
-    run_biometric_owner_face_absent_runtime_check,
+    record_successful_command_activity,
     run_biometric_owner_face_absent_check,
-    run_biometric_owner_face_recent_runtime_check,
+    run_biometric_owner_face_absent_runtime_check,
     run_biometric_owner_face_recent_check,
+    run_biometric_owner_face_recent_runtime_check,
     run_biometric_password_candidate_load,
     run_biometric_signal_consume,
     run_biometric_status_client_get,
@@ -72,10 +72,18 @@ def test_biometric_lock_enabled_reads_flag_from_args() -> None:
 
 def test_unlock_text_helpers_match_existing_contracts() -> None:
     assert unlock_requires_live_voice_text().startswith("ロック解除には実際の音声入力が必要です。")
-    assert unlock_requires_speaker_auth_text() == "声紋認証が利用できないため、ロックを解除できません。"
-    assert unlock_requires_face_auth_text() == "顔認証を確認できませんでした。カメラの前で、もう一度お試しください。"
-    assert unlock_requires_password_text() == "パスワード認証に失敗しました。もう一度お試しください。"
-    assert biometric_unlock_success_text() == "バイオメトリクス認証に成功しました。おかえりなさい、ユイさま"
+    assert unlock_requires_speaker_auth_text() == (
+        "声紋認証が利用できないため、ロックを解除できません。"
+    )
+    assert unlock_requires_face_auth_text() == (
+        "顔認証を確認できませんでした。カメラの前で、もう一度お試しください。"
+    )
+    assert unlock_requires_password_text() == (
+        "パスワード認証に失敗しました。もう一度お試しください。"
+    )
+    assert biometric_unlock_success_text() == (
+        "バイオメトリクス認証に成功しました。おかえりなさい、ユイさま"
+    )
 
 
 def test_set_system_locked_shows_overlay_when_locking() -> None:

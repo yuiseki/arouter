@@ -63,9 +63,13 @@ class DesktopNotifier:
             return
         if self.overlay and self.overlay.enabled:
             self.log(
-                f"desktop overlay notify enabled: endpoint={self.overlay.endpoint} timeoutMs={self.timeout_ms}"
+                "desktop overlay notify enabled: "
+                f"endpoint={self.overlay.endpoint} timeoutMs={self.timeout_ms}"
             )
-        self.log(f"desktop notify enabled: display={self.display or '<inherit>'} timeoutMs={self.timeout_ms}")
+        self.log(
+            "desktop notify enabled: "
+            f"display={self.display or '<inherit>'} timeoutMs={self.timeout_ms}"
+        )
 
     def notify(self, title: str, body: str = "", *, urgency: str = "normal") -> None:
         if not self.enabled:
