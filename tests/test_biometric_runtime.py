@@ -17,8 +17,10 @@ from arouter import (
     run_biometric_owner_face_recent_check,
     run_biometric_password_candidate_load,
     run_biometric_signal_consume,
+    run_biometric_status_client_get,
     run_biometric_status_client_resolution,
     run_biometric_status_fetch,
+    run_biometric_status_url_fetch,
     set_system_locked,
 )
 
@@ -202,6 +204,81 @@ def test_run_biometric_status_fetch_falls_back_to_url_fetch() -> None:
     assert client == "current"
     assert status == {"ownerPresent": False}
     fetch_status_from_url.assert_called_once_with("http://127.0.0.1:8765/biometric_status")
+
+
+def test_run_biometric_status_client_get_returns_current_client_when_cached() -> None:
+    resolver = mock.Mock()
+
+    client = run_biometric_status_client_get(
+        current_client="cached",
+        client_available=True,
+        status_url="http://127.0.0.1:8765/biometric_status",
+        logger=None,
+        resolve_client=resolver,
+    )
+
+    assert client == "cached"
+    resolver.assert_not_called()
+
+
+def test_run_biometric_status_client_get_uses_resolver_when_available() -> None:
+    resolver = mock.Mock(return_value="client")
+
+    client = run_biometric_status_client_get(
+        current_client=None,
+        client_available=True,
+        status_url=" http://127.0.0.1:8765/biometric_status ",
+        logger=None,
+        resolve_client=resolver,
+    )
+
+    assert client == "client"
+    resolver.assert_called_once_with(
+        current_client=None,
+        status_url="http://127.0.0.1:8765/biometric_status",
+        logger=None,
+        timeout_sec=1.5,
+    )
+
+
+def test_run_biometric_status_url_fetch_returns_dict_payload() -> None:
+    request_builder = mock.Mock(return_value="request")
+    response = mock.Mock()
+    response.__enter__ = mock.Mock(return_value=response)
+    response.__exit__ = mock.Mock(return_value=False)
+    response.read.return_value = b'{"ownerPresent": true}'
+    urlopen = mock.Mock(return_value=response)
+
+    status = run_biometric_status_url_fetch(
+        status_url=" http://127.0.0.1:8765/biometric_status ",
+        debug=mock.Mock(),
+        request_builder=request_builder,
+        urlopen=urlopen,
+        json_loads=lambda raw: {"ownerPresent": True} if raw else None,
+    )
+
+    assert status == {"ownerPresent": True}
+    request_builder.assert_called_once_with(
+        "http://127.0.0.1:8765/biometric_status",
+        headers={"Accept": "application/json"},
+    )
+    urlopen.assert_called_once_with("request", timeout=1.5)
+
+
+def test_run_biometric_status_url_fetch_logs_and_returns_none_on_error() -> None:
+    debug = mock.Mock()
+    urlopen = mock.Mock(side_effect=RuntimeError("boom"))
+
+    status = run_biometric_status_url_fetch(
+        status_url="http://127.0.0.1:8765/biometric_status",
+        debug=debug,
+        request_builder=mock.Mock(return_value="request"),
+        urlopen=urlopen,
+        json_loads=lambda raw: {"ownerPresent": True},
+    )
+
+    assert status is None
+    debug.assert_called_once_with("god mode biometric status fetch failed: boom")
 
 
 def test_run_biometric_owner_face_absent_check_prefers_client_helper() -> None:

@@ -55,6 +55,54 @@ def run_biometric_status_client_resolution(
     )
 
 
+def run_biometric_status_client_get(
+    *,
+    current_client: Any | None,
+    client_available: bool,
+    status_url: str,
+    logger: Callable[[str], None] | None,
+    resolve_client: Callable[..., Any | None] | None,
+) -> Any | None:
+    if current_client is not None:
+        return current_client
+    if not client_available or not callable(resolve_client):
+        return None
+    return run_biometric_status_client_resolution(
+        current_client=current_client,
+        status_url=status_url,
+        logger=logger,
+        resolve_client=resolve_client,
+    )
+
+
+def run_biometric_status_url_fetch(
+    *,
+    status_url: str,
+    debug: Callable[[str], None] | None,
+    request_builder: Callable[..., Any],
+    urlopen: Callable[..., Any],
+    json_loads: Callable[[str], Any],
+) -> dict[str, Any] | None:
+    resolved_url = str(status_url or "").strip()
+    if not resolved_url:
+        return None
+    try:
+        request = request_builder(
+            resolved_url,
+            headers={"Accept": "application/json"},
+        )
+        with urlopen(request, timeout=1.5) as response:
+            raw_payload = response.read()
+        if isinstance(raw_payload, bytes):
+            raw_payload = raw_payload.decode("utf-8")
+        data = json_loads(raw_payload)
+        return data if isinstance(data, dict) else None
+    except Exception as exc:
+        if callable(debug):
+            debug(f"god mode biometric status fetch failed: {exc}")
+        return None
+
+
 def run_biometric_status_fetch(
     *,
     current_client: Any | None,
