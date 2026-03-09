@@ -12,8 +12,11 @@ from arouter import (
     parse_tmux_client_pids,
     pid_ancestor_chain,
     prepare_load_check_konsole_placement,
+    run_load_check_konsole_placement_host_runtime,
     run_load_check_wmctrl_commands,
     run_system_load_check_flow,
+    run_system_load_check_host_runtime,
+    run_system_load_check_monitor_open_host_runtime,
     run_tmux_client_pid_query,
     wait_for_new_window_row,
 )
@@ -367,3 +370,74 @@ def test_run_system_load_check_flow_opens_new_session() -> None:
     open_monitor.assert_called_once_with()
     apply_new.assert_called_once_with({"0x00a"})
     logger.assert_any_call("system_load_check: tmux opened")
+
+
+def test_run_load_check_konsole_placement_host_runtime_reads_runtime_methods() -> None:
+    runtime = SimpleNamespace(
+        log=mock.Mock(),
+        vacuumtube=SimpleNamespace(
+            _desktop_size=mock.Mock(return_value=(4096, 2160)),
+            _x11_env=mock.Mock(return_value={"DISPLAY": ":1"}),
+        ),
+        _is_vacuumtube_quadrant_mode_for_load_check=mock.Mock(return_value=True),
+        _wait_new_konsole_window=mock.Mock(return_value={"id": "0x00b"}),
+        _load_check_bottom_left_geom=mock.Mock(
+            return_value={"x": 0, "y": 1080, "w": 2048, "h": 1080}
+        ),
+    )
+
+    with mock.patch("arouter.load_check.subprocess.run") as run_command:
+        result = run_load_check_konsole_placement_host_runtime(
+            runtime=runtime,
+            before_konsole_ids={"0x00a"},
+        )
+
+    assert result == {
+        "applied": True,
+        "window_id": "0x00b",
+        "target": {"x": 0, "y": 1080, "w": 2048, "h": 1080},
+    }
+    runtime._wait_new_konsole_window.assert_called_once_with(
+        before_ids={"0x00a"},
+        timeout_sec=8.0,
+    )
+    assert run_command.call_count == 4
+    runtime.log.assert_called_once()
+
+
+def test_run_system_load_check_monitor_open_host_runtime_uses_tmux_helper() -> None:
+    with mock.patch("arouter.load_check.run_tmux_konsole_open", return_value="opened") as helper:
+        out = run_system_load_check_monitor_open_host_runtime(
+            script_path="/tmp/sysmon.sh",
+            cwd="/work",
+        )
+
+    assert out == "opened"
+    helper.assert_called_once()
+    kwargs = helper.call_args.kwargs
+    assert kwargs["script_path"] == "/tmp/sysmon.sh"
+    assert kwargs["session_name"] == "sysmon"
+    assert kwargs["cwd"] == "/work"
+    assert callable(kwargs["path_exists"])
+    assert callable(kwargs["run_command"])
+
+
+def test_run_system_load_check_host_runtime_reads_runtime_methods() -> None:
+    runtime = SimpleNamespace(
+        log=mock.Mock(),
+        _find_konsole_rows_for_tmux_session=mock.Mock(return_value=[{"id": "0x00c000aa"}]),
+        _konsole_window_rows=mock.Mock(return_value=[{"id": "0x00c000aa"}]),
+        _raise_window_by_id=mock.Mock(),
+        _open_system_load_check_monitor=mock.Mock(return_value="opened"),
+    )
+
+    with mock.patch(
+        "arouter.load_check.run_load_check_konsole_placement_host_runtime",
+        return_value={"applied": False},
+    ) as placement:
+        out = run_system_load_check_host_runtime(runtime=runtime)
+
+    assert out == "system load monitor reused (tmux=sysmon)"
+    runtime._find_konsole_rows_for_tmux_session.assert_called_once_with("sysmon")
+    runtime._raise_window_by_id.assert_called_once_with("0x00c000aa")
+    placement.assert_called_once_with(runtime=runtime, row={"id": "0x00c000aa"})

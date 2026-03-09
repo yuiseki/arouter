@@ -8,12 +8,16 @@ import tempfile
 import time
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Protocol
+from typing import Any, Protocol, cast
 
 from .kwin_runtime import (
     KWinScriptCommandPlan,
     run_live_cam_minimize_runtime,
     run_minimize_other_windows_runtime,
+)
+from .kwin_scripts import (
+    build_kwin_script_command_plan,
+    build_minimize_other_windows_script,
 )
 from .live_cam_layout import resolve_live_cam_layout_plan
 
@@ -815,6 +819,35 @@ def run_minimize_other_windows_flow(
         cleanup=cleanup,
     )
     return build_response(skip_pids)
+
+
+def run_minimize_other_windows_host_runtime_flow(*, runtime: Any) -> str:
+    plugin_name = f"codex_minimize_others_{int(time.time() * 1000) % 1000000}"
+
+    def _run_command(command: list[str]) -> None:
+        subprocess.run(
+            command,
+            env=runtime.vacuumtube._x11_env(),
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+
+    return run_minimize_other_windows_flow(
+        instances=list(runtime.live_cam_wall.instances),
+        pid_lookup=runtime.live_cam_wall._pid_for_port,
+        build_script=build_minimize_other_windows_script,
+        write_temp_script=_write_temp_js_script,
+        command_plan_builder=cast(
+            Callable[[str, str], KWinScriptCommandPlan],
+            build_kwin_script_command_plan,
+        ),
+        run_command=_run_command,
+        sleep=time.sleep,
+        cleanup=lambda path: Path(path).unlink(missing_ok=True),
+        build_response=build_minimize_other_windows_response,
+        plugin_name=plugin_name,
+    )
 
 
 def run_live_cam_layout_flow(

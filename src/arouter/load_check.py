@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import json
+import subprocess
 from collections.abc import Callable
+from pathlib import Path
 from typing import Any, Protocol
 
+from .desktop_runtime import run_tmux_konsole_open
 from .window_presentation import geometry_close as _geometry_close
 
 
@@ -244,6 +247,89 @@ def run_system_load_check_flow(
     except Exception as exc:
         logger(f"system_load_check placement skipped: {exc}")
     return "system load monitor opened (tmux=sysmon)"
+
+
+def run_load_check_konsole_placement_host_runtime(
+    *,
+    runtime: Any,
+    before_konsole_ids: set[str] | None = None,
+    row: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    prepared = prepare_load_check_konsole_placement(
+        quadrant_mode=runtime._is_vacuumtube_quadrant_mode_for_load_check(),
+        screen=runtime.vacuumtube._desktop_size(),
+        row=row,
+        before_konsole_ids=before_konsole_ids,
+        wait_for_row=lambda: runtime._wait_new_konsole_window(
+            before_ids=before_konsole_ids or set(),
+            timeout_sec=8.0,
+        ),
+        target_geom=runtime._load_check_bottom_left_geom,
+    )
+    if not prepared.get("ready"):
+        return prepared
+
+    geom = dict(prepared["target"])
+    wid = str(prepared["window_id"])
+    env = runtime.vacuumtube._x11_env()
+    try:
+        result = run_load_check_wmctrl_commands(
+            window_id=wid,
+            target=geom,
+            build_commands=build_load_check_wmctrl_commands,
+            run_command=lambda command: subprocess.run(
+                command,
+                check=False,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                env=env,
+            ),
+        )
+        runtime.log(f"system_load_check Konsole repositioned to left-bottom: wid={wid} geom={geom}")
+        return result
+    except Exception as exc:
+        runtime.log(f"system_load_check Konsole reposition failed: {exc}")
+        return {"applied": False, "reason": str(exc)}
+
+
+def run_system_load_check_monitor_open_host_runtime(
+    *,
+    script_path: str,
+    cwd: str,
+) -> str:
+    return run_tmux_konsole_open(
+        script_path=script_path,
+        session_name="sysmon",
+        cwd=cwd,
+        path_exists=lambda path: Path(path).exists(),
+        run_command=lambda command, cwd: subprocess.run(
+            command,
+            cwd=cwd,
+            check=False,
+            text=True,
+            capture_output=True,
+        ),
+    )
+
+
+def run_system_load_check_host_runtime(*, runtime: Any) -> str:
+    return run_system_load_check_flow(
+        existing_rows=runtime._find_konsole_rows_for_tmux_session("sysmon"),
+        get_before_konsole_ids=lambda: {
+            str(row.get("id") or "").lower() for row in runtime._konsole_window_rows()
+        },
+        raise_window_by_id=runtime._raise_window_by_id,
+        apply_placement_for_existing=lambda row: run_load_check_konsole_placement_host_runtime(
+            runtime=runtime,
+            row=row,
+        ),
+        open_monitor=runtime._open_system_load_check_monitor,
+        apply_placement_for_new=lambda before_ids: run_load_check_konsole_placement_host_runtime(
+            runtime=runtime,
+            before_konsole_ids=before_ids,
+        ),
+        logger=runtime.log,
+    )
 
 
 def is_vacuumtube_quadrant_mode_for_load_check(

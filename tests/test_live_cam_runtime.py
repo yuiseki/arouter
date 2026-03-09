@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import time
 from pathlib import Path
+from types import SimpleNamespace
 from unittest import mock
 
 from arouter import (
@@ -49,6 +50,7 @@ from arouter import (
     run_live_cam_start_script_host_runtime_flow,
     run_live_cam_window_action_flow,
     run_minimize_other_windows_flow,
+    run_minimize_other_windows_host_runtime_flow,
 )
 
 
@@ -1039,6 +1041,32 @@ def test_run_minimize_other_windows_flow_collects_skip_pids_and_runs_script() ->
         ("cleanup", "/tmp/demo.js"),
         ("response", [101, 202]),
     ]
+
+
+def test_run_minimize_other_windows_host_runtime_flow_reads_runtime_methods() -> None:
+    class FakeRuntime:
+        live_cam_wall = SimpleNamespace(
+            instances=[{"port": "9993"}],
+            _pid_for_port=mock.Mock(return_value=974790),
+        )
+        vacuumtube = SimpleNamespace(_x11_env=mock.Mock(return_value={"DISPLAY": ":1"}))
+        _write_temp_js_script = mock.Mock(return_value="/tmp/codex-kwin.js")
+
+    with mock.patch(
+        "arouter.live_cam_runtime.run_minimize_other_windows_flow",
+        return_value="delegated",
+    ) as helper:
+        result = run_minimize_other_windows_host_runtime_flow(runtime=FakeRuntime())
+
+    assert result == "delegated"
+    helper.assert_called_once()
+    kwargs = helper.call_args.kwargs
+    assert kwargs["instances"] == [{"port": "9993"}]
+    assert kwargs["pid_lookup"](9993) == 974790
+    assert callable(kwargs["write_temp_script"])
+    assert callable(kwargs["run_command"])
+    assert callable(kwargs["cleanup"])
+    assert kwargs["plugin_name"].startswith("codex_minimize_others_")
 
 
 def test_run_live_cam_layout_flow_applies_layout_raises_windows_and_builds_response() -> None:
