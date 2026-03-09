@@ -36,6 +36,7 @@ from arouter import (
     run_vacuumtube_hide_overlay,
     run_vacuumtube_minimize,
     run_vacuumtube_open_from_home,
+    run_vacuumtube_open_from_home_runtime,
     run_vacuumtube_play_bgm,
     run_vacuumtube_play_bgm_runtime,
     run_vacuumtube_play_news,
@@ -1422,6 +1423,68 @@ def test_run_vacuumtube_play_bgm_runtime_passes_cdp_to_home_open() -> None:
         "enter",
         "state:cdp",
         "open:cdp",
+        "exit",
+    ]
+
+
+def test_run_vacuumtube_open_from_home_runtime_opens_cdp_and_reuses_flow() -> None:
+    events: list[str] = []
+
+    class FakeContext:
+        def __enter__(self) -> str:
+            events.append("enter")
+            return "cdp"
+
+        def __exit__(self, exc_type, exc, tb) -> None:
+            events.append("exit")
+            return None
+
+    result = run_vacuumtube_open_from_home_runtime(
+        open_cdp=lambda: FakeContext(),
+        label="BGM",
+        scorer=lambda tile: float(tile.get("score", 0.0)),
+        filter_fn=None,
+        allow_soft_playback_confirm=True,
+        hide_overlay_if_needed=lambda cdp: events.append(f"hide:{cdp}"),
+        capture_window_presentation=lambda: events.append("capture") or {"window_id": "0x123"},
+        ensure_home=lambda cdp: events.append(f"home:{cdp}") or {"hash": "#/", "tilesCount": 1},
+        log=events.append,
+        enumerate_tiles=lambda cdp: (
+            events.append(f"tiles:{cdp}") or [{"title": "tile", "score": 1.0}]
+        ),
+        click_tile_center=lambda cdp, tile: events.append(f"click:{cdp}:{tile['title']}"),
+        wait_watch_route=lambda cdp, timeout: events.append(f"wait:{cdp}:{timeout}") or True,
+        dom_click_tile=lambda cdp, tile: events.append(f"dom:{cdp}:{tile['title']}") or False,
+        send_return_key=lambda: events.append("return"),
+        try_resume_current_video=lambda cdp: events.append(f"resume:{cdp}"),
+        wait_confirmed_watch_playback=lambda cdp, timeout, allow_soft: (
+            events.append(f"confirm:{cdp}:{timeout}:{allow_soft}")
+            or {"hash": "#/watch?v=abc", "title": "watch", "video": {"paused": False}}
+        ),
+        restore_window_presentation=lambda presentation, label: events.append(
+            f"restore:{presentation['window_id']}:{label}"
+        ),
+    )
+
+    assert result == "opened watch route #/watch?v=abc"
+    assert events == [
+        "enter",
+        "hide:cdp",
+        "capture",
+        "home:cdp",
+        "BGM precondition home verified: hash=#/ tiles=1",
+        "tiles:cdp",
+        "BGM tile candidates: 1.0:tile",
+        "BGM tile selected attempt=1: tile",
+        "click:cdp:tile",
+        "wait:cdp:2.5",
+        "resume:cdp",
+        "confirm:cdp:8.0:True",
+        (
+            'BGM post-click state: {"hash": "#/watch?v=abc", '
+            '"title": "watch", "video": {"paused": false}}'
+        ),
+        "restore:0x123:BGM",
         "exit",
     ]
 

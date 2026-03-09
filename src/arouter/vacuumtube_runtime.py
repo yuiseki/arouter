@@ -1233,6 +1233,51 @@ def run_vacuumtube_open_from_home(
     return f"opened watch route {state.get('hash') or ''}".strip()
 
 
+def run_vacuumtube_open_from_home_runtime(
+    *,
+    open_cdp: Callable[[], Any],
+    label: str,
+    scorer: Callable[[dict[str, Any]], float],
+    filter_fn: Callable[[dict[str, Any]], bool] | None,
+    allow_soft_playback_confirm: bool,
+    hide_overlay_if_needed: Callable[[Any], None],
+    capture_window_presentation: Callable[[], dict[str, Any]],
+    ensure_home: Callable[[Any], dict[str, Any]],
+    log: Callable[[str], None],
+    enumerate_tiles: Callable[[Any], list[dict[str, Any]]],
+    click_tile_center: Callable[[Any, dict[str, Any]], None],
+    wait_watch_route: Callable[[Any, float], bool],
+    dom_click_tile: Callable[[Any, dict[str, Any]], bool],
+    send_return_key: Callable[[], None],
+    try_resume_current_video: Callable[[Any], None],
+    wait_confirmed_watch_playback: Callable[[Any, float, bool], dict[str, Any]],
+    restore_window_presentation: Callable[[dict[str, Any], str], None],
+) -> str:
+    with open_cdp() as cdp:
+        return run_vacuumtube_open_from_home(
+            label=label,
+            scorer=scorer,
+            filter_fn=filter_fn,
+            allow_soft_playback_confirm=allow_soft_playback_confirm,
+            hide_overlay_if_needed=lambda: hide_overlay_if_needed(cdp),
+            capture_window_presentation=capture_window_presentation,
+            ensure_home=lambda: ensure_home(cdp),
+            log=log,
+            enumerate_tiles=lambda: enumerate_tiles(cdp),
+            click_tile_center=lambda tile: click_tile_center(cdp, tile),
+            wait_watch_route=lambda timeout: wait_watch_route(cdp, timeout),
+            dom_click_tile=lambda tile: dom_click_tile(cdp, tile),
+            send_return_key=send_return_key,
+            try_resume_current_video=lambda: try_resume_current_video(cdp),
+            wait_confirmed_watch_playback=lambda timeout, allow_soft: wait_confirmed_watch_playback(
+                cdp,
+                timeout,
+                allow_soft,
+            ),
+            restore_window_presentation=restore_window_presentation,
+        )
+
+
 def run_vacuumtube_fullscreen(
     *,
     ensure_started_and_positioned: Callable[[], Any],
