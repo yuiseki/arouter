@@ -57,6 +57,7 @@ from arouter import (
     run_vacuumtube_resume_playback_host_runtime,
     run_vacuumtube_resume_playback_runtime,
     run_vacuumtube_route_to_home,
+    run_vacuumtube_runtime_ready_host_runtime,
     run_vacuumtube_select_account_if_needed,
     run_vacuumtube_snapshot_state,
     run_vacuumtube_snapshot_state_host_runtime,
@@ -65,6 +66,8 @@ from arouter import (
     run_vacuumtube_stop_music,
     run_vacuumtube_stop_music_host_runtime,
     run_vacuumtube_stop_music_runtime,
+    run_vacuumtube_tmux_restart_host_runtime,
+    run_vacuumtube_tmux_start_host_runtime,
     run_vacuumtube_try_resume_current_video,
     run_vacuumtube_wait_watch_route,
     run_vacuumtube_wait_watch_route_host_runtime,
@@ -837,13 +840,6 @@ def test_run_vacuumtube_good_night_pause_cdp_runtime_flow_uses_default_pause_que
 
 
 def test_run_vacuumtube_good_night_pause_host_runtime_uses_runtime_methods() -> None:
-    class FakeContext:
-        def __enter__(self) -> str:
-            return "cdp"
-
-        def __exit__(self, exc_type, exc, tb) -> None:
-            return None
-
     class FakeCdp:
         def __init__(self, events: list[str]) -> None:
             self._events = events
@@ -851,6 +847,16 @@ def test_run_vacuumtube_good_night_pause_host_runtime_uses_runtime_methods() -> 
         def evaluate(self, expr: str) -> dict[str, object]:
             self._events.append(f"evaluate:{'video' in expr}")
             return {"ok": True, "afterPaused": True, "hash": "#/watch?v=abc"}
+
+    class FakeContext:
+        def __init__(self, events: list[str]) -> None:
+            self._events = events
+
+        def __enter__(self) -> str:
+            return FakeCdp(self._events)
+
+        def __exit__(self, exc_type, exc, tb) -> None:
+            return None
 
     class FakeRuntime:
         def __init__(self) -> None:
@@ -861,17 +867,16 @@ def test_run_vacuumtube_good_night_pause_host_runtime_uses_runtime_methods() -> 
             return "0x123"
 
         def _cdp(self) -> FakeContext:
-            return FakeContext()
+            return FakeContext(self.events)
 
-        def _snapshot_state(self, cdp: str) -> dict[str, object]:
-            self.events.append(f"snapshot:{cdp}")
+        def _snapshot_state(self, cdp: FakeCdp) -> dict[str, object]:
+            self.events.append(f"snapshot:{type(cdp).__name__}")
             return {"hash": "#/watch?v=abc"}
 
     runtime = FakeRuntime()
 
     out = run_vacuumtube_good_night_pause_host_runtime(
         runtime=runtime,
-        cdp_getter=lambda _cdp: FakeCdp(runtime.events),
     )
 
     assert out == (
@@ -881,7 +886,7 @@ def test_run_vacuumtube_good_night_pause_host_runtime_uses_runtime_methods() -> 
     )
     assert runtime.events == [
         "find_window",
-        "snapshot:cdp",
+        "snapshot:FakeCdp",
         "evaluate:True",
     ]
 
@@ -1229,6 +1234,35 @@ def test_start_vacuumtube_tmux_session_noops_when_session_exists() -> None:
     assert events == ["VacuumTube tmux session already exists: vacuumtube-main"]
 
 
+def test_run_vacuumtube_tmux_start_host_runtime_reads_runtime_methods() -> None:
+    events: list[object] = []
+
+    class FakeRuntime:
+        start_script = "/opt/VacuumTube/start.sh"
+        tmux_session = "vacuumtube-main"
+        xauthority = "/tmp/.Xauthority"
+        log = events.append
+
+        @staticmethod
+        def _tmux_has() -> bool:
+            events.append("tmux_has")
+            return False
+
+        @staticmethod
+        def _resolve_display() -> str:
+            events.append("resolve_display")
+            return ":0"
+
+    with mock.patch("pathlib.Path.exists", return_value=True):
+        run_vacuumtube_tmux_start_host_runtime(runtime=FakeRuntime())
+
+    assert events == [
+        "tmux_has",
+        "resolve_display",
+        "VacuumTube tmux start requested: vacuumtube-main",
+    ]
+
+
 def test_restart_vacuumtube_tmux_session_kills_then_restarts() -> None:
     events: list[object] = []
 
@@ -1245,6 +1279,70 @@ def test_restart_vacuumtube_tmux_session_kills_then_restarts() -> None:
         ("run", ["tmux", "kill-session"]),
         ("sleep", 0.25),
         "start",
+    ]
+
+
+def test_run_vacuumtube_tmux_restart_host_runtime_reads_runtime_methods() -> None:
+    events: list[object] = []
+
+    class FakeRuntime:
+        tmux_session = "vacuumtube-main"
+
+        @staticmethod
+        def _tmux_has() -> bool:
+            events.append("tmux_has")
+            return True
+
+        @staticmethod
+        def _start_in_tmux() -> None:
+            events.append("start")
+
+    run_vacuumtube_tmux_restart_host_runtime(runtime=FakeRuntime())
+
+    assert events == [
+        "tmux_has",
+        "start",
+    ]
+
+
+def test_run_vacuumtube_runtime_ready_host_runtime_reads_runtime_methods() -> None:
+    events: list[object] = []
+
+    class FakeRuntime:
+        tmux_session = "vacuumtube-main"
+        base_url = "http://127.0.0.1:9992"
+        log = events.append
+
+        @staticmethod
+        def cdp_ready() -> bool:
+            events.append("cdp_ready")
+            return False
+
+        @staticmethod
+        def _tmux_has() -> bool:
+            events.append("tmux_has")
+            return False
+
+        @staticmethod
+        def wait_cdp_ready(timeout_sec: float) -> bool:
+            events.append(("wait_cdp_ready", timeout_sec))
+            return True
+
+        @staticmethod
+        def _restart_tmux_session() -> None:
+            events.append("restart")
+
+        @staticmethod
+        def _start_in_tmux() -> None:
+            events.append("start")
+
+    run_vacuumtube_runtime_ready_host_runtime(runtime=FakeRuntime())
+
+    assert events == [
+        "cdp_ready",
+        "tmux_has",
+        "start",
+        ("wait_cdp_ready", 35.0),
     ]
 
 
@@ -2484,20 +2582,15 @@ def test_run_vacuumtube_minimize_runs_built_command() -> None:
 
 
 def test_run_vacuumtube_minimize_host_runtime_uses_runtime_methods() -> None:
-    commands: list[list[str]] = []
-
     class FakeRuntime:
         def find_window_id(self) -> str | None:
             return "0x123"
 
     result = run_vacuumtube_minimize_host_runtime(
         runtime=FakeRuntime(),
-        build_minimize_command=lambda win_id: ["xdotool", "windowminimize", win_id],
-        run_command=commands.append,
     )
 
     assert result == "youtube minimize: ok (win_id=0x123)"
-    assert commands == [["xdotool", "windowminimize", "0x123"]]
 
 
 def test_run_vacuumtube_open_from_home_uses_return_fallback_and_restores_presentation() -> None:

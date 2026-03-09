@@ -5,7 +5,13 @@ import subprocess
 import tempfile
 import time
 from collections.abc import Callable
-from typing import Any, TypedDict
+from typing import Any, TypedDict, cast
+
+from .kwin_scripts import (
+    build_kwin_script_command_plan,
+    build_live_cam_layout_script,
+    build_window_frame_geometry_script,
+)
 
 
 class KWinScriptCommandPlan(TypedDict):
@@ -112,8 +118,6 @@ def run_live_cam_layout_host_runtime(
     plugin_name: str,
     keep_above: bool,
     no_border: bool,
-    build_script: Callable[..., str],
-    command_plan_builder: Callable[[str, str], KWinScriptCommandPlan],
 ) -> None:
     def _run_command(command: list[str]) -> None:
         runtime._run(
@@ -127,9 +131,12 @@ def run_live_cam_layout_host_runtime(
         plugin_name=plugin_name,
         keep_above=keep_above,
         no_border=no_border,
-        build_script=build_script,
+        build_script=build_live_cam_layout_script,
         write_temp_script=_write_temp_js_script,
-        command_plan_builder=command_plan_builder,
+        command_plan_builder=cast(
+            Callable[[str, str], KWinScriptCommandPlan],
+            build_kwin_script_command_plan,
+        ),
         run_command=_run_command,
         sleep=time.sleep,
         cleanup=os.unlink,
@@ -194,8 +201,6 @@ def run_window_frame_geometry_host_runtime(
     geom: dict[str, int],
     no_border: bool,
     plugin_name: str,
-    build_script: Callable[..., str],
-    command_plan_builder: Callable[[str, str], KWinScriptCommandPlan],
 ) -> None:
     env = runtime._x11_env()
 
@@ -213,9 +218,12 @@ def run_window_frame_geometry_host_runtime(
         geom=geom,
         no_border=no_border,
         plugin_name=plugin_name,
-        build_script=build_script,
+        build_script=build_window_frame_geometry_script,
         write_temp_script=_write_temp_js_script,
-        command_plan_builder=command_plan_builder,
+        command_plan_builder=cast(
+            Callable[[str, str], KWinScriptCommandPlan],
+            build_kwin_script_command_plan,
+        ),
         run_command=_run_command,
         sleep=time.sleep,
         cleanup=os.unlink,

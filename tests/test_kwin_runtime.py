@@ -165,18 +165,13 @@ def test_run_live_cam_layout_host_runtime_uses_runtime_runner() -> None:
         plugin_name="plugin-name",
         keep_above=False,
         no_border=True,
-        build_script=lambda targets, *, keep_above, no_border: "SCRIPT",
-        command_plan_builder=lambda path, plugin: {
-            "run": [["qdbus", "load", path, plugin], ["qdbus", "start"]],
-            "unload": ["qdbus", "unload", plugin],
-        },
     )
 
     assert len(events) == 3
     assert events[0][0][0] == "qdbus"
     assert events[0][1]["env"] == {"DISPLAY": ":1"}
-    assert events[1][0] == ["qdbus", "start"]
-    assert events[2][0] == ["qdbus", "unload", "plugin-name"]
+    assert events[1][0][-1] == "org.kde.kwin.Scripting.start"
+    assert events[2][0][-1] == "plugin-name"
 
 
 def test_run_window_frame_geometry_script_builds_script_and_uses_kwin_runner() -> None:
@@ -254,17 +249,12 @@ def test_run_window_frame_geometry_host_runtime_uses_runtime_env() -> None:
             geom={"x": 1, "y": 2, "w": 3, "h": 4},
             no_border=False,
             plugin_name="plugin-name",
-            build_script=lambda *, pid, geom, no_border: "SCRIPT",
-            command_plan_builder=lambda path, plugin: {
-                "run": [["qdbus", "load", path, plugin], ["qdbus", "start"]],
-                "unload": ["qdbus", "unload", plugin],
-            },
         )
 
     assert len(events) == 3
     assert events[0][1]["env"] == {"DISPLAY": ":1"}
-    assert events[1][0] == ["qdbus", "start"]
-    assert events[2][0] == ["qdbus", "unload", "plugin-name"]
+    assert events[1][0][-1] == "org.kde.kwin.Scripting.start"
+    assert events[2][0][-1] == "plugin-name"
 
 
 def test_run_live_cam_minimize_script_builds_script_and_uses_kwin_runner() -> None:

@@ -2,12 +2,19 @@ from __future__ import annotations
 
 import json
 import socket
+import subprocess
 import time
 from collections.abc import Callable
 from contextlib import nullcontext
+from pathlib import Path
 from typing import Any
 
+from .tmux_commands import (
+    build_tmux_kill_session_command,
+    build_vacuumtube_tmux_start_command,
+)
 from .vacuumtube_state import vacuumtube_is_watch_state
+from .window_actions import build_window_minimize_command
 from .window_query_runtime import build_xprop_wm_state_command
 
 
@@ -780,13 +787,12 @@ def run_vacuumtube_good_night_pause_cdp_runtime_flow(
 def run_vacuumtube_good_night_pause_host_runtime(
     *,
     runtime: Any,
-    cdp_getter: Callable[[Any], Any],
 ) -> str:
     return run_vacuumtube_good_night_pause_cdp_runtime_flow(
         find_window_id=runtime.find_window_id,
         open_cdp=runtime._cdp,
         snapshot_state=runtime._snapshot_state,
-        cdp_getter=cdp_getter,
+        cdp_getter=lambda cdp: cdp,
     )
 
 
@@ -995,6 +1001,20 @@ def ensure_vacuumtube_runtime_ready(
         raise RuntimeError(f"VacuumTube CDP not ready at {base_url}")
 
 
+def run_vacuumtube_runtime_ready_host_runtime(*, runtime: Any) -> None:
+    log = runtime.log if callable(getattr(runtime, "log", None)) else (lambda _message: None)
+    ensure_vacuumtube_runtime_ready(
+        cdp_ready=runtime.cdp_ready,
+        tmux_has=runtime._tmux_has,
+        wait_cdp_ready=runtime.wait_cdp_ready,
+        restart_tmux_session=runtime._restart_tmux_session,
+        start_in_tmux=runtime._start_in_tmux,
+        log=log,
+        tmux_session=str(getattr(runtime, "tmux_session", "")),
+        base_url=str(getattr(runtime, "base_url", "")),
+    )
+
+
 def recover_vacuumtube_unresponsive_state(
     *,
     restart_tmux_session: Callable[[], None],
@@ -1019,7 +1039,7 @@ def start_vacuumtube_tmux_session(
     tmux_has: Callable[[], bool],
     resolve_display: Callable[[], str],
     build_start_command: Callable[[str], list[str]],
-    run_command: Callable[[list[str]], None],
+    run_command: Callable[[list[str]], Any],
     log: Callable[[str], None],
 ) -> None:
     if not path_exists(start_script):
@@ -1033,11 +1053,34 @@ def start_vacuumtube_tmux_session(
     log(f"VacuumTube tmux start requested: {tmux_session}")
 
 
+def run_vacuumtube_tmux_start_host_runtime(*, runtime: Any) -> None:
+    start_vacuumtube_tmux_session(
+        start_script=str(getattr(runtime, "start_script", "")),
+        tmux_session=str(getattr(runtime, "tmux_session", "")),
+        path_exists=lambda path: Path(path).exists(),
+        tmux_has=runtime._tmux_has,
+        resolve_display=runtime._resolve_display,
+        build_start_command=lambda display: build_vacuumtube_tmux_start_command(
+            session_name=str(getattr(runtime, "tmux_session", "")),
+            display=display,
+            xauthority=getattr(runtime, "xauthority", None),
+            start_script=str(getattr(runtime, "start_script", "")),
+        ),
+        run_command=lambda command: subprocess.run(
+            command,
+            check=False,
+            text=True,
+            capture_output=True,
+        ),
+        log=runtime.log if callable(getattr(runtime, "log", None)) else (lambda _message: None),
+    )
+
+
 def restart_vacuumtube_tmux_session(
     *,
     tmux_has: Callable[[], bool],
     build_kill_command: Callable[[], list[str]],
-    run_command: Callable[[list[str]], None],
+    run_command: Callable[[list[str]], Any],
     sleep: Callable[[float], None],
     start_tmux_session: Callable[[], None],
 ) -> None:
@@ -1045,6 +1088,23 @@ def restart_vacuumtube_tmux_session(
         run_command(build_kill_command())
         sleep(0.25)
     start_tmux_session()
+
+
+def run_vacuumtube_tmux_restart_host_runtime(*, runtime: Any) -> None:
+    restart_vacuumtube_tmux_session(
+        tmux_has=runtime._tmux_has,
+        build_kill_command=lambda: build_tmux_kill_session_command(
+            str(getattr(runtime, "tmux_session", ""))
+        ),
+        run_command=lambda command: subprocess.run(
+            command,
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        ),
+        sleep=time.sleep,
+        start_tmux_session=runtime._start_in_tmux,
+    )
 
 
 def run_vacuumtube_resume_playback(
@@ -1538,7 +1598,7 @@ def run_vacuumtube_minimize(
     *,
     find_window_id: Callable[[], str | None],
     build_minimize_command: Callable[[str], list[str]],
-    run_command: Callable[[list[str]], None],
+    run_command: Callable[[list[str]], Any],
 ) -> str:
     win_id = find_window_id()
     if not win_id:
@@ -1551,13 +1611,21 @@ def run_vacuumtube_minimize(
 def run_vacuumtube_minimize_host_runtime(
     *,
     runtime: Any,
-    build_minimize_command: Callable[[str], list[str]],
-    run_command: Callable[[list[str]], None],
 ) -> str:
     return run_vacuumtube_minimize(
         find_window_id=runtime.find_window_id,
-        build_minimize_command=build_minimize_command,
-        run_command=run_command,
+        build_minimize_command=build_window_minimize_command,
+        run_command=lambda command: subprocess.run(
+            command,
+            env=(
+                runtime._x11_env()
+                if callable(getattr(runtime, "_x11_env", None))
+                else None
+            ),
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        ),
     )
 
 

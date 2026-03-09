@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import subprocess
 from collections.abc import Callable
+from pathlib import Path
 from typing import Any
 
 
@@ -75,6 +77,26 @@ def run_arrange_script(
     return f"{label} arranged"
 
 
+def run_arrange_script_host_runtime(
+    *,
+    script_path: str,
+    label: str,
+    env: dict[str, str] | None = None,
+) -> str:
+    return run_arrange_script(
+        script_path=script_path,
+        label=label,
+        path_exists=lambda path: Path(path).is_file(),
+        run_command=lambda command: subprocess.run(
+            command,
+            check=False,
+            text=True,
+            capture_output=True,
+            env=env,
+        ),
+    )
+
+
 def run_tmp_main_layout(
     *,
     script_path: str,
@@ -90,6 +112,24 @@ def run_tmp_main_layout(
         err = (getattr(cp, "stderr", "") or "").strip()
         raise RuntimeError(f"tmp_main.sh layout {flag} failed: {err}")
     return f"god_mode layout {mode}: ok"
+
+
+def run_tmp_main_layout_host_runtime(
+    *,
+    script_path: str,
+    mode: str,
+) -> str:
+    return run_tmp_main_layout(
+        script_path=script_path,
+        mode=mode,
+        path_exists=lambda path: Path(path).is_file(),
+        run_command=lambda command: subprocess.run(
+            command,
+            check=False,
+            text=True,
+            capture_output=True,
+        ),
+    )
 
 
 def run_tmux_konsole_open(

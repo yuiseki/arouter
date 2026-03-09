@@ -401,14 +401,12 @@ def test_run_system_live_camera_hide_host_runtime_tracks_layout_and_calls_hide()
 
 
 def test_run_system_street_camera_mode_host_runtime_reuses_show_helper() -> None:
-    called: list[str] = []
+    runtime = SimpleNamespace(system_live_camera_show=mock.Mock(return_value="show ok"))
 
-    out = run_system_street_camera_mode_host_runtime(
-        show_live_camera=lambda: called.append("show") or "show ok"
-    )
+    out = run_system_street_camera_mode_host_runtime(runtime=runtime)
 
     assert out == "show ok"
-    assert called == ["show"]
+    runtime.system_live_camera_show.assert_called_once_with()
 
 
 def test_run_system_webcam_mode_host_runtime_tracks_layout_and_reuses_system_mode_helper() -> None:
@@ -445,44 +443,54 @@ def test_run_system_normal_mode_host_runtime_reuses_system_mode_helper() -> None
 
 
 def test_run_system_world_situation_mode_host_runtime_uses_arrange_script() -> None:
-    run_command = mock.Mock(
-        return_value=SimpleNamespace(returncode=0, stdout="world ok\n", stderr="")
-    )
-
-    out = run_system_world_situation_mode_host_runtime(
-        script_path="/tmp/world.sh",
-        path_exists=lambda _path: True,
-        run_command=run_command,
-    )
+    with mock.patch(
+        "arouter.execution.run_arrange_script_host_runtime",
+        return_value="world ok",
+    ) as helper:
+        out = run_system_world_situation_mode_host_runtime(script_path="/tmp/world.sh")
 
     assert out == "world ok"
-    run_command.assert_called_once_with(["bash", "/tmp/world.sh"])
+    helper.assert_called_once_with(
+        script_path="/tmp/world.sh",
+        label="world situation mode",
+        env=mock.ANY,
+    )
 
 
 def test_run_system_weather_mode_host_runtime_uses_arrange_script() -> None:
-    run_command = mock.Mock(return_value=SimpleNamespace(returncode=0, stdout="", stderr=""))
-
-    out = run_system_weather_mode_host_runtime(
-        script_path="/tmp/weather.sh",
-        path_exists=lambda _path: True,
-        run_command=run_command,
-    )
+    with mock.patch(
+        "arouter.execution.run_arrange_script_host_runtime",
+        return_value="weather mode arranged",
+    ) as helper:
+        out = run_system_weather_mode_host_runtime(script_path="/tmp/weather.sh")
 
     assert out == "weather mode arranged"
-    run_command.assert_called_once_with(["bash", "/tmp/weather.sh"])
+    helper.assert_called_once_with(
+        script_path="/tmp/weather.sh",
+        label="weather mode",
+        env=mock.ANY,
+    )
 
 
 def test_run_god_mode_layout_host_runtime_tracks_layout_state() -> None:
     runtime = SimpleNamespace(_god_mode_last_layout=None)
 
-    out = run_god_mode_layout_host_runtime(
-        runtime=runtime,
-        mode="frontmost",
-        run_layout=lambda: "god mode ok",
-    )
+    with mock.patch(
+        "arouter.execution.run_tmp_main_layout_host_runtime",
+        return_value="god mode ok",
+    ) as helper:
+        out = run_god_mode_layout_host_runtime(
+            runtime=runtime,
+            mode="frontmost",
+            script_path="/tmp/tmp_main.sh",
+        )
 
     assert out == "god mode ok"
     assert runtime._god_mode_last_layout == "frontmost"
+    helper.assert_called_once_with(
+        script_path="/tmp/tmp_main.sh",
+        mode="frontmost",
+    )
 
 
 def test_command_has_system_prefix_detects_explicit_prefix() -> None:

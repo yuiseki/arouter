@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+import os
 from collections.abc import Callable, Mapping
 from typing import Any, Protocol
 
-from .desktop_runtime import run_arrange_script
+from .desktop_runtime import (
+    run_arrange_script_host_runtime,
+    run_tmp_main_layout_host_runtime,
+)
 from .models import VoiceCommand
 from .parser import normalize_transcript
 from .system_modes import run_system_normal_mode, run_system_webcam_mode
@@ -201,9 +205,9 @@ def run_system_live_camera_hide_host_runtime(*, runtime: Any) -> str:
 
 def run_system_street_camera_mode_host_runtime(
     *,
-    show_live_camera: Callable[[], str],
+    runtime: Any,
 ) -> str:
-    return show_live_camera()
+    return str(runtime.system_live_camera_show())
 
 
 def run_system_webcam_mode_host_runtime(*, runtime: Any) -> str:
@@ -225,28 +229,26 @@ def run_system_normal_mode_host_runtime(*, runtime: Any) -> str:
 def run_system_world_situation_mode_host_runtime(
     *,
     script_path: str,
-    path_exists: Callable[[str], bool],
-    run_command: Callable[[list[str]], Any],
 ) -> str:
-    return run_arrange_script(
+    env = os.environ.copy()
+    env["DISPLAY"] = os.environ.get("DISPLAY") or ":0"
+    return run_arrange_script_host_runtime(
         script_path=script_path,
         label="world situation mode",
-        path_exists=path_exists,
-        run_command=run_command,
+        env=env,
     )
 
 
 def run_system_weather_mode_host_runtime(
     *,
     script_path: str,
-    path_exists: Callable[[str], bool],
-    run_command: Callable[[list[str]], Any],
 ) -> str:
-    return run_arrange_script(
+    env = os.environ.copy()
+    env["DISPLAY"] = os.environ.get("DISPLAY") or ":0"
+    return run_arrange_script_host_runtime(
         script_path=script_path,
         label="weather mode",
-        path_exists=path_exists,
-        run_command=run_command,
+        env=env,
     )
 
 
@@ -254,9 +256,12 @@ def run_god_mode_layout_host_runtime(
     *,
     runtime: Any,
     mode: str,
-    run_layout: Callable[[], str],
+    script_path: str,
 ) -> str:
-    result = run_layout()
+    result = run_tmp_main_layout_host_runtime(
+        script_path=script_path,
+        mode=mode,
+    )
     runtime._god_mode_last_layout = mode
     return result
 

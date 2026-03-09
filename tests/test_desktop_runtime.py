@@ -7,8 +7,10 @@ from arouter import (
     read_active_window_id,
     run_active_window_id_query,
     run_arrange_script,
+    run_arrange_script_host_runtime,
     run_kwin_shortcut,
     run_tmp_main_layout,
+    run_tmp_main_layout_host_runtime,
     run_tmux_has_session_query,
     run_tmux_konsole_open,
 )
@@ -153,6 +155,37 @@ def test_run_arrange_script_raises_with_stderr_on_failure() -> None:
         )
 
 
+def test_run_arrange_script_host_runtime_uses_subprocess() -> None:
+    with pytest.MonkeyPatch.context() as mp:
+        calls: list[tuple[list[str], dict[str, object]]] = []
+
+        def _run(command: list[str], **kwargs: object) -> _CompletedProcess:
+            calls.append((command, kwargs))
+            return _CompletedProcess(returncode=0, stdout="world ok\n")
+
+        mp.setattr("pathlib.Path.is_file", lambda self: True)
+        mp.setattr("subprocess.run", _run)
+
+        out = run_arrange_script_host_runtime(
+            script_path="/tmp/arrange.sh",
+            label="world situation mode",
+            env={"DISPLAY": ":0"},
+        )
+
+    assert out == "world ok"
+    assert calls == [
+        (
+            ["bash", "/tmp/arrange.sh"],
+            {
+                "check": False,
+                "text": True,
+                "capture_output": True,
+                "env": {"DISPLAY": ":0"},
+            },
+        )
+    ]
+
+
 def test_run_tmp_main_layout_runs_layout_subcommand() -> None:
     events: list[object] = []
 
@@ -185,6 +218,35 @@ def test_run_tmp_main_layout_raises_on_failure() -> None:
             path_exists=lambda _path: True,
             run_command=lambda _command: _CompletedProcess(returncode=1, stderr="boom"),
         )
+
+
+def test_run_tmp_main_layout_host_runtime_uses_subprocess() -> None:
+    with pytest.MonkeyPatch.context() as mp:
+        calls: list[tuple[list[str], dict[str, object]]] = []
+
+        def _run(command: list[str], **kwargs: object) -> _CompletedProcess:
+            calls.append((command, kwargs))
+            return _CompletedProcess(returncode=0)
+
+        mp.setattr("pathlib.Path.is_file", lambda self: True)
+        mp.setattr("subprocess.run", _run)
+
+        out = run_tmp_main_layout_host_runtime(
+            script_path="/tmp/tmp_main.sh",
+            mode="frontmost",
+        )
+
+    assert out == "god_mode layout frontmost: ok"
+    assert calls == [
+        (
+            ["bash", "/tmp/tmp_main.sh", "layout", "--frontmost"],
+            {
+                "check": False,
+                "text": True,
+                "capture_output": True,
+            },
+        )
+    ]
 
 
 def test_run_tmux_konsole_open_runs_open_subcommand_and_returns_stdout() -> None:
