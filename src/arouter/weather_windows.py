@@ -46,6 +46,56 @@ def build_weather_pages_closed_response(candidate_ids: list[str]) -> str:
     )
 
 
+def run_weather_pages_tiled(
+    *,
+    weather_desktop_tiles: list[dict[str, Any]],
+    current_window_ids: WeatherWindowIdsFetcher,
+    launch_window: WeatherWindowLauncher,
+    detect_new_window: WeatherWindowDetector,
+    move_window: WeatherWindowMover,
+) -> dict[str, Any]:
+    flow = open_weather_pages_flow(
+        weather_desktop_tiles,
+        current_window_ids=current_window_ids,
+        launch_window=launch_window,
+        detect_new_window=detect_new_window,
+        move_window=move_window,
+        build_tile_result=lambda spec, moved: build_weather_tile_result(spec=spec, moved=moved),
+        build_response=build_weather_pages_tiled_response,
+    )
+    return {
+        "history": list(flow["opened_ids"]),
+        "results": list(flow["results"]),
+        "response": flow["response"],
+    }
+
+
+def run_weather_pages_closed(
+    *,
+    lines: list[str],
+    last_weather_window_ids: list[str],
+    select_candidate_window_ids: WeatherCandidateSelector,
+    close_window: WeatherWindowCloser,
+    current_window_ids: WeatherWindowIdsFetcher,
+    after_close: WeatherAfterClose | None = None,
+) -> dict[str, Any]:
+    flow = close_weather_pages_flow(
+        lines,
+        last_weather_window_ids,
+        select_candidate_window_ids=select_candidate_window_ids,
+        close_window=close_window,
+        current_window_ids=current_window_ids,
+        prune_history=prune_weather_window_history,
+        build_response=build_weather_pages_closed_response,
+        after_close=after_close,
+    )
+    return {
+        "candidate_ids": list(flow["candidate_ids"]),
+        "history": list(flow["history"]),
+        "response": flow["response"],
+    }
+
+
 def open_weather_pages_flow(
     weather_desktop_tiles: list[dict[str, Any]],
     *,

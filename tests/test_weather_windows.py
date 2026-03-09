@@ -7,6 +7,8 @@ from arouter import (
     close_weather_pages_flow,
     open_weather_pages_flow,
     prune_weather_window_history,
+    run_weather_pages_closed,
+    run_weather_pages_tiled,
 )
 
 
@@ -97,4 +99,68 @@ def test_close_weather_pages_flow_closes_candidates_and_prunes_history() -> None
         "remaining_ids": {"0x2"},
         "history": ["0x2"],
         "response": 'weather pages closed {"closed": 1, "ids": ["0x1"]}',
+    }
+
+
+def test_run_weather_pages_tiled_uses_default_builders_and_returns_history() -> None:
+    launched: list[str] = []
+    moved_calls: list[tuple[str, dict[str, int]]] = []
+
+    def move_window(win_id: str, geom: dict[str, int]) -> dict[str, object]:
+        moved_calls.append((win_id, geom))
+        return {"window_id": win_id, "target": dict(geom)}
+
+    out = run_weather_pages_tiled(
+        weather_desktop_tiles=[
+            {
+                "label": "amesh",
+                "url": "https://example.test/amesh",
+                "geom": {"x": 10, "y": 20, "w": 640, "h": 360},
+            }
+        ],
+        current_window_ids=lambda: {"0x0bad"},
+        launch_window=launched.append,
+        detect_new_window=lambda before_ids, timeout_sec: "0xBEEF",
+        move_window=move_window,
+    )
+
+    assert launched == ["https://example.test/amesh"]
+    assert moved_calls == [("0xBEEF", {"x": 10, "y": 20, "w": 640, "h": 360})]
+    assert out == {
+        "history": ["0xbeef"],
+        "response": (
+            'weather pages tiled [{"window_id": "0xBEEF", "target": {"x": 10, '
+            '"y": 20, "w": 640, "h": 360}, "label": "amesh", "url": '
+            '"https://example.test/amesh"}]'
+        ),
+        "results": [
+            {
+                "window_id": "0xBEEF",
+                "target": {"x": 10, "y": 20, "w": 640, "h": 360},
+                "label": "amesh",
+                "url": "https://example.test/amesh",
+            }
+        ],
+    }
+
+
+def test_run_weather_pages_closed_uses_default_helpers_and_returns_updated_history() -> None:
+    closed: list[str] = []
+    after_close_calls: list[str] = []
+
+    out = run_weather_pages_closed(
+        lines=["0x1 0 host 東京アメッシュ - Chromium"],
+        last_weather_window_ids=["0x1", "0x2"],
+        select_candidate_window_ids=lambda lines, last_ids: ["0x1"],
+        close_window=closed.append,
+        current_window_ids=lambda: {"0x2"},
+        after_close=lambda: after_close_calls.append("slept"),
+    )
+
+    assert closed == ["0x1"]
+    assert after_close_calls == ["slept"]
+    assert out == {
+        "history": ["0x2"],
+        "response": 'weather pages closed {"closed": 1, "ids": ["0x1"]}',
+        "candidate_ids": ["0x1"],
     }

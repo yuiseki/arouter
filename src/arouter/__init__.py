@@ -6,7 +6,6 @@ from .biometric_admin import (
     run_request_biometric_lock,
 )
 from .biometric_bootstrap import ensure_biometric_runtime_attrs
-from .biometric_runtime_adapter import BiometricRuntimeAdapter
 from .biometric_password import (
     encrypt_password_file,
     load_password_candidates,
@@ -24,21 +23,21 @@ from .biometric_poller import (
 from .biometric_runtime import (
     biometric_lock_enabled,
     biometric_unlock_success_text,
-    record_successful_command_activity,
     default_lock_screen_text,
     default_locked_denied_text,
     maybe_auto_lock,
     maybe_lock_from_signal,
     maybe_unlock_from_signal,
     reassert_lock_screen,
+    record_successful_command_activity,
+    run_biometric_owner_face_absent_check,
     run_biometric_owner_face_absent_runtime_check,
+    run_biometric_owner_face_recent_check,
+    run_biometric_owner_face_recent_runtime_check,
     run_biometric_password_candidate_load,
     run_biometric_signal_consume,
-    run_biometric_owner_face_recent_runtime_check,
-    run_biometric_owner_face_absent_check,
-    run_biometric_owner_face_recent_check,
-    run_biometric_status_client_resolution,
     run_biometric_status_client_get,
+    run_biometric_status_client_resolution,
     run_biometric_status_fetch,
     run_biometric_status_runtime_fetch,
     run_biometric_status_url_fetch,
@@ -48,6 +47,7 @@ from .biometric_runtime import (
     unlock_requires_password_text,
     unlock_requires_speaker_auth_text,
 )
+from .biometric_runtime_adapter import BiometricRuntimeAdapter
 from .biometric_signal import (
     consume_signal_file,
     current_signal_mtime,
@@ -278,6 +278,8 @@ from .weather_windows import (
     close_weather_pages_flow,
     open_weather_pages_flow,
     prune_weather_window_history,
+    run_weather_pages_closed,
+    run_weather_pages_tiled,
 )
 from .window_actions import (
     build_window_activate_command,
@@ -458,6 +460,8 @@ __all__ = [
     "build_weather_tile_result",
     "close_weather_pages_flow",
     "open_weather_pages_flow",
+    "run_weather_pages_closed",
+    "run_weather_pages_tiled",
     "build_window_presentation_snapshot",
     "command_has_system_prefix",
     "chromium_window_ids_from_wmctrl_lines",
