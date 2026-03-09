@@ -1084,6 +1084,22 @@ def run_vacuumtube_go_home_runtime(
         )
 
 
+def run_vacuumtube_go_home_host_runtime(
+    *,
+    runtime: Any,
+    presentation_before: dict[str, Any],
+) -> str:
+    log = runtime.log if hasattr(runtime, "log") else None
+    return run_vacuumtube_go_home_runtime(
+        open_cdp=runtime._cdp,
+        presentation_before=presentation_before,
+        hide_overlay_if_needed=runtime._hide_overlay_if_needed,
+        ensure_home=runtime._ensure_home,
+        restore_window_presentation=runtime._restore_window_presentation,
+        log=log if callable(log) else (lambda _message: None),
+    )
+
+
 def run_vacuumtube_play_bgm(
     *,
     get_state: Callable[[], dict[str, Any]],

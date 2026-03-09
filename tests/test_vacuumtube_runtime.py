@@ -27,6 +27,7 @@ from arouter import (
     run_vacuumtube_enumerate_tiles,
     run_vacuumtube_fullscreen,
     run_vacuumtube_go_home,
+    run_vacuumtube_go_home_host_runtime,
     run_vacuumtube_go_home_runtime,
     run_vacuumtube_good_night_pause,
     run_vacuumtube_good_night_pause_cdp_runtime_flow,
@@ -1302,6 +1303,54 @@ def test_run_vacuumtube_go_home_runtime_opens_cdp_and_reuses_home_flow() -> None
         "ensure_home:cdp",
         "restore:0x123:YOUTUBE_HOME",
         "exit",
+    ]
+
+
+def test_run_vacuumtube_go_home_host_runtime_reads_runtime_methods() -> None:
+    class FakeRuntime:
+        def __init__(self) -> None:
+            self.events: list[str] = []
+
+        class _FakeContext:
+            def __enter__(self) -> str:
+                return "cdp"
+
+            def __exit__(self, exc_type, exc, tb) -> None:
+                return None
+
+        def _cdp(self) -> _FakeContext:
+            return self._FakeContext()
+
+        def log(self, message: str) -> None:
+            self.events.append(message)
+
+        def _hide_overlay_if_needed(self, cdp: str) -> None:
+            self.events.append(f"hide:{cdp}")
+
+        def _ensure_home(self, cdp: str) -> dict[str, object]:
+            self.events.append(f"ensure_home:{cdp}")
+            return {"hash": "#/", "tilesCount": 8}
+
+        def _restore_window_presentation(
+            self,
+            presentation: dict[str, object],
+            *,
+            label: str,
+        ) -> None:
+            self.events.append(f"restore:{presentation['window_id']}:{label}")
+
+    runtime = FakeRuntime()
+
+    result = run_vacuumtube_go_home_host_runtime(
+        runtime=runtime,
+        presentation_before={"fullscreen": True, "window_id": "0x123"},
+    )
+
+    assert result == 'youtube home verified {"hash": "#/", "tiles": 8}'
+    assert runtime.events == [
+        "hide:cdp",
+        "ensure_home:cdp",
+        "restore:0x123:YOUTUBE_HOME",
     ]
 
 
