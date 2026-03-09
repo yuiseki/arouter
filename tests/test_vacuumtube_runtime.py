@@ -18,15 +18,18 @@ from arouter import (
     restart_vacuumtube_tmux_session,
     run_vacuumtube_action_with_recovery,
     run_vacuumtube_click_tile_center,
+    run_vacuumtube_click_tile_center_host_runtime,
     run_vacuumtube_confirm_watch_playback,
     run_vacuumtube_confirm_watch_playback_host_runtime,
     run_vacuumtube_context_query,
     run_vacuumtube_context_runtime_flow,
     run_vacuumtube_context_runtime_query,
     run_vacuumtube_dom_click_tile,
+    run_vacuumtube_dom_click_tile_host_runtime,
     run_vacuumtube_ensure_home,
     run_vacuumtube_ensure_home_host_runtime,
     run_vacuumtube_enumerate_tiles,
+    run_vacuumtube_enumerate_tiles_host_runtime,
     run_vacuumtube_fullscreen,
     run_vacuumtube_fullscreen_host_runtime,
     run_vacuumtube_go_home,
@@ -39,6 +42,7 @@ from arouter import (
     run_vacuumtube_good_night_pause_runtime,
     run_vacuumtube_good_night_pause_runtime_flow,
     run_vacuumtube_hard_reload_home,
+    run_vacuumtube_hard_reload_home_host_runtime,
     run_vacuumtube_hide_overlay,
     run_vacuumtube_minimize,
     run_vacuumtube_minimize_host_runtime,
@@ -57,8 +61,10 @@ from arouter import (
     run_vacuumtube_resume_playback_host_runtime,
     run_vacuumtube_resume_playback_runtime,
     run_vacuumtube_route_to_home,
+    run_vacuumtube_route_to_home_host_runtime,
     run_vacuumtube_runtime_ready_host_runtime,
     run_vacuumtube_select_account_if_needed,
+    run_vacuumtube_select_account_if_needed_host_runtime,
     run_vacuumtube_snapshot_state,
     run_vacuumtube_snapshot_state_host_runtime,
     run_vacuumtube_state_host_runtime_query,
@@ -69,6 +75,7 @@ from arouter import (
     run_vacuumtube_tmux_restart_host_runtime,
     run_vacuumtube_tmux_start_host_runtime,
     run_vacuumtube_try_resume_current_video,
+    run_vacuumtube_try_resume_current_video_host_runtime,
     run_vacuumtube_wait_watch_route,
     run_vacuumtube_wait_watch_route_host_runtime,
     start_vacuumtube_tmux_session,
@@ -595,6 +602,18 @@ def test_run_vacuumtube_try_resume_current_video_swallows_errors() -> None:
     assert out is False
 
 
+def test_run_vacuumtube_try_resume_current_video_host_runtime_uses_cdp() -> None:
+    cdp = mock.Mock()
+    cdp.evaluate.return_value = {"ok": True}
+
+    out = run_vacuumtube_try_resume_current_video_host_runtime(cdp=cdp)
+
+    assert out is True
+    cdp.evaluate.assert_called_once()
+    assert cdp.evaluate.call_args.args[0].startswith("\n(async () => {")
+    assert cdp.evaluate.call_args.kwargs == {"await_promise": True}
+
+
 def test_run_vacuumtube_wait_watch_route_returns_true_when_hash_matches() -> None:
     states = iter(
         [
@@ -653,12 +672,28 @@ def test_run_vacuumtube_route_to_home_invokes_hash_assignment() -> None:
     assert seen == ["location.hash = '#/'"]
 
 
+def test_run_vacuumtube_route_to_home_host_runtime_uses_cdp() -> None:
+    cdp = mock.Mock()
+
+    run_vacuumtube_route_to_home_host_runtime(cdp=cdp)
+
+    cdp.evaluate.assert_called_once_with("location.hash = '#/'")
+
+
 def test_run_vacuumtube_hard_reload_home_invokes_full_home_url() -> None:
     seen: list[str] = []
 
     run_vacuumtube_hard_reload_home(evaluate=seen.append)
 
     assert seen == ["location.href = 'https://www.youtube.com/tv#/'"]
+
+
+def test_run_vacuumtube_hard_reload_home_host_runtime_uses_cdp() -> None:
+    cdp = mock.Mock()
+
+    run_vacuumtube_hard_reload_home_host_runtime(cdp=cdp)
+
+    cdp.evaluate.assert_called_once_with("location.href = 'https://www.youtube.com/tv#/'")
 
 
 def test_run_vacuumtube_click_tile_center_passes_float_coordinates() -> None:
@@ -670,6 +705,17 @@ def test_run_vacuumtube_click_tile_center_passes_float_coordinates() -> None:
     )
 
     assert seen == [(123.4, 456.0)]
+
+
+def test_run_vacuumtube_click_tile_center_host_runtime_uses_cdp_mouse_click() -> None:
+    cdp = mock.Mock()
+
+    run_vacuumtube_click_tile_center_host_runtime(
+        cdp=cdp,
+        tile={"cx": "123.4", "cy": 456},
+    )
+
+    cdp.mouse_click.assert_called_once_with(123.4, 456.0)
 
 
 def test_run_vacuumtube_enumerate_tiles_returns_dict_rows() -> None:
@@ -693,6 +739,17 @@ def test_run_vacuumtube_enumerate_tiles_returns_empty_list_for_non_list_payload(
     assert out == []
 
 
+def test_run_vacuumtube_enumerate_tiles_host_runtime_uses_cdp() -> None:
+    cdp = mock.Mock()
+    cdp.evaluate.return_value = [{"title": "Tile 1"}]
+
+    out = run_vacuumtube_enumerate_tiles_host_runtime(cdp=cdp)
+
+    assert out == [{"title": "Tile 1"}]
+    cdp.evaluate.assert_called_once()
+    assert "ytlr-tile-renderer" in cdp.evaluate.call_args.args[0]
+
+
 def test_run_vacuumtube_dom_click_tile_passes_title_and_text_to_expression() -> None:
     seen: list[str] = []
 
@@ -706,6 +763,21 @@ def test_run_vacuumtube_dom_click_tile_passes_title_and_text_to_expression() -> 
     assert len(seen) == 1
     assert '"Best Tile"' in seen[0]
     assert '"Best Tile Text"' in seen[0]
+
+
+def test_run_vacuumtube_dom_click_tile_host_runtime_logs_failure_payload() -> None:
+    cdp = mock.Mock()
+    cdp.evaluate.return_value = {"ok": False, "reason": "no-match"}
+    logs: list[str] = []
+
+    out = run_vacuumtube_dom_click_tile_host_runtime(
+        runtime=type("_Runtime", (), {"log": logs.append})(),
+        cdp=cdp,
+        tile={"title": "Best Tile", "text": "Best Tile Text"},
+    )
+
+    assert out is False
+    assert logs == ['DOM tile click failed: {"ok": false, "reason": "no-match"}']
 
 
 def test_run_vacuumtube_good_night_pause_returns_payload_dict() -> None:
@@ -934,6 +1006,51 @@ def test_run_vacuumtube_select_account_if_needed_logs_and_returns_false_on_error
 
     assert out is False
     assert logs == ["account selection check failed (continuing): boom"]
+
+
+def test_run_vacuumtube_select_account_if_needed_host_runtime_uses_runtime_methods() -> None:
+    class FakeContext:
+        def __enter__(self) -> str:
+            return "cdp"
+
+        def __exit__(self, exc_type, exc, tb) -> None:
+            return None
+
+    class FakeRuntime:
+        def __init__(self) -> None:
+            self.events: list[str] = []
+
+        def _cdp(self) -> FakeContext:
+            return FakeContext()
+
+        def _state(self, cdp: str) -> dict[str, object]:
+            self.events.append(f"state:{cdp}")
+            return {"accountSelectHint": len(self.events) == 1}
+
+        def send_key(self, key: str) -> None:
+            self.events.append(f"key:{key}")
+
+        def log(self, message: str) -> None:
+            self.events.append(message)
+
+    now_values = iter([100.0, 100.1, 100.6, 100.9])
+    sleep_calls: list[float] = []
+    runtime = FakeRuntime()
+
+    out = run_vacuumtube_select_account_if_needed_host_runtime(
+        runtime=runtime,
+        now=lambda: next(now_values),
+        sleep=lambda seconds: sleep_calls.append(seconds),
+    )
+
+    assert out is True
+    assert runtime.events == [
+        "state:cdp",
+        "VacuumTube account selection detected; sending Enter for default focus",
+        "key:Return",
+        "state:cdp",
+    ]
+    assert sleep_calls == []
 
 
 def test_run_vacuumtube_confirm_watch_playback_returns_confirmed_snapshot() -> None:

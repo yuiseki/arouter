@@ -7,7 +7,7 @@ import time
 from collections.abc import Callable
 from contextlib import nullcontext
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from .tmux_commands import (
     build_tmux_kill_session_command,
@@ -481,6 +481,15 @@ def run_vacuumtube_try_resume_current_video(
         return False
 
 
+def run_vacuumtube_try_resume_current_video_host_runtime(
+    *,
+    cdp: Any,
+) -> bool:
+    return run_vacuumtube_try_resume_current_video(
+        evaluate_async=lambda expr: cdp.evaluate(expr, await_promise=True),
+    )
+
+
 def run_vacuumtube_wait_watch_route(
     *,
     get_state: Callable[[], dict[str, Any]],
@@ -522,11 +531,25 @@ def run_vacuumtube_route_to_home(
     evaluate("location.hash = '#/'")
 
 
+def run_vacuumtube_route_to_home_host_runtime(
+    *,
+    cdp: Any,
+) -> None:
+    run_vacuumtube_route_to_home(evaluate=cdp.evaluate)
+
+
 def run_vacuumtube_hard_reload_home(
     *,
     evaluate: Callable[[str], Any],
 ) -> None:
     evaluate("location.href = 'https://www.youtube.com/tv#/'")
+
+
+def run_vacuumtube_hard_reload_home_host_runtime(
+    *,
+    cdp: Any,
+) -> None:
+    run_vacuumtube_hard_reload_home(evaluate=cdp.evaluate)
 
 
 def run_vacuumtube_click_tile_center(
@@ -537,6 +560,14 @@ def run_vacuumtube_click_tile_center(
     x = float(tile.get("cx") or 0)
     y = float(tile.get("cy") or 0)
     mouse_click(x, y)
+
+
+def run_vacuumtube_click_tile_center_host_runtime(
+    *,
+    cdp: Any,
+    tile: dict[str, Any],
+) -> None:
+    run_vacuumtube_click_tile_center(tile=tile, mouse_click=cdp.mouse_click)
 
 
 def run_vacuumtube_enumerate_tiles(
@@ -607,6 +638,13 @@ def run_vacuumtube_enumerate_tiles(
     if not isinstance(data, list):
         return []
     return [row for row in data if isinstance(row, dict)]
+
+
+def run_vacuumtube_enumerate_tiles_host_runtime(
+    *,
+    cdp: Any,
+) -> list[dict[str, Any]]:
+    return run_vacuumtube_enumerate_tiles(evaluate=cdp.evaluate)
 
 
 def run_vacuumtube_dom_click_tile(
@@ -687,6 +725,33 @@ def run_vacuumtube_dom_click_tile(
 }})()
 """
     return evaluate(expr)
+
+
+def run_vacuumtube_dom_click_tile_host_runtime(
+    *,
+    runtime: Any,
+    cdp: Any,
+    tile: dict[str, Any],
+) -> bool:
+    title = str(tile.get("title") or "")
+    text = str(tile.get("text") or "")
+    log = runtime.log if callable(getattr(runtime, "log", None)) else (lambda _message: None)
+    try:
+        out = run_vacuumtube_dom_click_tile(
+            title=title,
+            text=text,
+            evaluate=cdp.evaluate,
+        )
+        ok = bool(isinstance(out, dict) and out.get("ok"))
+        if not ok:
+            log(
+                "DOM tile click failed: "
+                + json.dumps(out if isinstance(out, dict) else {"out": out}, ensure_ascii=False)
+            )
+        return ok
+    except Exception as err:
+        log(f"DOM tile click error: {err}")
+        return False
 
 
 def run_vacuumtube_good_night_pause(
@@ -826,6 +891,27 @@ def run_vacuumtube_select_account_if_needed(
             pass
         sleep(poll_interval_sec)
     return False
+
+
+def run_vacuumtube_select_account_if_needed_host_runtime(
+    *,
+    runtime: Any,
+    now: Callable[[], float] = time.time,
+    sleep: Callable[[float], None] = time.sleep,
+) -> bool:
+    log = runtime.log if callable(getattr(runtime, "log", None)) else (lambda _message: None)
+
+    def snapshot_state() -> dict[str, Any]:
+        with runtime._cdp() as cdp:
+            return cast(dict[str, Any], runtime._state(cdp))
+
+    return run_vacuumtube_select_account_if_needed(
+        snapshot_state=snapshot_state,
+        send_return_key=lambda: runtime.send_key("Return"),
+        log=log,
+        now=now,
+        sleep=sleep,
+    )
 
 
 def run_vacuumtube_confirm_watch_playback(
