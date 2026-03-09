@@ -40,6 +40,116 @@ def default_locked_denied_text() -> str:
     )
 
 
+def run_biometric_status_client_resolution(
+    *,
+    current_client: Any | None,
+    status_url: str,
+    logger: Callable[[str], None] | None,
+    resolve_client: Callable[..., Any | None],
+) -> Any | None:
+    return resolve_client(
+        current_client=current_client,
+        status_url=str(status_url or "").strip(),
+        logger=logger,
+        timeout_sec=1.5,
+    )
+
+
+def run_biometric_status_fetch(
+    *,
+    current_client: Any | None,
+    status_url: str,
+    logger: Callable[[str], None] | None,
+    fetch_remote_status: Callable[..., tuple[Any | None, dict[str, Any] | None]] | None,
+    fetch_status_from_url: Callable[[str], dict[str, Any] | None] | None,
+) -> tuple[Any | None, dict[str, Any] | None]:
+    resolved_url = str(status_url or "").strip()
+    if callable(fetch_remote_status):
+        client, status = fetch_remote_status(
+            current_client=current_client,
+            status_url=resolved_url,
+            logger=logger,
+            timeout_sec=1.5,
+        )
+        return client, status if isinstance(status, dict) else None
+    if not resolved_url or not callable(fetch_status_from_url):
+        return current_client, None
+    status = fetch_status_from_url(resolved_url)
+    return current_client, status if isinstance(status, dict) else None
+
+
+def run_biometric_owner_face_absent_check(
+    *,
+    current_client: Any | None,
+    status_url: str,
+    absent_lock_sec: int,
+    logger: Callable[[str], None] | None,
+    resolve_client: Callable[..., Any | None] | None,
+    fetch_remote_status: Callable[..., tuple[Any | None, dict[str, Any] | None]] | None,
+    fetch_status_from_url: Callable[[str], dict[str, Any] | None] | None,
+    status_helper: Callable[..., bool],
+) -> tuple[Any | None, bool]:
+    threshold_sec = max(0, int(absent_lock_sec))
+    client = current_client
+    if callable(resolve_client):
+        client = run_biometric_status_client_resolution(
+            current_client=current_client,
+            status_url=status_url,
+            logger=logger,
+            resolve_client=resolve_client,
+        )
+        helper = getattr(client, "owner_face_absent_for_lock", None)
+        if callable(helper):
+            try:
+                return client, bool(helper(absent_lock_sec=threshold_sec))
+            except Exception:
+                return client, False
+    client, status = run_biometric_status_fetch(
+        current_client=client,
+        status_url=status_url,
+        logger=logger,
+        fetch_remote_status=fetch_remote_status,
+        fetch_status_from_url=fetch_status_from_url,
+    )
+    return client, bool(status_helper(status, absent_lock_sec=threshold_sec))
+
+
+def run_biometric_owner_face_recent_check(
+    *,
+    current_client: Any | None,
+    status_url: str,
+    fresh_ms: int,
+    logger: Callable[[str], None] | None,
+    resolve_client: Callable[..., Any | None] | None,
+    fetch_remote_status: Callable[..., tuple[Any | None, dict[str, Any] | None]] | None,
+    fetch_status_from_url: Callable[[str], dict[str, Any] | None] | None,
+    status_helper: Callable[..., bool],
+) -> tuple[Any | None, bool]:
+    threshold_ms = max(0, int(fresh_ms))
+    client = current_client
+    if callable(resolve_client):
+        client = run_biometric_status_client_resolution(
+            current_client=current_client,
+            status_url=status_url,
+            logger=logger,
+            resolve_client=resolve_client,
+        )
+        helper = getattr(client, "owner_face_recent_for_unlock", None)
+        if callable(helper):
+            try:
+                return client, bool(helper(fresh_ms=threshold_ms))
+            except Exception:
+                return client, False
+    client, status = run_biometric_status_fetch(
+        current_client=client,
+        status_url=status_url,
+        logger=logger,
+        fetch_remote_status=fetch_remote_status,
+        fetch_status_from_url=fetch_status_from_url,
+    )
+    return client, bool(status_helper(status, fresh_ms=threshold_ms))
+
+
 def set_system_locked(runtime: LockRuntime, locked: bool, *, reason: str) -> bool:
     previous = bool(runtime._system_locked)
     runtime._system_locked = bool(locked)

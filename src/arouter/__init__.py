@@ -25,6 +25,10 @@ from .biometric_runtime import (
     maybe_lock_from_signal,
     maybe_unlock_from_signal,
     reassert_lock_screen,
+    run_biometric_owner_face_absent_check,
+    run_biometric_owner_face_recent_check,
+    run_biometric_status_client_resolution,
+    run_biometric_status_fetch,
     set_system_locked,
 )
 from .biometric_signal import (
@@ -527,8 +531,12 @@ __all__ = [
     "resolve_vacuumtube_context_poll_interval",
     "report_segment_error",
     "run_biometric_poll_iteration",
+    "run_biometric_owner_face_absent_check",
+    "run_biometric_owner_face_recent_check",
     "parse_key_value_stdout",
     "run_biometric_poller_loop",
+    "run_biometric_status_client_resolution",
+    "run_biometric_status_fetch",
     "run_authorized_command_flow",
     "run_live_cam_parallel",
     "run_vacuumtube_context_poller_loop",
