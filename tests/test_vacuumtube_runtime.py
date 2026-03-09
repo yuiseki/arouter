@@ -26,6 +26,7 @@ from arouter import (
     run_vacuumtube_fullscreen,
     run_vacuumtube_go_home,
     run_vacuumtube_good_night_pause,
+    run_vacuumtube_good_night_pause_flow,
     run_vacuumtube_good_night_pause_runtime,
     run_vacuumtube_hard_reload_home,
     run_vacuumtube_hide_overlay,
@@ -519,6 +520,33 @@ def test_run_vacuumtube_good_night_pause_runtime_adds_state_hash() -> None:
         'good_night pause '
         '{"ok": true, "afterPaused": true, "cdp": "cdp", "stateHash": "#/watch?v=abc"}'
     )
+
+
+def test_run_vacuumtube_good_night_pause_flow_returns_noop_when_window_missing() -> None:
+    out = run_vacuumtube_good_night_pause_flow(
+        find_window_id=lambda: None,
+        pause_runtime=lambda: "unexpected",
+    )
+
+    assert out == "good_night pause no VacuumTube window (no-op)"
+
+
+def test_run_vacuumtube_good_night_pause_flow_returns_runtime_result() -> None:
+    out = run_vacuumtube_good_night_pause_flow(
+        find_window_id=lambda: "0x123",
+        pause_runtime=lambda: 'good_night pause {"ok": true}',
+    )
+
+    assert out == 'good_night pause {"ok": true}'
+
+
+def test_run_vacuumtube_good_night_pause_flow_formats_runtime_error() -> None:
+    out = run_vacuumtube_good_night_pause_flow(
+        find_window_id=lambda: "0x123",
+        pause_runtime=lambda: (_ for _ in ()).throw(RuntimeError("boom")),
+    )
+
+    assert out == "good_night pause error: boom"
 
 
 def test_run_vacuumtube_select_account_if_needed_sends_enter_until_hint_clears() -> None:

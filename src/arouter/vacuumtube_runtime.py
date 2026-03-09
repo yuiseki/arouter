@@ -587,6 +587,20 @@ def run_vacuumtube_good_night_pause_runtime(
         return "good_night pause " + json.dumps(payload, ensure_ascii=False)
 
 
+def run_vacuumtube_good_night_pause_flow(
+    *,
+    find_window_id: Callable[[], str | None],
+    pause_runtime: Callable[[], str],
+) -> str:
+    win_id = find_window_id()
+    if not win_id:
+        return "good_night pause no VacuumTube window (no-op)"
+    try:
+        return str(pause_runtime())
+    except Exception as err:
+        return f"good_night pause error: {err}"
+
+
 def run_vacuumtube_select_account_if_needed(
     *,
     snapshot_state: Callable[[], dict[str, Any]],
