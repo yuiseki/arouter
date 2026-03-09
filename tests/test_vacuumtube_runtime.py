@@ -23,6 +23,7 @@ from arouter import (
     run_vacuumtube_fullscreen,
     run_vacuumtube_go_home,
     run_vacuumtube_good_night_pause,
+    run_vacuumtube_good_night_pause_runtime,
     run_vacuumtube_hard_reload_home,
     run_vacuumtube_hide_overlay,
     run_vacuumtube_minimize,
@@ -35,6 +36,7 @@ from arouter import (
     run_vacuumtube_select_account_if_needed,
     run_vacuumtube_state_query,
     run_vacuumtube_stop_music,
+    run_vacuumtube_stop_music_runtime,
     run_vacuumtube_try_resume_current_video,
     run_vacuumtube_wait_watch_route,
     start_vacuumtube_tmux_session,
@@ -328,6 +330,26 @@ def test_run_vacuumtube_good_night_pause_wraps_non_dict_payload() -> None:
     out = run_vacuumtube_good_night_pause(evaluate=lambda _expr: "oops")
 
     assert out == {"ok": False, "result": "oops"}
+
+
+def test_run_vacuumtube_good_night_pause_runtime_adds_state_hash() -> None:
+    class FakeContext:
+        def __enter__(self) -> str:
+            return "cdp"
+
+        def __exit__(self, exc_type, exc, tb) -> None:
+            return None
+
+    out = run_vacuumtube_good_night_pause_runtime(
+        open_cdp=lambda: FakeContext(),
+        snapshot_state=lambda cdp: {"hash": "#/watch?v=abc", "seen": cdp},
+        run_pause=lambda cdp: {"ok": True, "afterPaused": True, "cdp": cdp},
+    )
+
+    assert out == (
+        'good_night pause '
+        '{"ok": true, "afterPaused": true, "cdp": "cdp", "stateHash": "#/watch?v=abc"}'
+    )
 
 
 def test_run_vacuumtube_select_account_if_needed_sends_enter_until_hint_clears() -> None:
@@ -1025,6 +1047,40 @@ def test_run_vacuumtube_stop_music_returns_last_snapshot_when_pause_not_confirme
         '"video": {"paused": false}})'
     )
     assert events == ["space", "sleep:0.25"]
+
+
+def test_run_vacuumtube_stop_music_runtime_opens_cdp_and_reuses_stop_flow() -> None:
+    class FakeContext:
+        def __enter__(self) -> str:
+            return "cdp"
+
+        def __exit__(self, exc_type, exc, tb) -> None:
+            return None
+
+    events: list[str] = []
+    states = iter(
+        [
+            {"hash": "#/watch?v=abc", "video": {"paused": False}, "cdp": "cdp"},
+            {"hash": "#/watch?v=abc", "video": {"paused": True}, "cdp": "cdp"},
+        ]
+    )
+
+    result = run_vacuumtube_stop_music_runtime(
+        open_cdp=lambda: FakeContext(),
+        find_window_id=lambda: "0x123",
+        snapshot_state=lambda cdp: next(states),
+        is_watch_state=lambda state: str(state.get("hash", "")).startswith("#/watch"),
+        send_space_key=lambda: events.append("space"),
+        time_now=iter([100.0, 100.1]).__next__,
+        sleep=lambda seconds: events.append(f"sleep:{seconds}"),
+        ensure_top_right_position=lambda: (
+            events.append("ensure_top_right") or {"ok": True, "window_id": "0x123"}
+        ),
+        log=events.append,
+    )
+
+    assert result == "sent Space toggle to VacuumTube (0x123); pause confirmed"
+    assert events[:2] == ["space", "ensure_top_right"]
 
 
 def test_run_vacuumtube_play_news_opens_with_expected_label() -> None:

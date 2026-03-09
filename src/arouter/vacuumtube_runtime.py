@@ -456,6 +456,19 @@ def run_vacuumtube_good_night_pause(
     return out if isinstance(out, dict) else {"ok": False, "result": out}
 
 
+def run_vacuumtube_good_night_pause_runtime(
+    *,
+    open_cdp: Callable[[], Any],
+    snapshot_state: Callable[[Any], dict[str, Any]],
+    run_pause: Callable[[Any], dict[str, Any]],
+) -> str:
+    with open_cdp() as cdp:
+        snap = snapshot_state(cdp)
+        payload = run_pause(cdp)
+        payload.setdefault("stateHash", snap.get("hash"))
+        return "good_night pause " + json.dumps(payload, ensure_ascii=False)
+
+
 def run_vacuumtube_select_account_if_needed(
     *,
     snapshot_state: Callable[[], dict[str, Any]],
@@ -986,6 +999,31 @@ def run_vacuumtube_stop_music(
 
     payload = json.dumps(last, ensure_ascii=False)
     return f"sent Space toggle to VacuumTube ({win_id}); pause not confirmed ({payload})"
+
+
+def run_vacuumtube_stop_music_runtime(
+    *,
+    open_cdp: Callable[[], Any],
+    find_window_id: Callable[[], str | None],
+    snapshot_state: Callable[[Any], dict[str, Any]],
+    is_watch_state: Callable[[dict[str, Any]], bool],
+    send_space_key: Callable[[], None],
+    time_now: Callable[[], float],
+    sleep: Callable[[float], None],
+    ensure_top_right_position: Callable[[], dict[str, Any]],
+    log: Callable[[str], None],
+) -> str:
+    with open_cdp() as cdp:
+        return run_vacuumtube_stop_music(
+            find_window_id=find_window_id,
+            snapshot_state=lambda: snapshot_state(cdp),
+            is_watch_state=is_watch_state,
+            send_space_key=send_space_key,
+            time_now=time_now,
+            sleep=sleep,
+            ensure_top_right_position=ensure_top_right_position,
+            log=log,
+        )
 
 
 def run_vacuumtube_play_news(
