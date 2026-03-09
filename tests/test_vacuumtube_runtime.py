@@ -10,6 +10,7 @@ from arouter import (
     build_vacuumtube_context_base,
     ensure_vacuumtube_runtime_ready,
     ensure_vacuumtube_started_and_positioned,
+    ensure_vacuumtube_started_and_positioned_host_runtime,
     finalize_vacuumtube_context,
     is_recoverable_vacuumtube_error,
     merge_vacuumtube_cdp_state,
@@ -1503,6 +1504,56 @@ def test_ensure_vacuumtube_started_and_positioned_preserves_fullscreen_window() 
         event.startswith("VacuumTube window position preserved (fullscreen): ")
         for event in events
     )
+
+
+def test_ensure_vacuumtube_started_and_positioned_host_runtime_uses_runtime_methods() -> None:
+    class FakeRuntime:
+        def __init__(self) -> None:
+            self.events: list[str] = []
+            self.base_url = "http://127.0.0.1:9992"
+
+        def ensure_running(self) -> None:
+            self.events.append("ensure_running")
+
+        def wait_window(self, timeout_sec: float) -> str:
+            self.events.append(f"wait_window:{timeout_sec}")
+            return "0x123"
+
+        def _restart_tmux_session(self) -> None:
+            self.events.append("restart")
+
+        def wait_cdp_ready(self, timeout_sec: float) -> bool:
+            self.events.append(f"wait_cdp_ready:{timeout_sec}")
+            return True
+
+        def _select_account_if_needed(self) -> None:
+            self.events.append("select_account")
+
+        def _capture_window_presentation(self, win_id: str) -> dict[str, object]:
+            self.events.append(f"capture:{win_id}")
+            return {"window_id": win_id, "fullscreen": False}
+
+        def ensure_top_right_position(self) -> dict[str, object]:
+            self.events.append("position")
+            return {"ok": True}
+
+        def log(self, message: str) -> None:
+            self.events.append(message)
+
+    runtime = FakeRuntime()
+
+    result = ensure_vacuumtube_started_and_positioned_host_runtime(runtime=runtime)
+
+    assert result == {"window_id": "0x123", "fullscreen": False}
+    assert runtime.events == [
+        "ensure_running",
+        "wait_window:20.0",
+        "select_account",
+        "capture:0x123",
+        "position",
+        'VacuumTube window position check: {"ok": true}',
+        "capture:0x123",
+    ]
 
 
 def test_run_vacuumtube_resume_playback_returns_noop_when_window_missing() -> None:

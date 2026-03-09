@@ -1063,6 +1063,24 @@ def ensure_vacuumtube_started_and_positioned(
     return capture_window_presentation(win_id)
 
 
+def ensure_vacuumtube_started_and_positioned_host_runtime(
+    *,
+    runtime: Any,
+) -> dict[str, Any]:
+    log = runtime.log if callable(getattr(runtime, "log", None)) else (lambda _message: None)
+    return ensure_vacuumtube_started_and_positioned(
+        ensure_running=runtime.ensure_running,
+        wait_window=runtime.wait_window,
+        restart_tmux_session=runtime._restart_tmux_session,
+        wait_cdp_ready=runtime.wait_cdp_ready,
+        select_account_if_needed=runtime._select_account_if_needed,
+        capture_window_presentation=runtime._capture_window_presentation,
+        ensure_top_right_position=runtime.ensure_top_right_position,
+        log=log,
+        base_url=str(getattr(runtime, "base_url", "")),
+    )
+
+
 def ensure_vacuumtube_runtime_ready(
     *,
     cdp_ready: Callable[[], bool],
