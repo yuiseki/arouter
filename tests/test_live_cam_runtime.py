@@ -22,7 +22,9 @@ from arouter import (
     resolve_live_cam_layout_bootstrap,
     run_live_cam_close_windows,
     run_live_cam_existing_windowed_pids_query,
+    run_live_cam_hide_flow,
     run_live_cam_layout_flow,
+    run_live_cam_minimize_flow,
     run_live_cam_minimize_windows,
     run_live_cam_open_flow,
     run_live_cam_parallel,
@@ -431,6 +433,36 @@ def test_run_live_cam_window_action_flow_uses_action_state_and_response_builder(
     assert acted_on == [101, 102]
     assert after_action_calls == ["done"]
     assert result == "ids=['0x1', '0x2'];ports=[9993, 9994];state_ports=[9993, 9994]"
+
+
+def test_run_live_cam_hide_flow_uses_hide_response_builder() -> None:
+    result = run_live_cam_hide_flow(
+        [{"port": 9993}, {"port": 9994}],
+        pid_lookup=lambda port: {9993: 101, 9994: 102}.get(port),
+        state_fetcher=lambda _pids: {"windows": [], "urls": []},
+        close_windows=lambda _pids: ["0x1", "0x2"],
+        after_action=lambda: None,
+    )
+
+    assert result == (
+        'live camera wall hide {"closed": 2, "windowIds": ["0x1", "0x2"], '
+        '"ports": [9993, 9994], "windows": [], "urls": []}'
+    )
+
+
+def test_run_live_cam_minimize_flow_uses_minimize_response_builder() -> None:
+    result = run_live_cam_minimize_flow(
+        [{"port": 9993}],
+        pid_lookup=lambda port: {9993: 101}.get(port),
+        state_fetcher=lambda _pids: {"windows": [], "urls": []},
+        minimize_windows=lambda _pids: ["0x1"],
+        after_action=lambda: None,
+    )
+
+    assert result == (
+        'live camera wall minimize {"minimized": 1, "windowIds": ["0x1"], '
+        '"ports": [9993], "windows": [], "urls": []}'
+    )
 
 
 def test_collect_window_ids_for_pids_skips_missing_window_ids() -> None:

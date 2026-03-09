@@ -274,6 +274,50 @@ def run_live_cam_window_action_flow(
     return build_response(window_ids, sorted(pids_by_port.keys()), state)
 
 
+def run_live_cam_hide_flow(
+    instances: list[dict[str, Any]],
+    *,
+    pid_lookup: Callable[[int], int | None],
+    state_fetcher: Callable[[dict[int, int]], dict[str, Any]],
+    close_windows: Callable[[list[int]], list[str]],
+    after_action: Callable[[], None] | None = None,
+) -> str:
+    return run_live_cam_window_action_flow(
+        instances,
+        pid_lookup=pid_lookup,
+        state_fetcher=state_fetcher,
+        perform_window_action=close_windows,
+        build_response=lambda window_ids, ports, state: build_live_cam_hide_response(
+            window_ids=window_ids,
+            ports=ports,
+            state=state,
+        ),
+        after_action=after_action,
+    )
+
+
+def run_live_cam_minimize_flow(
+    instances: list[dict[str, Any]],
+    *,
+    pid_lookup: Callable[[int], int | None],
+    state_fetcher: Callable[[dict[int, int]], dict[str, Any]],
+    minimize_windows: Callable[[list[int]], list[str]],
+    after_action: Callable[[], None] | None = None,
+) -> str:
+    return run_live_cam_window_action_flow(
+        instances,
+        pid_lookup=pid_lookup,
+        state_fetcher=state_fetcher,
+        perform_window_action=minimize_windows,
+        build_response=lambda window_ids, ports, state: build_live_cam_minimize_response(
+            window_ids=window_ids,
+            ports=ports,
+            state=state,
+        ),
+        after_action=after_action,
+    )
+
+
 def run_live_cam_raise_windows(
     pids: list[int],
     *,
