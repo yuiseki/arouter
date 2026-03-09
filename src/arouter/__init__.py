@@ -6,6 +6,7 @@ from .biometric_admin import (
     run_request_biometric_lock,
 )
 from .biometric_bootstrap import ensure_biometric_runtime_attrs
+from .biometric_runtime_adapter import BiometricRuntimeAdapter
 from .biometric_password import (
     encrypt_password_file,
     load_password_candidates,
@@ -345,6 +346,7 @@ __all__ = [
     "authorize_command",
     "biometric_lock_enabled",
     "biometric_unlock_success_text",
+    "BiometricRuntimeAdapter",
     "DesktopNotifier",
     "encrypt_biometric_password_payload",
     "ensure_biometric_runtime_attrs",
