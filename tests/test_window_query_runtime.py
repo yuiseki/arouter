@@ -10,11 +10,16 @@ from arouter import (
     run_desktop_size_query,
     run_screen_size_host_runtime_query,
     run_screen_size_query,
+    run_vacuumtube_window_id_host_runtime_query,
     run_vacuumtube_window_id_query,
+    run_window_geometry_host_runtime_query,
     run_window_geometry_query,
+    run_window_id_by_pid_title_host_runtime_query,
     run_window_id_query_by_pid_title,
     run_window_row_by_listen_port,
+    run_window_rows_for_pids_host_runtime_query,
     run_window_rows_query_for_pids,
+    run_window_title_host_runtime_query,
     run_window_title_query,
     run_wmctrl_list_host_runtime_query,
     run_wmctrl_list_query,
@@ -324,6 +329,43 @@ def test_run_vacuumtube_window_id_query_falls_back_to_title_lookup() -> None:
     ]
 
 
+def test_run_vacuumtube_window_id_host_runtime_query_uses_runtime_queries() -> None:
+    runtime = type("_Runtime", (), {"_x11_env": lambda self: {"DISPLAY": ":0"}})()
+
+    with pytest.MonkeyPatch.context() as mp:
+        calls: list[tuple[list[str], dict[str, object]]] = []
+
+        class _CP:
+            def __init__(self, stdout: str) -> None:
+                self.stdout = stdout
+
+        def _run(command: list[str], **kwargs: object) -> _CP:
+            calls.append((command, kwargs))
+            if command[0] == "lsof":
+                return _CP("456\n")
+            if command == ["wmctrl", "-lp"]:
+                return _CP("0x002 0 456 host VacuumTube\n")
+            if command == ["wmctrl", "-l"]:
+                return _CP("0x003 0 host VacuumTube\n")
+            raise AssertionError(command)
+
+        mp.setattr("subprocess.run", _run)
+
+        out = run_vacuumtube_window_id_host_runtime_query(runtime=runtime, listen_port=9992)
+
+    assert out == "0x002"
+    assert calls == [
+        (
+            ["lsof", "-nP", "-iTCP:9992", "-sTCP:LISTEN", "-t"],
+            {"check": False, "text": True, "capture_output": True},
+        ),
+        (
+            ["wmctrl", "-lp"],
+            {"check": False, "text": True, "capture_output": True, "env": {"DISPLAY": ":0"}},
+        ),
+    ]
+
+
 def test_run_window_geometry_query_returns_geometry() -> None:
     calls: list[object] = []
 
@@ -342,6 +384,32 @@ def test_run_window_geometry_query_returns_geometry() -> None:
     ]
 
 
+def test_run_window_geometry_host_runtime_query_uses_runtime_rows() -> None:
+    runtime = type("_Runtime", (), {"_x11_env": lambda self: {"DISPLAY": ":0"}})()
+
+    with pytest.MonkeyPatch.context() as mp:
+        calls: list[tuple[list[str], dict[str, object]]] = []
+
+        class _CP:
+            stdout = "0xabc 0 10 20 30 40 host VacuumTube\n"
+
+        def _run(command: list[str], **kwargs: object) -> _CP:
+            calls.append((command, kwargs))
+            return _CP()
+
+        mp.setattr("subprocess.run", _run)
+
+        out = run_window_geometry_host_runtime_query(runtime=runtime, win_id="0xabc")
+
+    assert out == {"x": 10, "y": 20, "w": 30, "h": 40}
+    assert calls == [
+        (
+            ["wmctrl", "-lG"],
+            {"check": False, "text": True, "capture_output": True, "env": {"DISPLAY": ":0"}},
+        )
+    ]
+
+
 def test_run_window_title_query_returns_title() -> None:
     calls: list[object] = []
 
@@ -357,6 +425,90 @@ def test_run_window_title_query_returns_title() -> None:
     assert calls == [
         "rows",
         (["0x050000b5 0 host 東京アメッシュ - Chromium"], "0x050000b5"),
+    ]
+
+
+def test_run_window_title_host_runtime_query_uses_runtime_rows() -> None:
+    runtime = type("_Runtime", (), {"_x11_env": lambda self: {"DISPLAY": ":0"}})()
+
+    with pytest.MonkeyPatch.context() as mp:
+        calls: list[tuple[list[str], dict[str, object]]] = []
+
+        class _CP:
+            stdout = "0x050000b5 0 host 東京アメッシュ - Chromium\n"
+
+        def _run(command: list[str], **kwargs: object) -> _CP:
+            calls.append((command, kwargs))
+            return _CP()
+
+        mp.setattr("subprocess.run", _run)
+
+        out = run_window_title_host_runtime_query(runtime=runtime, win_id="0x050000b5")
+
+    assert out == "東京アメッシュ - Chromium"
+    assert calls == [
+        (
+            ["wmctrl", "-l"],
+            {"check": False, "text": True, "capture_output": True, "env": {"DISPLAY": ":0"}},
+        )
+    ]
+
+
+def test_run_window_id_by_pid_title_host_runtime_query_uses_runtime_rows() -> None:
+    runtime = type("_Runtime", (), {"_x11_env": lambda self: {"DISPLAY": ":0"}})()
+
+    with pytest.MonkeyPatch.context() as mp:
+        calls: list[tuple[list[str], dict[str, object]]] = []
+
+        class _CP:
+            stdout = "0x002 0 456 host VacuumTube\n"
+
+        def _run(command: list[str], **kwargs: object) -> _CP:
+            calls.append((command, kwargs))
+            return _CP()
+
+        mp.setattr("subprocess.run", _run)
+
+        out = run_window_id_by_pid_title_host_runtime_query(
+            runtime=runtime,
+            pid=456,
+            title_hint="VacuumTube",
+        )
+
+    assert out == "0x002"
+    assert calls == [
+        (
+            ["wmctrl", "-lp"],
+            {"check": False, "text": True, "capture_output": True, "env": {"DISPLAY": ":0"}},
+        )
+    ]
+
+
+def test_run_window_rows_for_pids_host_runtime_query_uses_runtime_rows() -> None:
+    runtime = type("_Runtime", (), {"_x11_env": lambda self: {"DISPLAY": ":0"}})()
+
+    with pytest.MonkeyPatch.context() as mp:
+        calls: list[tuple[list[str], dict[str, object]]] = []
+
+        class _CP:
+            stdout = "0x001 0 123 1 2 3 4 host VacuumTube\n"
+
+        def _run(command: list[str], **kwargs: object) -> _CP:
+            calls.append((command, kwargs))
+            return _CP()
+
+        mp.setattr("subprocess.run", _run)
+
+        out = run_window_rows_for_pids_host_runtime_query(runtime=runtime, pids=[123, 456])
+
+    assert out == [
+        {"id": "0x001", "pid": 123, "x": 1, "y": 2, "w": 3, "h": 4, "title": "VacuumTube"}
+    ]
+    assert calls == [
+        (
+            ["wmctrl", "-lpG"],
+            {"check": False, "text": True, "capture_output": True, "env": {"DISPLAY": ":0"}},
+        )
     ]
 
 

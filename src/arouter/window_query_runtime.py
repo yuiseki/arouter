@@ -2,14 +2,22 @@ from __future__ import annotations
 
 import subprocess
 from collections.abc import Callable
-from typing import Any
+from typing import Any, cast
 
+from .listen_ports import run_listen_pid_host_runtime_query
 from .window_presentation import (
     parse_desktop_size_from_wmctrl_output,
     parse_screen_size_from_xrandr_output,
     parse_work_area_from_wmctrl_output,
 )
 from .window_queries import build_wmctrl_list_command
+from .window_rows import (
+    find_window_geometry_from_wmctrl_lines,
+    find_window_id_by_pid_and_title,
+    find_window_id_by_title,
+    window_rows_for_pids_from_wmctrl_lines,
+    window_title_from_wmctrl_lines,
+)
 
 
 def run_wmctrl_list_query(
@@ -186,6 +194,29 @@ def run_vacuumtube_window_id_query(
     return find_by_title(rows_provider(), title_hint="VacuumTube")
 
 
+def run_vacuumtube_window_id_host_runtime_query(
+    *,
+    runtime: Any,
+    listen_port: int,
+) -> str | None:
+    return run_vacuumtube_window_id_query(
+        listen_port=listen_port,
+        pid_lookup=run_listen_pid_host_runtime_query,
+        rows_with_pid_provider=lambda: run_wmctrl_list_host_runtime_query(
+            runtime=runtime,
+            geometry=False,
+            with_pid=True,
+        ),
+        rows_provider=lambda: run_wmctrl_list_host_runtime_query(
+            runtime=runtime,
+            geometry=False,
+            with_pid=False,
+        ),
+        find_by_pid_title=find_window_id_by_pid_and_title,
+        find_by_title=find_window_id_by_title,
+    )
+
+
 def run_window_geometry_query(
     *,
     win_id: str,
@@ -195,6 +226,26 @@ def run_window_geometry_query(
     return find_geometry(row_provider(), str(win_id).lower())
 
 
+def run_window_geometry_host_runtime_query(
+    *,
+    runtime: Any,
+    win_id: str,
+) -> dict[str, object] | None:
+    find_geometry = cast(
+        Callable[[list[str], str], dict[str, object] | None],
+        find_window_geometry_from_wmctrl_lines,
+    )
+    return run_window_geometry_query(
+        win_id=win_id,
+        row_provider=lambda: run_wmctrl_list_host_runtime_query(
+            runtime=runtime,
+            geometry=True,
+            with_pid=False,
+        ),
+        find_geometry=find_geometry,
+    )
+
+
 def run_window_title_query(
     *,
     win_id: str,
@@ -202,6 +253,56 @@ def run_window_title_query(
     title_lookup: Callable[[list[str], str], str],
 ) -> str:
     return title_lookup(row_provider(), str(win_id))
+
+
+def run_window_title_host_runtime_query(
+    *,
+    runtime: Any,
+    win_id: str,
+) -> str:
+    return run_window_title_query(
+        win_id=win_id,
+        row_provider=lambda: run_wmctrl_list_host_runtime_query(
+            runtime=runtime,
+            geometry=False,
+            with_pid=False,
+        ),
+        title_lookup=window_title_from_wmctrl_lines,
+    )
+
+
+def run_window_id_by_pid_title_host_runtime_query(
+    *,
+    runtime: Any,
+    pid: int,
+    title_hint: str,
+) -> str | None:
+    return run_window_id_query_by_pid_title(
+        pid=pid,
+        row_provider=lambda: run_wmctrl_list_host_runtime_query(
+            runtime=runtime,
+            geometry=False,
+            with_pid=True,
+        ),
+        find_window_id=find_window_id_by_pid_and_title,
+        title_hint=title_hint,
+    )
+
+
+def run_window_rows_for_pids_host_runtime_query(
+    *,
+    runtime: Any,
+    pids: list[int],
+) -> list[dict[str, object]]:
+    return run_window_rows_query_for_pids(
+        pids=pids,
+        row_provider=lambda: run_wmctrl_list_host_runtime_query(
+            runtime=runtime,
+            geometry=True,
+            with_pid=True,
+        ),
+        select_rows=window_rows_for_pids_from_wmctrl_lines,
+    )
 
 
 def build_xprop_wm_state_command(win_id: str) -> list[str]:
