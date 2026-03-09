@@ -34,6 +34,7 @@ from arouter import (
     run_vacuumtube_resume_playback,
     run_vacuumtube_route_to_home,
     run_vacuumtube_select_account_if_needed,
+    run_vacuumtube_snapshot_state,
     run_vacuumtube_state_query,
     run_vacuumtube_stop_music,
     run_vacuumtube_stop_music_runtime,
@@ -114,6 +115,57 @@ def test_run_vacuumtube_state_query_returns_empty_dict_for_non_dict_payload() ->
     out = run_vacuumtube_state_query(evaluate=lambda _expr: ["not", "dict"])
 
     assert out == {}
+
+
+def test_run_vacuumtube_snapshot_state_combines_state_and_tile_samples() -> None:
+    out = run_vacuumtube_snapshot_state(
+        query_state=lambda: {
+            "hash": "#/watch?v=abc",
+            "title": "VacuumTube",
+            "accountSelectHint": False,
+            "homeHint": False,
+            "watchUiHint": True,
+            "overlayVisible": True,
+            "video": {"paused": False},
+        },
+        enumerate_tiles=lambda: [
+            {"title": "Tile A"},
+            {"text": "Tile B"},
+            {"title": "Tile C"},
+            {"title": "Tile D"},
+        ],
+    )
+
+    assert out == {
+        "hash": "#/watch?v=abc",
+        "title": "VacuumTube",
+        "accountSelectHint": False,
+        "homeHint": False,
+        "watchUiHint": True,
+        "overlayVisible": True,
+        "video": {"paused": False},
+        "tilesCount": 4,
+        "tilesSample": ["Tile A", "Tile B", "Tile C"],
+    }
+
+
+def test_run_vacuumtube_snapshot_state_tolerates_tile_enumeration_errors() -> None:
+    out = run_vacuumtube_snapshot_state(
+        query_state=lambda: {"hash": "#/"},
+        enumerate_tiles=lambda: (_ for _ in ()).throw(RuntimeError("boom")),
+    )
+
+    assert out == {
+        "hash": "#/",
+        "title": None,
+        "accountSelectHint": None,
+        "homeHint": None,
+        "watchUiHint": None,
+        "overlayVisible": None,
+        "video": None,
+        "tilesCount": 0,
+        "tilesSample": [],
+    }
 
 
 def test_run_vacuumtube_hide_overlay_invokes_evaluate_with_overlay_selector() -> None:

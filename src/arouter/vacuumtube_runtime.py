@@ -140,6 +140,37 @@ def run_vacuumtube_hide_overlay(
     evaluate(expr)
 
 
+def run_vacuumtube_snapshot_state(
+    *,
+    query_state: Callable[[], dict[str, Any]],
+    enumerate_tiles: Callable[[], list[dict[str, Any]]],
+) -> dict[str, Any]:
+    state = query_state()
+    if not isinstance(state, dict):
+        state = {}
+
+    try:
+        tiles = enumerate_tiles()
+    except Exception:
+        tiles = []
+
+    sample_titles: list[str] = []
+    for tile in tiles[:3]:
+        sample_titles.append(str(tile.get("title") or tile.get("text") or "")[:100])
+
+    return {
+        "hash": state.get("hash"),
+        "title": state.get("title"),
+        "accountSelectHint": state.get("accountSelectHint"),
+        "homeHint": state.get("homeHint"),
+        "watchUiHint": state.get("watchUiHint"),
+        "overlayVisible": state.get("overlayVisible"),
+        "video": state.get("video"),
+        "tilesCount": len(tiles),
+        "tilesSample": sample_titles,
+    }
+
+
 def run_vacuumtube_ensure_home(
     *,
     snapshot_state: Callable[[], dict[str, Any]],
