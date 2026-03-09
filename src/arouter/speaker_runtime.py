@@ -6,6 +6,42 @@ from pathlib import Path
 from typing import Any
 
 
+def run_speaker_auth_initialization(
+    *,
+    enabled: bool,
+    requested_device: str,
+    speaker_master: str,
+    logger: Callable[[str], None],
+    initialize_runtime: Callable[..., Any] | None,
+) -> dict[str, Any]:
+    runtime_state = {
+        "classifier": None,
+        "voiceprint": None,
+        "np_module": None,
+        "torch_module": None,
+        "torchaudio_module": None,
+        "device": requested_device,
+    }
+    if not callable(initialize_runtime):
+        return runtime_state
+
+    runtime = initialize_runtime(
+        enabled=enabled,
+        requested_device=requested_device,
+        speaker_master=speaker_master,
+        logger=logger,
+    )
+    runtime_state.update(
+        classifier=runtime.classifier,
+        voiceprint=runtime.voiceprint,
+        np_module=runtime.np_module,
+        torch_module=runtime.torch_module,
+        torchaudio_module=runtime.torchaudio_module,
+        device=runtime.device,
+    )
+    return runtime_state
+
+
 def run_speaker_auth_enabled(
     *,
     classifier: Any | None,

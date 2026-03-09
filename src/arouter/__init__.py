@@ -180,7 +180,11 @@ from .router import (
     contextualize_command_with_vacuumtube_state,
 )
 from .segment import process_pcm_segment, process_transcribed_segment
-from .speaker_runtime import run_speaker_auth_enabled, run_speaker_identity_verification
+from .speaker_runtime import (
+    run_speaker_auth_enabled,
+    run_speaker_auth_initialization,
+    run_speaker_identity_verification,
+)
 from .storage import handle_authorization_denied, store_authfail_wav, store_authorized_wav
 from .system_modes import run_system_normal_mode, run_system_webcam_mode
 from .tmux_commands import (
@@ -541,6 +545,7 @@ __all__ = [
     "run_authorized_command_flow",
     "run_live_cam_parallel",
     "run_speaker_auth_enabled",
+    "run_speaker_auth_initialization",
     "run_speaker_identity_verification",
     "run_vacuumtube_context_poller_loop",
     "run_vacuumtube_cdp_client",

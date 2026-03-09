@@ -6,7 +6,66 @@ from unittest import mock
 
 import numpy as np
 
-from arouter import run_speaker_auth_enabled, run_speaker_identity_verification
+from arouter import (
+    run_speaker_auth_enabled,
+    run_speaker_auth_initialization,
+    run_speaker_identity_verification,
+)
+
+
+def test_run_speaker_auth_initialization_returns_defaults_without_helper() -> None:
+    runtime = run_speaker_auth_initialization(
+        enabled=True,
+        requested_device="cpu",
+        speaker_master="/tmp/master.npy",
+        logger=lambda _: None,
+        initialize_runtime=None,
+    )
+
+    assert runtime == {
+        "classifier": None,
+        "voiceprint": None,
+        "np_module": None,
+        "torch_module": None,
+        "torchaudio_module": None,
+        "device": "cpu",
+    }
+
+
+def test_run_speaker_auth_initialization_delegates_to_helper() -> None:
+    initialize_runtime = mock.Mock(
+        return_value=mock.Mock(
+            classifier="classifier",
+            voiceprint="voiceprint",
+            np_module="np",
+            torch_module="torch",
+            torchaudio_module="torchaudio",
+            device="cuda:0",
+        )
+    )
+
+    runtime = run_speaker_auth_initialization(
+        enabled=True,
+        requested_device="cpu",
+        speaker_master="/tmp/master.npy",
+        logger=lambda _: None,
+        initialize_runtime=initialize_runtime,
+    )
+
+    assert runtime == {
+        "classifier": "classifier",
+        "voiceprint": "voiceprint",
+        "np_module": "np",
+        "torch_module": "torch",
+        "torchaudio_module": "torchaudio",
+        "device": "cuda:0",
+    }
+    initialize_runtime.assert_called_once_with(
+        enabled=True,
+        requested_device="cpu",
+        speaker_master="/tmp/master.npy",
+        logger=mock.ANY,
+    )
 
 
 def test_run_speaker_auth_enabled_delegates_to_helper() -> None:
