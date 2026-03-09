@@ -12,6 +12,7 @@ from arouter import (
     run_live_cam_page_brief_cdp_runtime,
     run_live_cam_page_brief_flow,
     run_live_cam_page_brief_http_query,
+    run_live_cam_page_brief_runtime_flow,
     run_live_cam_page_snapshot_query,
     run_live_cam_page_snapshot_via_websocket,
     run_live_cam_runtime_state_cdp_runtime,
@@ -532,6 +533,54 @@ def test_run_live_cam_page_brief_http_query_uses_http_target_query_and_client_fa
     }
     assert fetch_calls == [("http://127.0.0.1:9993/json", 2.0)]
     assert events == [
+        ("enable", "ws://127.0.0.1:9993/devtools/page/1"),
+        ("evaluate", True),
+    ]
+
+
+def test_run_live_cam_page_brief_runtime_flow_builds_client_with_timeouts() -> None:
+    events: list[object] = []
+
+    class FakeClient:
+        def __init__(self, ws_url: str, *, timeout_sec: float) -> None:
+            events.append(("create", ws_url, timeout_sec))
+            self.ws_url = ws_url
+
+        def enable_basics(self) -> None:
+            events.append(("enable", self.ws_url))
+
+        def evaluate(self, expr: str) -> dict[str, str]:
+            events.append(("evaluate", "ytlr-watch-metadata" in expr))
+            return {"watchText": f"watch:{self.ws_url}"}
+
+    fetch_calls: list[tuple[str, float]] = []
+
+    out = run_live_cam_page_brief_runtime_flow(
+        port=9993,
+        fetch_json=lambda url, timeout: (
+            fetch_calls.append((url, float(timeout)))
+            or [
+                {
+                    "type": "page",
+                    "url": "https://www.youtube.com/tv#/watch?v=abc9993",
+                    "title": "Shibuya",
+                    "webSocketDebuggerUrl": "ws://127.0.0.1:9993/devtools/page/1",
+                }
+            ]
+        ),
+        client_factory=FakeClient,
+        http_timeout=1.5,
+        client_timeout=4.5,
+    )
+
+    assert out == {
+        "url": "https://www.youtube.com/tv#/watch?v=abc9993",
+        "title": "Shibuya",
+        "watchText": "watch:ws://127.0.0.1:9993/devtools/page/1",
+    }
+    assert fetch_calls == [("http://127.0.0.1:9993/json", 1.5)]
+    assert events == [
+        ("create", "ws://127.0.0.1:9993/devtools/page/1", 4.5),
         ("enable", "ws://127.0.0.1:9993/devtools/page/1"),
         ("evaluate", True),
     ]

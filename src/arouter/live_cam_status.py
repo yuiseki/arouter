@@ -332,6 +332,25 @@ def run_live_cam_page_brief_http_query(
     )
 
 
+def run_live_cam_page_brief_runtime_flow(
+    *,
+    port: int,
+    fetch_json: Callable[..., Any],
+    client_factory: Callable[..., Any],
+    http_timeout: float = 2.0,
+    client_timeout: float = 4.0,
+) -> dict[str, Any]:
+    return run_live_cam_page_brief_http_query(
+        port=port,
+        fetch_json=fetch_json,
+        create_client=lambda ws_url: client_factory(
+            ws_url,
+            timeout_sec=client_timeout,
+        ),
+        timeout=http_timeout,
+    )
+
+
 def page_matches_live_camera_spec(spec: dict[str, Any], page: dict[str, Any]) -> bool:
     url = str(page.get("url") or "")
     if "youtube.com/tv" not in url or "watch?v=" not in url:
