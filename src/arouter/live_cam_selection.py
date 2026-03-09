@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 LiveCamCommandRunner = Callable[[list[str], float], tuple[int, str, str]]
+LiveCamProcessRunner = Callable[..., Any]
 LiveCamPageVerifier = Callable[[dict[str, Any]], bool]
 LiveCamCandidateExpander = Callable[[dict[str, Any]], list[dict[str, Any]]]
 LiveCamForceIdNormalizer = Callable[[dict[str, Any]], str]
@@ -327,5 +328,43 @@ def run_live_cam_payload_selection_runtime(
         format_selection_error=format_live_cam_selection_error,
         run_command=run_command,
         verify_force_candidate_page=verify_force_candidate_page,
+        log=log,
+    )
+
+
+def run_live_cam_payload_selection_runtime_flow(
+    spec: dict[str, Any],
+    *,
+    fast_open_script: str | Path,
+    run_process: LiveCamProcessRunner,
+    page_brief_for_port: Callable[[int], dict[str, Any]],
+    page_matches_spec: Callable[[dict[str, Any], dict[str, Any]], bool],
+    log: LiveCamLogger | None = None,
+) -> dict[str, Any]:
+    def _run_command(command: list[str], timeout: float) -> tuple[int, str, str]:
+        completed = run_process(command, timeout=timeout, check=False)
+        return (
+            int(getattr(completed, "returncode", 0)),
+            str(getattr(completed, "stdout", "") or ""),
+            str(getattr(completed, "stderr", "") or ""),
+        )
+
+    def _verify_force_candidate_page(candidate: dict[str, Any]) -> bool:
+        try:
+            page = page_brief_for_port(int(candidate["port"]))
+        except Exception as exc:
+            if log is not None:
+                log(
+                    "LIVE_CAM force_video_id verify probe failed for "
+                    f"{candidate.get('label', candidate['port'])}: {exc}"
+                )
+            return False
+        return bool(page_matches_spec(candidate, page))
+
+    return run_live_cam_payload_selection_runtime(
+        spec,
+        fast_open_script=fast_open_script,
+        run_command=_run_command,
+        verify_force_candidate_page=_verify_force_candidate_page,
         log=log,
     )

@@ -13,6 +13,7 @@ from arouter import (
     format_live_cam_selection_error,
     normalize_live_cam_force_video_id,
     run_live_cam_payload_selection_runtime,
+    run_live_cam_payload_selection_runtime_flow,
     select_live_cam_payload,
     web_watch_retry_video_id,
 )
@@ -391,3 +392,127 @@ def test_run_live_cam_payload_selection_runtime_uses_fast_open_script_and_verifi
     assert len(calls) == 2
     assert calls[0][:2] == ["node", "/tmp/open_tv_channel_live_tile_fast.js"]
     assert len(verify_calls) == 1
+
+
+def test_run_live_cam_payload_selection_runtime_flow_uses_process_and_page_verifier() -> None:
+    calls: list[tuple[list[str], float, bool]] = []
+    brief_calls: list[int] = []
+    match_calls: list[tuple[dict[str, object], dict[str, object]]] = []
+
+    def fake_run_process(
+        command: list[str],
+        *,
+        timeout: float,
+        check: bool,
+    ):
+        calls.append((command, timeout, check))
+        if "--force-video-id" in command:
+            return type(
+                "Completed",
+                (),
+                {
+                    "returncode": 0,
+                    "stdout": '{"ok":true,"videoId":"urE7veQRlrQ","method":"force-video-id"}',
+                    "stderr": "",
+                },
+            )()
+        return type(
+            "Completed",
+            (),
+            {
+                "returncode": 0,
+                "stdout": '{"ok":true,"videoId":"abc123DEF45","method":"direct-id"}',
+                "stderr": "",
+            },
+        )()
+
+    payload = run_live_cam_payload_selection_runtime_flow(
+        {
+            "label": "asakusa",
+            "port": 9996,
+            "force_video_id": "urE7veQRlrQ",
+            "browse_url": "https://example.test/asakusa",
+            "keyword": "浅草・雷門前の様子",
+            "verify_regex": "浅草|雷門|Asakusa",
+        },
+        fast_open_script=FAST_OPEN_SCRIPT,
+        run_process=fake_run_process,
+        page_brief_for_port=lambda port: brief_calls.append(port)
+        or {
+            "url": "https://www.youtube.com/tv?env_enableMediaStreams=true#/",
+            "watchText": "",
+            "bodyText": "あなたへのおすすめ",
+        },
+        page_matches_spec=lambda spec, page: match_calls.append((spec, page)) or False,
+    )
+
+    assert payload["videoId"] == "abc123DEF45"
+    assert calls == [
+        (
+            [
+                "node",
+                "/tmp/open_tv_channel_live_tile_fast.js",
+                "--cdp-port",
+                "9996",
+                "--force-video-id",
+                "urE7veQRlrQ",
+                "--keyword",
+                "浅草・雷門前の様子",
+            ],
+            20.0,
+            False,
+        ),
+        (
+            [
+                "node",
+                "/tmp/open_tv_channel_live_tile_fast.js",
+                "--cdp-port",
+                "9996",
+                "--browse-url",
+                "https://example.test/asakusa",
+                "--keyword",
+                "浅草・雷門前の様子",
+                "--verify-regex",
+                "浅草|雷門|Asakusa",
+            ],
+            45.0,
+            False,
+        ),
+    ]
+    assert brief_calls == [9996]
+    assert len(match_calls) == 1
+
+
+def test_run_live_cam_payload_selection_runtime_flow_logs_verify_probe_failure() -> None:
+    logs: list[str] = []
+
+    payload = run_live_cam_payload_selection_runtime_flow(
+        {
+            "label": "asakusa",
+            "port": 9996,
+            "force_video_id": "urE7veQRlrQ",
+            "browse_url": "https://example.test/asakusa",
+            "keyword": "浅草・雷門前の様子",
+            "verify_regex": "浅草|雷門|Asakusa",
+        },
+        fast_open_script=FAST_OPEN_SCRIPT,
+        run_process=lambda command, *, timeout, check: type(
+            "Completed",
+            (),
+            {
+                "returncode": 0,
+                "stdout": (
+                    '{"ok":true,"videoId":"urE7veQRlrQ","method":"force-video-id"}'
+                    if "--force-video-id" in command
+                    else '{"ok":true,"videoId":"abc123DEF45","method":"direct-id"}'
+                ),
+                "stderr": "",
+            },
+        )(),
+        page_brief_for_port=lambda _port: (_ for _ in ()).throw(RuntimeError("boom")),
+        page_matches_spec=lambda _spec, _page: True,
+        log=logs.append,
+    )
+
+    assert payload["videoId"] == "abc123DEF45"
+    assert any("verify probe failed" in entry for entry in logs)
