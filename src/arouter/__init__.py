@@ -230,6 +230,7 @@ from .live_cam_status import (
 from .load_check import (
     build_load_check_wmctrl_commands,
     find_konsole_rows_for_tmux_client_pids,
+    find_konsole_rows_for_tmux_session_host_runtime,
     is_vacuumtube_quadrant_mode_for_load_check,
     load_check_bottom_left_geom,
     parse_konsole_window_rows,
@@ -243,6 +244,7 @@ from .load_check import (
     run_system_load_check_monitor_open_host_runtime,
     run_tmux_client_pid_query,
     wait_for_new_window_row,
+    wait_for_new_window_row_host_runtime,
 )
 from .models import VoiceCommand
 from .notifier import DesktopNotifier, compose_overlay_notify_text, trim_notify_text
@@ -730,6 +732,7 @@ __all__ = [
     "good_night_voice_text",
     "handle_authorization_denied",
     "find_konsole_rows_for_tmux_client_pids",
+    "find_konsole_rows_for_tmux_session_host_runtime",
     "is_recoverable_vacuumtube_error",
     "is_vacuumtube_quadrant_mode_for_load_check",
     "is_window_fullscreenish",
@@ -875,6 +878,7 @@ __all__ = [
     "vacuumtube_video_playing",
     "wait_for_window_id",
     "wait_for_new_window_row",
+    "wait_for_new_window_row_host_runtime",
     "window_rows_for_pids_from_wmctrl_lines",
     "window_title_from_wmctrl_lines",
     "web_watch_retry_video_id",

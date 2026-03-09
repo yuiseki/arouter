@@ -6,6 +6,7 @@ from unittest import mock
 from arouter import (
     build_load_check_wmctrl_commands,
     find_konsole_rows_for_tmux_client_pids,
+    find_konsole_rows_for_tmux_session_host_runtime,
     is_vacuumtube_quadrant_mode_for_load_check,
     load_check_bottom_left_geom,
     parse_konsole_window_rows,
@@ -19,6 +20,7 @@ from arouter import (
     run_system_load_check_monitor_open_host_runtime,
     run_tmux_client_pid_query,
     wait_for_new_window_row,
+    wait_for_new_window_row_host_runtime,
 )
 
 
@@ -211,6 +213,69 @@ def test_wait_for_new_window_row_returns_none_on_timeout() -> None:
     )
 
     assert row is None
+
+
+def test_find_konsole_rows_for_tmux_session_host_runtime_reads_runtime_methods() -> None:
+    class FakeRuntime:
+        def __init__(self) -> None:
+            self.rows_calls = 0
+            self.tmux_pid_calls: list[str] = []
+            self.parent_pid_calls: list[int] = []
+
+        def _konsole_window_rows(self) -> list[dict[str, int | str]]:
+            self.rows_calls += 1
+            return [
+                {"id": "0x1", "pid": 11, "title": "Konsole"},
+                {"id": "0x2", "pid": 22, "title": "Konsole"},
+            ]
+
+        def _tmux_client_pids_for_session(self, session_name: str) -> list[int]:
+            self.tmux_pid_calls.append(session_name)
+            return [101]
+
+        def _parent_pid(self, pid: int) -> int | None:
+            self.parent_pid_calls.append(pid)
+            return {101: 22, 22: 1}.get(pid)
+
+    runtime = FakeRuntime()
+
+    matched = find_konsole_rows_for_tmux_session_host_runtime(
+        runtime=runtime,
+        session_name="load-check",
+    )
+
+    assert matched == [{"id": "0x2", "pid": 22, "title": "Konsole"}]
+    assert runtime.rows_calls == 1
+    assert runtime.tmux_pid_calls == ["load-check"]
+    assert runtime.parent_pid_calls == [101, 22]
+
+
+def test_wait_for_new_window_row_host_runtime_reads_runtime_rows() -> None:
+    class FakeRuntime:
+        def __init__(self) -> None:
+            self.rows = iter(
+                [
+                    [{"id": "0x1"}],
+                    [{"id": "0x1"}, {"id": "0x2", "title": "Konsole"}],
+                ]
+            )
+
+        def _konsole_window_rows(self) -> list[dict[str, str]]:
+            return next(self.rows)
+
+    runtime = FakeRuntime()
+
+    with (
+        mock.patch("arouter.load_check.time.time", side_effect=[100.0, 100.05, 100.1]),
+        mock.patch("arouter.load_check.time.sleep"),
+    ):
+        row = wait_for_new_window_row_host_runtime(
+            runtime=runtime,
+            before_ids={"0x1"},
+            timeout_sec=1.0,
+        )
+
+    assert row == {"id": "0x2", "title": "Konsole"}
 
 
 def test_prepare_load_check_konsole_placement_rejects_non_quadrant_mode() -> None:

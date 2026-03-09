@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+import time
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any, Protocol
@@ -20,6 +21,7 @@ class VacuumTubeLoadCheckRuntime(Protocol):
     def get_window_geometry(self, win_id: str) -> dict[str, Any] | None: ...
 
     def _current_window_is_fullscreenish(self, win_id: str) -> bool: ...
+
 
 def load_check_bottom_left_geom(*, screen_w: int, screen_h: int) -> dict[str, int]:
     return {
@@ -138,6 +140,18 @@ def find_konsole_rows_for_tmux_client_pids(
     return matched
 
 
+def find_konsole_rows_for_tmux_session_host_runtime(
+    *,
+    runtime: Any,
+    session_name: str,
+) -> list[dict[str, Any]]:
+    return find_konsole_rows_for_tmux_client_pids(
+        runtime._konsole_window_rows(),
+        runtime._tmux_client_pids_for_session(session_name),
+        parent_pid_for_pid=runtime._parent_pid,
+    )
+
+
 def wait_for_new_window_row(
     *,
     row_provider: Callable[[], list[dict[str, Any]]],
@@ -155,6 +169,21 @@ def wait_for_new_window_row(
             return new_rows[-1]
         sleep(poll_interval_sec)
     return None
+
+
+def wait_for_new_window_row_host_runtime(
+    *,
+    runtime: Any,
+    before_ids: set[str],
+    timeout_sec: float,
+) -> dict[str, Any] | None:
+    return wait_for_new_window_row(
+        row_provider=runtime._konsole_window_rows,
+        before_ids=before_ids,
+        timeout_sec=timeout_sec,
+        now=time.time,
+        sleep=time.sleep,
+    )
 
 
 def prepare_load_check_konsole_placement(
