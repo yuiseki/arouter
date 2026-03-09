@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from typing import Any
+from unittest import mock
 
 import pytest
 
@@ -15,6 +16,7 @@ from arouter import (
     merge_vacuumtube_window_snapshot,
     recover_vacuumtube_unresponsive_state,
     restart_vacuumtube_tmux_session,
+    run_vacuumtube_action_with_recovery,
     run_vacuumtube_click_tile_center,
     run_vacuumtube_confirm_watch_playback,
     run_vacuumtube_context_query,
@@ -241,6 +243,46 @@ def test_run_vacuumtube_context_query_falls_back_to_window_lookup_and_xprop_stat
         "videoPaused": None,
         "geom": {"x": 1, "y": 2, "w": 3, "h": 4},
     }
+
+
+def test_run_vacuumtube_action_with_recovery_retries_once_for_recoverable_error() -> None:
+    logs: list[str] = []
+    action = mock.Mock(side_effect=[RuntimeError("Connection timed out"), "recovered"])
+    recover = mock.Mock()
+
+    out = run_vacuumtube_action_with_recovery(
+        action=action,
+        label="music_play",
+        is_recoverable_error=lambda err: "timed out" in str(err),
+        recover=recover,
+        log=logs.append,
+    )
+
+    assert out == "recovered"
+    assert action.call_count == 2
+    recover.assert_called_once_with()
+    assert logs == [
+        (
+            "music_play recoverable VacuumTube error: Connection timed out; "
+            "restarting and retrying once"
+        )
+    ]
+
+
+def test_run_vacuumtube_action_with_recovery_reraises_nonrecoverable_error() -> None:
+    action = mock.Mock(side_effect=RuntimeError("boom"))
+    recover = mock.Mock()
+
+    with pytest.raises(RuntimeError, match="boom"):
+        run_vacuumtube_action_with_recovery(
+            action=action,
+            label="music_play",
+            is_recoverable_error=lambda _err: False,
+            recover=recover,
+            log=lambda _msg: None,
+        )
+
+    recover.assert_not_called()
 
 
 def test_run_vacuumtube_hide_overlay_invokes_evaluate_with_overlay_selector() -> None:

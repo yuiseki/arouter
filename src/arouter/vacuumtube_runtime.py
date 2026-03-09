@@ -238,6 +238,26 @@ def run_vacuumtube_context_query(
     return context
 
 
+def run_vacuumtube_action_with_recovery(
+    *,
+    action: Callable[[], Any],
+    label: str,
+    is_recoverable_error: Callable[[Exception], bool],
+    recover: Callable[[], Any] | None,
+    log: Callable[[str], None],
+) -> str:
+    try:
+        return str(action())
+    except Exception as err:
+        if not is_recoverable_error(err):
+            raise
+        if not callable(recover):
+            raise
+        log(f"{label} recoverable VacuumTube error: {err}; restarting and retrying once")
+        recover()
+        return str(action())
+
+
 def run_vacuumtube_ensure_home(
     *,
     snapshot_state: Callable[[], dict[str, Any]],
