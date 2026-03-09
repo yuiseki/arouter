@@ -3,6 +3,8 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
+from .cdp_targets import require_cdp_target_list, run_cdp_target_list_http_query
+
 
 def select_vacuumtube_page_target(targets: Any) -> dict[str, Any] | None:
     if not isinstance(targets, list):
@@ -42,6 +44,35 @@ def run_vacuumtube_page_target_query(
     if target is None:
         raise RuntimeError("no VacuumTube/YouTube TV page target found in CDP")
     return target
+
+
+def run_vacuumtube_target_list_host_runtime_query(
+    *,
+    runtime: Any,
+    fetch_json: Callable[[str, float], Any],
+    timeout: float = 2.0,
+) -> list[dict[str, Any]]:
+    return run_cdp_target_list_http_query(
+        url=runtime._url("/json/list"),
+        timeout=timeout,
+        fetch_json=fetch_json,
+        validate=require_cdp_target_list,
+        error_message="unexpected /json/list response",
+    )
+
+
+def run_vacuumtube_page_target_host_runtime_query(
+    *,
+    runtime: Any,
+    fetch_json: Callable[[str, float], Any],
+) -> dict[str, Any]:
+    return run_vacuumtube_page_target_query(
+        fetch_targets=lambda: run_vacuumtube_target_list_host_runtime_query(
+            runtime=runtime,
+            fetch_json=fetch_json,
+        ),
+        select_target=select_vacuumtube_page_target,
+    )
 
 
 def run_vacuumtube_cdp_client(
@@ -91,4 +122,21 @@ def run_vacuumtube_page_cdp_runtime(
         select_websocket_url=select_websocket_url,
         create_client=create_client,
         enable_client=lambda client: client.enable_basics(),
+    )
+
+
+def run_vacuumtube_page_cdp_host_runtime(
+    *,
+    runtime: Any,
+    fetch_json: Callable[[str, float], Any],
+    create_client: Callable[[str], Any],
+) -> Any:
+    return run_vacuumtube_page_cdp_runtime(
+        fetch_targets=lambda: run_vacuumtube_target_list_host_runtime_query(
+            runtime=runtime,
+            fetch_json=fetch_json,
+        ),
+        select_target=select_vacuumtube_page_target,
+        select_websocket_url=select_vacuumtube_websocket_url,
+        create_client=create_client,
     )

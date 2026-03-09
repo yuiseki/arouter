@@ -2,6 +2,9 @@ from __future__ import annotations
 
 import concurrent.futures
 import json
+import os
+import subprocess
+import tempfile
 import time
 from collections.abc import Callable
 from pathlib import Path
@@ -108,6 +111,18 @@ def collect_window_ids_for_pids(
         if wid:
             window_ids.append(wid)
     return window_ids
+
+
+def _write_temp_js_script(script_text: str, prefix: str) -> str:
+    with tempfile.NamedTemporaryFile(
+        "w",
+        encoding="utf-8",
+        suffix=".js",
+        prefix=prefix,
+        delete=False,
+    ) as temp_file:
+        temp_file.write(script_text)
+        return temp_file.name
 
 
 def find_missing_live_cam_window_ports(
@@ -367,6 +382,24 @@ def run_live_cam_raise_windows(
         run_command(build_activate_command(wid))
 
 
+def run_live_cam_raise_windows_host_runtime_flow(*, runtime: Any, pids: list[int]) -> None:
+    def _run_command(command: list[str]) -> None:
+        subprocess.run(
+            command,
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            env=runtime._x11_env(),
+        )
+
+    run_live_cam_raise_windows(
+        pids,
+        window_id_lookup=runtime._window_id_for_pid,
+        build_activate_command=lambda wid: ["xdotool", "windowactivate", "--sync", wid],
+        run_command=_run_command,
+    )
+
+
 def run_live_cam_close_windows(
     pids: list[int],
     *,
@@ -382,6 +415,28 @@ def run_live_cam_close_windows(
         run_command(build_close_command(wid))
         closed.append(wid)
     return closed
+
+
+def run_live_cam_close_windows_host_runtime_flow(
+    *,
+    runtime: Any,
+    pids: list[int],
+) -> list[str]:
+    def _run_command(command: list[str]) -> None:
+        subprocess.run(
+            command,
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            env=runtime._x11_env(),
+        )
+
+    return run_live_cam_close_windows(
+        pids,
+        window_id_lookup=runtime._window_id_for_pid,
+        build_close_command=lambda wid: ["wmctrl", "-i", "-c", wid],
+        run_command=_run_command,
+    )
 
 
 def run_live_cam_minimize_windows(
@@ -411,6 +466,68 @@ def run_live_cam_minimize_windows(
         cleanup=cleanup,
     )
     return window_ids
+
+
+def run_live_cam_minimize_windows_host_runtime_flow(
+    *,
+    runtime: Any,
+    pids: list[int],
+) -> list[str]:
+    plugin_name = f"codex_live_cam_minimize_{int(time.time() * 1000) % 1000000}"
+    return run_live_cam_minimize_windows(
+        pids,
+        window_id_lookup=runtime._window_id_for_pid,
+        collect_window_ids=collect_window_ids_for_pids,
+        build_script=lambda current_pids: "\n".join(
+            [
+                "var targetPids = {",
+                *[f"  {int(pid)}: true," for pid in current_pids],
+                "};",
+                "var clients = workspace.clientList();",
+                "for (var i = 0; i < clients.length; ++i) {",
+                "  var c = clients[i];",
+                "  if (!targetPids[c.pid]) continue;",
+                "  try { c.keepAbove = false; } catch (e1) {}",
+                "  try { c.minimized = true; } catch (e2) {}",
+                "}",
+                "",
+            ]
+        ),
+        write_temp_script=_write_temp_js_script,
+        command_plan_builder=lambda path, plugin: {
+            "run": [
+                [
+                    "qdbus",
+                    "org.kde.KWin",
+                    "/Scripting",
+                    "org.kde.kwin.Scripting.loadScript",
+                    path,
+                    plugin,
+                ],
+                [
+                    "qdbus",
+                    "org.kde.KWin",
+                    "/Scripting",
+                    "org.kde.kwin.Scripting.start",
+                ],
+            ],
+            "unload": [
+                "qdbus",
+                "org.kde.KWin",
+                "/Scripting",
+                "org.kde.kwin.Scripting.unloadScript",
+                plugin,
+            ],
+        },
+        run_command=lambda command: runtime._run(
+            command,
+            env=runtime._x11_env(),
+            timeout=8.0,
+        ),
+        sleep=time.sleep,
+        cleanup=os.unlink,
+        plugin_name=plugin_name,
+    )
 
 
 def parse_key_value_stdout(text: str) -> dict[str, str]:
@@ -489,6 +606,19 @@ def run_live_cam_start_script_flow(
         run_command=run_command,
         parse_stdout=parse_key_value_stdout,
         build_result=build_live_cam_started_result,
+    )
+
+
+def run_live_cam_start_script_host_runtime_flow(
+    *,
+    spec: dict[str, Any],
+    runtime: Any,
+) -> dict[str, Any]:
+    return run_live_cam_start_script_flow(
+        spec,
+        start_silent_script=runtime.start_silent_script,
+        display=runtime._resolve_display(),
+        run_command=lambda command: runtime._run(command, timeout=90.0),
     )
 
 

@@ -22,6 +22,7 @@ from arouter import (
     resolve_live_cam_action_state,
     resolve_live_cam_layout_bootstrap,
     run_live_cam_close_windows,
+    run_live_cam_close_windows_host_runtime_flow,
     run_live_cam_existing_windowed_pids_host_runtime_query,
     run_live_cam_existing_windowed_pids_query,
     run_live_cam_hide_flow,
@@ -33,16 +34,19 @@ from arouter import (
     run_live_cam_minimize_flow,
     run_live_cam_minimize_host_runtime_flow,
     run_live_cam_minimize_windows,
+    run_live_cam_minimize_windows_host_runtime_flow,
     run_live_cam_open_flow,
     run_live_cam_open_instances_flow,
     run_live_cam_open_instances_host_runtime_flow,
     run_live_cam_parallel,
     run_live_cam_raise_windows,
+    run_live_cam_raise_windows_host_runtime_flow,
     run_live_cam_reopen_specs_flow,
     run_live_cam_start_flow,
     run_live_cam_start_instances_flow,
     run_live_cam_start_instances_host_runtime_flow,
     run_live_cam_start_script_flow,
+    run_live_cam_start_script_host_runtime_flow,
     run_live_cam_window_action_flow,
     run_minimize_other_windows_flow,
 )
@@ -237,6 +241,37 @@ def test_run_live_cam_start_script_flow_uses_default_build_parse_and_result_help
     }
 
 
+def test_run_live_cam_start_script_host_runtime_flow_reads_runtime_methods() -> None:
+    class FakeRuntime:
+        start_silent_script = Path("/tmp/start_silent_instance.sh")
+
+        def _resolve_display(self) -> str:
+            return ":0"
+
+        def _run(self, command: list[str], *, timeout: float) -> object:
+            assert timeout == 90.0
+            return type("CP", (), {"stdout": f"CMD={' '.join(command)}\nPID=12345\n"})()
+
+    out = run_live_cam_start_script_host_runtime_flow(
+        spec={
+            "session": "vacuumtube-bg-5",
+            "port": 9996,
+            "instance_dir": "/tmp/instance5",
+        },
+        runtime=FakeRuntime(),
+    )
+
+    assert out == {
+        "CMD": (
+            "bash /tmp/start_silent_instance.sh --session vacuumtube-bg-5 --port 9996 "
+            "--sink vacuumtube_silent --display :0 --instance-dir /tmp/instance5"
+        ),
+        "PID": "12345",
+        "port": "9996",
+        "session_name": "vacuumtube-bg-5",
+    }
+
+
 def test_run_live_cam_start_instances_flow_ensures_scripts_and_runs_parallel() -> None:
     events: list[str] = []
     specs = [{"port": 9993}, {"port": 9994}]
@@ -386,6 +421,135 @@ def test_run_live_cam_open_instances_host_runtime_flow_reads_runtime_methods() -
         }
     ]
     assert calls == [{"specs": [{"label": "akihabara", "port": 9994}], "label": "live_cam_open"}]
+
+
+def test_run_live_cam_raise_windows_host_runtime_flow_reads_runtime_methods() -> None:
+    calls: list[object] = []
+
+    class FakeRuntime:
+        def _window_id_for_pid(self, pid: int) -> str | None:
+            return {101: "0x1", 102: None}.get(pid)
+
+        def _x11_env(self) -> dict[str, str]:
+            return {"DISPLAY": ":0"}
+
+    def _run_command(command: list[str], **kwargs: object) -> object:
+        calls.append((command, kwargs))
+        return object()
+
+    with mock.patch("arouter.live_cam_runtime.subprocess.run", side_effect=_run_command):
+        run_live_cam_raise_windows_host_runtime_flow(runtime=FakeRuntime(), pids=[101, 102])
+
+    assert calls == [
+        (
+            ["xdotool", "windowactivate", "--sync", "0x1"],
+            {
+                "check": False,
+                "stdout": mock.ANY,
+                "stderr": mock.ANY,
+                "env": {"DISPLAY": ":0"},
+            },
+        )
+    ]
+
+
+def test_run_live_cam_close_windows_host_runtime_flow_reads_runtime_methods() -> None:
+    calls: list[object] = []
+
+    class FakeRuntime:
+        def _window_id_for_pid(self, pid: int) -> str | None:
+            return {201: "0x10", 202: None, 203: "0x30"}.get(pid)
+
+        def _x11_env(self) -> dict[str, str]:
+            return {"DISPLAY": ":0"}
+
+    def _run_command(command: list[str], **kwargs: object) -> object:
+        calls.append((command, kwargs))
+        return object()
+
+    with mock.patch("arouter.live_cam_runtime.subprocess.run", side_effect=_run_command):
+        closed = run_live_cam_close_windows_host_runtime_flow(
+            runtime=FakeRuntime(),
+            pids=[201, 202, 203],
+        )
+
+    assert closed == ["0x10", "0x30"]
+    assert calls == [
+        (
+            ["wmctrl", "-i", "-c", "0x10"],
+            {
+                "check": False,
+                "stdout": mock.ANY,
+                "stderr": mock.ANY,
+                "env": {"DISPLAY": ":0"},
+            },
+        ),
+        (
+            ["wmctrl", "-i", "-c", "0x30"],
+            {
+                "check": False,
+                "stdout": mock.ANY,
+                "stderr": mock.ANY,
+                "env": {"DISPLAY": ":0"},
+            },
+        ),
+    ]
+
+
+def test_run_live_cam_minimize_windows_host_runtime_flow_reads_runtime_methods() -> None:
+    calls: list[object] = []
+
+    class FakeRuntime:
+        def _window_id_for_pid(self, pid: int) -> str | None:
+            return {101: "0x1", 102: None}.get(pid)
+
+        def _x11_env(self) -> dict[str, str]:
+            return {"DISPLAY": ":0"}
+
+        def _run(self, command: list[str], *, env: dict[str, str], timeout: float) -> object:
+            calls.append(("run", command, env, timeout))
+            return object()
+
+    with mock.patch("arouter.live_cam_runtime.time.time", return_value=0.0):
+        out = run_live_cam_minimize_windows_host_runtime_flow(
+            runtime=FakeRuntime(),
+            pids=[101, 102],
+        )
+
+    assert out == ["0x1"]
+    assert calls == [
+        (
+            "run",
+            [
+                "qdbus",
+                "org.kde.KWin",
+                "/Scripting",
+                "org.kde.kwin.Scripting.loadScript",
+                mock.ANY,
+                "codex_live_cam_minimize_0",
+            ],
+            {"DISPLAY": ":0"},
+            8.0,
+        ),
+        (
+            "run",
+            ["qdbus", "org.kde.KWin", "/Scripting", "org.kde.kwin.Scripting.start"],
+            {"DISPLAY": ":0"},
+            8.0,
+        ),
+        (
+            "run",
+            [
+                "qdbus",
+                "org.kde.KWin",
+                "/Scripting",
+                "org.kde.kwin.Scripting.unloadScript",
+                "codex_live_cam_minimize_0",
+            ],
+            {"DISPLAY": ":0"},
+            8.0,
+        ),
+    ]
 
 
 def test_run_live_cam_reopen_specs_flow_uses_default_reopen_result_builder() -> None:

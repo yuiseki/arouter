@@ -19,11 +19,13 @@ from arouter import (
     run_vacuumtube_action_with_recovery,
     run_vacuumtube_click_tile_center,
     run_vacuumtube_confirm_watch_playback,
+    run_vacuumtube_confirm_watch_playback_host_runtime,
     run_vacuumtube_context_query,
     run_vacuumtube_context_runtime_flow,
     run_vacuumtube_context_runtime_query,
     run_vacuumtube_dom_click_tile,
     run_vacuumtube_ensure_home,
+    run_vacuumtube_ensure_home_host_runtime,
     run_vacuumtube_enumerate_tiles,
     run_vacuumtube_fullscreen,
     run_vacuumtube_fullscreen_host_runtime,
@@ -57,12 +59,15 @@ from arouter import (
     run_vacuumtube_route_to_home,
     run_vacuumtube_select_account_if_needed,
     run_vacuumtube_snapshot_state,
+    run_vacuumtube_snapshot_state_host_runtime,
+    run_vacuumtube_state_host_runtime_query,
     run_vacuumtube_state_query,
     run_vacuumtube_stop_music,
     run_vacuumtube_stop_music_host_runtime,
     run_vacuumtube_stop_music_runtime,
     run_vacuumtube_try_resume_current_video,
     run_vacuumtube_wait_watch_route,
+    run_vacuumtube_wait_watch_route_host_runtime,
     start_vacuumtube_tmux_session,
 )
 
@@ -140,6 +145,16 @@ def test_run_vacuumtube_state_query_returns_empty_dict_for_non_dict_payload() ->
     assert out == {}
 
 
+def test_run_vacuumtube_state_host_runtime_query_reads_cdp_evaluate() -> None:
+    cdp = mock.Mock()
+    cdp.evaluate.return_value = {"hash": "#/watch?v=abc"}
+
+    out = run_vacuumtube_state_host_runtime_query(cdp=cdp)
+
+    assert out == {"hash": "#/watch?v=abc"}
+    cdp.evaluate.assert_called_once()
+
+
 def test_run_vacuumtube_snapshot_state_combines_state_and_tile_samples() -> None:
     out = run_vacuumtube_snapshot_state(
         query_state=lambda: {
@@ -189,6 +204,29 @@ def test_run_vacuumtube_snapshot_state_tolerates_tile_enumeration_errors() -> No
         "tilesCount": 0,
         "tilesSample": [],
     }
+
+
+def test_run_vacuumtube_snapshot_state_host_runtime_reads_runtime_methods() -> None:
+    runtime = mock.Mock()
+    runtime._enumerate_tiles.return_value = [{"title": "Tile A"}]
+    cdp = mock.Mock()
+    cdp.evaluate.return_value = {"hash": "#/watch?v=abc", "title": "VacuumTube"}
+
+    out = run_vacuumtube_snapshot_state_host_runtime(runtime=runtime, cdp=cdp)
+
+    assert out == {
+        "hash": "#/watch?v=abc",
+        "title": "VacuumTube",
+        "accountSelectHint": None,
+        "homeHint": None,
+        "watchUiHint": None,
+        "overlayVisible": None,
+        "video": None,
+        "tilesCount": 1,
+        "tilesSample": ["Tile A"],
+    }
+    runtime._enumerate_tiles.assert_called_once_with(cdp)
+    cdp.evaluate.assert_called_once()
 
 
 def test_run_vacuumtube_context_query_combines_window_and_cdp_state() -> None:
@@ -515,6 +553,26 @@ def test_run_vacuumtube_ensure_home_recovers_from_account_select_after_hard_relo
     assert any(line.startswith("state after ensure_home: ") for line in logs)
 
 
+def test_run_vacuumtube_ensure_home_host_runtime_reads_runtime_methods() -> None:
+    runtime = mock.Mock()
+    runtime._is_home_browse_state.return_value = True
+    runtime._needs_hard_reload_home.return_value = False
+    runtime._snapshot_state.return_value = {"hash": "#/"}
+    runtime.log = mock.Mock()
+    cdp = object()
+
+    out = run_vacuumtube_ensure_home_host_runtime(
+        runtime=runtime,
+        cdp=cdp,
+        timeout_sec=5.0,
+    )
+
+    assert out == {"hash": "#/"}
+    runtime._snapshot_state.assert_called_once_with(cdp)
+    runtime._is_home_browse_state.assert_called_once_with({"hash": "#/"})
+    runtime.log.assert_called()
+
+
 def test_run_vacuumtube_try_resume_current_video_returns_ok_flag() -> None:
     out = run_vacuumtube_try_resume_current_video(
         evaluate_async=lambda expr: {
@@ -568,6 +626,20 @@ def test_run_vacuumtube_wait_watch_route_tolerates_state_errors_until_timeout() 
 
     assert out is False
     assert sleeps == [0.2, 0.2]
+
+
+def test_run_vacuumtube_wait_watch_route_host_runtime_reads_runtime_methods() -> None:
+    runtime = mock.Mock()
+    runtime._state.return_value = {"hash": "#/watch?v=abc"}
+
+    out = run_vacuumtube_wait_watch_route_host_runtime(
+        runtime=runtime,
+        cdp=object(),
+        timeout_sec=5.0,
+    )
+
+    assert out is True
+    runtime._state.assert_called_once()
 
 
 def test_run_vacuumtube_route_to_home_invokes_hash_assignment() -> None:
@@ -928,6 +1000,30 @@ def test_run_vacuumtube_confirm_watch_playback_soft_confirms_unpaused_video() ->
             ensure_ascii=False,
         )
     ]
+
+
+def test_run_vacuumtube_confirm_watch_playback_host_runtime_reads_runtime_methods() -> None:
+    runtime = mock.Mock()
+    runtime.log = mock.Mock()
+    runtime._snapshot_state.return_value = {"hash": "#/watch?v=abc", "video": {"paused": False}}
+    runtime._is_watch_state.return_value = True
+    runtime._try_resume_current_video.return_value = True
+    cdp = object()
+
+    out = run_vacuumtube_confirm_watch_playback_host_runtime(
+        runtime=runtime,
+        cdp=cdp,
+        playback_confirmed=lambda _first, _current: True,
+        timeout_sec=4.0,
+        allow_resume_attempts=False,
+        allow_soft_confirm_when_unpaused=True,
+    )
+
+    assert out == {"hash": "#/watch?v=abc", "video": {"paused": False}}
+    runtime._snapshot_state.assert_called_once_with(cdp)
+    runtime._is_watch_state.assert_called_once_with(
+        {"hash": "#/watch?v=abc", "video": {"paused": False}}
+    )
 
 
 def test_finalize_vacuumtube_context_marks_available_from_window_or_hash() -> None:

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import socket
+import time
 from collections.abc import Callable
 from contextlib import nullcontext
 from typing import Any
@@ -126,6 +127,10 @@ def run_vacuumtube_state_query(
     return data if isinstance(data, dict) else {}
 
 
+def run_vacuumtube_state_host_runtime_query(*, cdp: Any) -> dict[str, Any]:
+    return run_vacuumtube_state_query(evaluate=lambda expr: cdp.evaluate(expr))
+
+
 def run_vacuumtube_hide_overlay(
     *,
     evaluate: Callable[[str], Any],
@@ -171,6 +176,17 @@ def run_vacuumtube_snapshot_state(
         "tilesCount": len(tiles),
         "tilesSample": sample_titles,
     }
+
+
+def run_vacuumtube_snapshot_state_host_runtime(
+    *,
+    runtime: Any,
+    cdp: Any,
+) -> dict[str, Any]:
+    return run_vacuumtube_snapshot_state(
+        query_state=lambda: run_vacuumtube_state_host_runtime_query(cdp=cdp),
+        enumerate_tiles=lambda: runtime._enumerate_tiles(cdp),
+    )
 
 
 def run_vacuumtube_context_query(
@@ -412,6 +428,27 @@ def run_vacuumtube_ensure_home(
     )
 
 
+def run_vacuumtube_ensure_home_host_runtime(
+    *,
+    runtime: Any,
+    cdp: Any,
+    timeout_sec: float = 8.0,
+) -> dict[str, Any]:
+    log = runtime.log if callable(getattr(runtime, "log", None)) else (lambda _message: None)
+    return run_vacuumtube_ensure_home(
+        snapshot_state=lambda: runtime._snapshot_state(cdp),
+        is_home_browse_state=runtime._is_home_browse_state,
+        route_to_home=lambda: runtime._route_to_home(cdp),
+        hard_reload_home=lambda: runtime._hard_reload_home(cdp),
+        select_account_if_needed=runtime._select_account_if_needed,
+        needs_hard_reload_home=runtime._needs_hard_reload_home,
+        log=log,
+        now=time.time,
+        sleep=time.sleep,
+        timeout_sec=timeout_sec,
+    )
+
+
 def run_vacuumtube_try_resume_current_video(
     *,
     evaluate_async: Callable[[str], Any],
@@ -455,6 +492,20 @@ def run_vacuumtube_wait_watch_route(
             return True
         sleep(0.2)
     return False
+
+
+def run_vacuumtube_wait_watch_route_host_runtime(
+    *,
+    runtime: Any,
+    cdp: Any,
+    timeout_sec: float = 8.0,
+) -> bool:
+    return run_vacuumtube_wait_watch_route(
+        get_state=lambda: runtime._state(cdp),
+        now=time.time,
+        sleep=time.sleep,
+        timeout_sec=timeout_sec,
+    )
 
 
 def run_vacuumtube_route_to_home(
@@ -823,6 +874,30 @@ def run_vacuumtube_confirm_watch_playback(
     raise RuntimeError(
         "watch route reached but playback not confirmed: "
         + json.dumps(last_snapshot or {}, ensure_ascii=False)
+    )
+
+
+def run_vacuumtube_confirm_watch_playback_host_runtime(
+    *,
+    runtime: Any,
+    cdp: Any,
+    playback_confirmed: Callable[[dict[str, Any], dict[str, Any]], bool],
+    timeout_sec: float = 8.0,
+    allow_resume_attempts: bool = True,
+    allow_soft_confirm_when_unpaused: bool = False,
+) -> dict[str, Any]:
+    log = runtime.log if callable(getattr(runtime, "log", None)) else (lambda _message: None)
+    return run_vacuumtube_confirm_watch_playback(
+        snapshot_state=lambda: runtime._snapshot_state(cdp),
+        is_watch_state=runtime._is_watch_state,
+        playback_confirmed=playback_confirmed,
+        try_resume_current_video=lambda: runtime._try_resume_current_video(cdp),
+        log=log,
+        now=time.time,
+        sleep=time.sleep,
+        timeout_sec=timeout_sec,
+        allow_resume_attempts=allow_resume_attempts,
+        allow_soft_confirm_when_unpaused=allow_soft_confirm_when_unpaused,
     )
 
 
