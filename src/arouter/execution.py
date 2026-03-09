@@ -3,8 +3,10 @@ from __future__ import annotations
 from collections.abc import Callable, Mapping
 from typing import Any, Protocol
 
+from .desktop_runtime import run_arrange_script
 from .models import VoiceCommand
 from .parser import normalize_transcript
+from .system_modes import run_system_normal_mode, run_system_webcam_mode
 
 
 class VacuumTubeRuntime(Protocol):
@@ -202,6 +204,50 @@ def run_system_street_camera_mode_host_runtime(
     show_live_camera: Callable[[], str],
 ) -> str:
     return show_live_camera()
+
+
+def run_system_webcam_mode_host_runtime(*, runtime: Any) -> str:
+    runtime._live_cam_last_layout = "hide"
+    return run_system_webcam_mode(
+        minimize_live_camera=runtime.live_cam_wall.minimize,
+        god_mode_layout=runtime.god_mode_layout,
+    )
+
+
+def run_system_normal_mode_host_runtime(*, runtime: Any) -> str:
+    return run_system_normal_mode(
+        god_mode_layout=runtime.god_mode_layout,
+        show_live_camera_compact=runtime.live_cam_wall.show_compact,
+        minimize_other_windows=runtime._minimize_other_windows,
+    )
+
+
+def run_system_world_situation_mode_host_runtime(
+    *,
+    script_path: str,
+    path_exists: Callable[[str], bool],
+    run_command: Callable[[list[str]], Any],
+) -> str:
+    return run_arrange_script(
+        script_path=script_path,
+        label="world situation mode",
+        path_exists=path_exists,
+        run_command=run_command,
+    )
+
+
+def run_system_weather_mode_host_runtime(
+    *,
+    script_path: str,
+    path_exists: Callable[[str], bool],
+    run_command: Callable[[list[str]], Any],
+) -> str:
+    return run_arrange_script(
+        script_path=script_path,
+        label="weather mode",
+        path_exists=path_exists,
+        run_command=run_command,
+    )
 
 
 def run_god_mode_layout_host_runtime(

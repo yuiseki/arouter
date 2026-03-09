@@ -15,8 +15,12 @@ from arouter.execution import (
     run_system_live_camera_compact_host_runtime,
     run_system_live_camera_hide_host_runtime,
     run_system_live_camera_show_host_runtime,
+    run_system_normal_mode_host_runtime,
     run_system_status_report_host_runtime,
     run_system_street_camera_mode_host_runtime,
+    run_system_weather_mode_host_runtime,
+    run_system_webcam_mode_host_runtime,
+    run_system_world_situation_mode_host_runtime,
 )
 
 
@@ -405,6 +409,67 @@ def test_run_system_street_camera_mode_host_runtime_reuses_show_helper() -> None
 
     assert out == "show ok"
     assert called == ["show"]
+
+
+def test_run_system_webcam_mode_host_runtime_tracks_layout_and_reuses_system_mode_helper() -> None:
+    runtime = SimpleNamespace(
+        _live_cam_last_layout=None,
+        live_cam_wall=SimpleNamespace(minimize=mock.Mock(return_value="street minimized")),
+        god_mode_layout=mock.Mock(return_value="webcam ok"),
+    )
+
+    out = run_system_webcam_mode_host_runtime(runtime=runtime)
+
+    assert out == "street minimized; webcam ok"
+    assert runtime._live_cam_last_layout == "hide"
+    runtime.live_cam_wall.minimize.assert_called_once_with()
+    runtime.god_mode_layout.assert_called_once_with("frontmost")
+
+
+def test_run_system_normal_mode_host_runtime_reuses_system_mode_helper() -> None:
+    runtime = SimpleNamespace(
+        god_mode_layout=mock.Mock(side_effect=["ignored", "backmost ok"]),
+        live_cam_wall=SimpleNamespace(show_compact=mock.Mock(return_value="compact ok")),
+        _minimize_other_windows=mock.Mock(return_value="minimized ok"),
+    )
+
+    out = run_system_normal_mode_host_runtime(runtime=runtime)
+
+    assert out == "backmost ok; compact ok; minimized ok"
+    assert runtime.god_mode_layout.call_args_list == [
+        mock.call("full-screen"),
+        mock.call("backmost"),
+    ]
+    runtime.live_cam_wall.show_compact.assert_called_once_with()
+    runtime._minimize_other_windows.assert_called_once_with()
+
+
+def test_run_system_world_situation_mode_host_runtime_uses_arrange_script() -> None:
+    run_command = mock.Mock(
+        return_value=SimpleNamespace(returncode=0, stdout="world ok\n", stderr="")
+    )
+
+    out = run_system_world_situation_mode_host_runtime(
+        script_path="/tmp/world.sh",
+        path_exists=lambda _path: True,
+        run_command=run_command,
+    )
+
+    assert out == "world ok"
+    run_command.assert_called_once_with(["bash", "/tmp/world.sh"])
+
+
+def test_run_system_weather_mode_host_runtime_uses_arrange_script() -> None:
+    run_command = mock.Mock(return_value=SimpleNamespace(returncode=0, stdout="", stderr=""))
+
+    out = run_system_weather_mode_host_runtime(
+        script_path="/tmp/weather.sh",
+        path_exists=lambda _path: True,
+        run_command=run_command,
+    )
+
+    assert out == "weather mode arranged"
+    run_command.assert_called_once_with(["bash", "/tmp/weather.sh"])
 
 
 def test_run_god_mode_layout_host_runtime_tracks_layout_state() -> None:

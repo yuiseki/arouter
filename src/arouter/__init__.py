@@ -85,9 +85,13 @@ from .execution import (
     run_system_live_camera_compact_host_runtime,
     run_system_live_camera_hide_host_runtime,
     run_system_live_camera_show_host_runtime,
+    run_system_normal_mode_host_runtime,
     run_system_status_report,
     run_system_status_report_host_runtime,
     run_system_street_camera_mode_host_runtime,
+    run_system_weather_mode_host_runtime,
+    run_system_webcam_mode_host_runtime,
+    run_system_world_situation_mode_host_runtime,
 )
 from .flow import run_authorized_command_flow
 from .kwin_runtime import (
@@ -757,7 +761,11 @@ __all__ = [
     "looks_like_weather_chromium_title",
     "select_weather_candidate_window_ids",
     "run_system_normal_mode",
+    "run_system_normal_mode_host_runtime",
     "run_system_webcam_mode",
+    "run_system_webcam_mode_host_runtime",
+    "run_system_world_situation_mode_host_runtime",
+    "run_system_weather_mode_host_runtime",
     "should_ack_before_action",
     "should_wait_ack_before_action",
     "suppress_transcribed_command_reason",
