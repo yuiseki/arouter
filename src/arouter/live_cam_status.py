@@ -70,6 +70,31 @@ def collect_live_cam_runtime_state(
     }
 
 
+def run_live_cam_runtime_state_cdp_runtime(
+    specs: list[dict[str, Any]],
+    *,
+    rows: list[dict[str, Any]],
+    fetch_targets: Callable[[int], Any],
+    validate_target_list: Callable[[Any, str], Any] | None,
+) -> dict[str, Any]:
+    def _validated_targets(port: int) -> Any:
+        payload = fetch_targets(int(port))
+        if validate_target_list is None:
+            if not isinstance(payload, list):
+                raise RuntimeError(f"unexpected CDP target list on port {int(port)}")
+            return payload
+        return validate_target_list(
+            payload,
+            f"unexpected CDP target list on port {int(port)}",
+        )
+
+    return collect_live_cam_runtime_state(
+        specs,
+        rows=rows,
+        fetch_targets=_validated_targets,
+    )
+
+
 def collect_live_cam_pages_by_port(
     specs: list[dict[str, Any]],
     *,

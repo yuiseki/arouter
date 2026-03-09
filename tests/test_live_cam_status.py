@@ -13,6 +13,7 @@ from arouter import (
     run_live_cam_page_brief_flow,
     run_live_cam_page_snapshot_query,
     run_live_cam_page_snapshot_via_websocket,
+    run_live_cam_runtime_state_cdp_runtime,
     run_live_cam_target_inspection,
     run_live_cam_target_snapshot_cdp_runtime,
     run_live_cam_target_snapshot_runtime,
@@ -96,6 +97,32 @@ def test_collect_live_cam_runtime_state_combines_windows_and_urls() -> None:
         "urls": [
             {"port": 9993, "url": "https://www.youtube.com/tv#/watch?v=abc123DEF45"},
             {"port": 9994, "error": "connection refused"},
+        ],
+    }
+
+
+def test_run_live_cam_runtime_state_cdp_runtime_validates_target_lists() -> None:
+    specs = [{"port": 9993}, {"port": 9994}]
+    rows = [{"id": "0x1", "pid": 101}]
+
+    out = run_live_cam_runtime_state_cdp_runtime(
+        specs,
+        rows=rows,
+        fetch_targets=lambda port: (
+            [{"type": "page", "url": "https://www.youtube.com/tv#/watch?v=abc123DEF45"}]
+            if port == 9993
+            else {"unexpected": True}
+        ),
+        validate_target_list=lambda payload, message: (
+            payload if isinstance(payload, list) else (_ for _ in ()).throw(RuntimeError(message))
+        ),
+    )
+
+    assert out == {
+        "windows": [{"id": "0x1", "pid": 101}],
+        "urls": [
+            {"port": 9993, "url": "https://www.youtube.com/tv#/watch?v=abc123DEF45"},
+            {"port": 9994, "error": "unexpected CDP target list on port 9994"},
         ],
     }
 
