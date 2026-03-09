@@ -1,14 +1,19 @@
 from __future__ import annotations
 
+import subprocess
+
 import pytest
 
 from arouter import (
     launch_chromium_new_window,
     read_active_window_id,
+    run_active_window_id_host_runtime_query,
     run_active_window_id_query,
     run_arrange_script,
     run_arrange_script_host_runtime,
     run_kwin_shortcut,
+    run_kwin_shortcut_host_runtime,
+    run_launch_chromium_new_window_host_runtime,
     run_tmp_main_layout,
     run_tmp_main_layout_host_runtime,
     run_tmux_has_session_host_runtime,
@@ -79,6 +84,34 @@ def test_run_active_window_id_query_uses_parser() -> None:
     )
 
 
+def test_run_active_window_id_host_runtime_query_uses_runtime_env() -> None:
+    runtime = type("_Runtime", (), {"_x11_env": lambda self: {"DISPLAY": ":0"}})()
+
+    with pytest.MonkeyPatch.context() as mp:
+        calls: list[tuple[list[str], dict[str, object]]] = []
+
+        def _run(command: list[str], **kwargs: object) -> _CompletedProcess:
+            calls.append((command, kwargs))
+            return _CompletedProcess(returncode=0, stdout="123\n")
+
+        mp.setattr("subprocess.run", _run)
+
+        out = run_active_window_id_host_runtime_query(runtime=runtime)
+
+    assert out == "0x7b"
+    assert calls == [
+        (
+            ["xdotool", "getactivewindow"],
+            {
+                "env": {"DISPLAY": ":0"},
+                "check": False,
+                "text": True,
+                "capture_output": True,
+            },
+        )
+    ]
+
+
 def test_run_tmux_has_session_query_checks_returncode() -> None:
     commands: list[list[str]] = []
 
@@ -129,6 +162,75 @@ def test_run_kwin_shortcut_builds_and_runs_command() -> None:
     )
 
     assert commands == [["qdbus", "org.kde.kglobalaccel", "Window Quick Tile Top Right"]]
+
+
+def test_run_kwin_shortcut_host_runtime_uses_runtime_env() -> None:
+    runtime = type("_Runtime", (), {"_x11_env": lambda self: {"DISPLAY": ":0"}})()
+
+    with pytest.MonkeyPatch.context() as mp:
+        calls: list[tuple[list[str], dict[str, object]]] = []
+
+        def _run(command: list[str], **kwargs: object) -> _CompletedProcess:
+            calls.append((command, kwargs))
+            return _CompletedProcess(returncode=0)
+
+        mp.setattr("subprocess.run", _run)
+
+        run_kwin_shortcut_host_runtime(
+            runtime=runtime,
+            shortcut_name="Window Quick Tile Top Right",
+        )
+
+    assert calls == [
+        (
+            [
+                "qdbus",
+                "org.kde.kglobalaccel",
+                "/component/kwin",
+                "org.kde.kglobalaccel.Component.invokeShortcut",
+                "Window Quick Tile Top Right",
+                "default",
+            ],
+            {
+                "env": {"DISPLAY": ":0"},
+                "check": False,
+                "stdout": subprocess.DEVNULL,
+                "stderr": subprocess.DEVNULL,
+            },
+        )
+    ]
+
+
+def test_run_launch_chromium_new_window_host_runtime_uses_runtime_env() -> None:
+    runtime = type("_Runtime", (), {"_x11_env": lambda self: {"DISPLAY": ":0"}})()
+
+    with pytest.MonkeyPatch.context() as mp:
+        calls: list[tuple[list[str], dict[str, object]]] = []
+
+        mp.setattr("shutil.which", lambda name: "/usr/bin/chromium" if name == "chromium" else None)
+
+        def _popen(command: list[str], **kwargs: object) -> object:
+            calls.append((command, kwargs))
+            return object()
+
+        mp.setattr("subprocess.Popen", _popen)
+
+        run_launch_chromium_new_window_host_runtime(
+            runtime=runtime,
+            url="https://example.com",
+        )
+
+    assert calls == [
+        (
+            ["/usr/bin/chromium", "--new-window", "https://example.com"],
+            {
+                "env": {"DISPLAY": ":0"},
+                "stdout": subprocess.DEVNULL,
+                "stderr": subprocess.DEVNULL,
+                "start_new_session": True,
+            },
+        )
+    ]
 
 
 class _CompletedProcess:

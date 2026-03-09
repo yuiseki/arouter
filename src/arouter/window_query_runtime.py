@@ -215,3 +215,22 @@ def read_window_fullscreen_state(
     run_command: Callable[[list[str]], str],
 ) -> bool:
     return "_NET_WM_STATE_FULLSCREEN" in (run_command(build_command(win_id)) or "")
+
+
+def read_window_fullscreen_state_host_runtime(
+    *,
+    runtime: Any,
+    win_id: str,
+) -> bool:
+    return read_window_fullscreen_state(
+        win_id=win_id,
+        build_command=build_xprop_wm_state_command,
+        run_command=lambda command: subprocess.run(
+            command,
+            check=False,
+            text=True,
+            capture_output=True,
+            env=runtime._x11_env(),
+        ).stdout
+        or "",
+    )

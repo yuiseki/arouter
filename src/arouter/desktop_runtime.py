@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import shutil
 import subprocess
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from .kwin_scripts import build_kwin_invoke_shortcut_command
 from .tmux_commands import build_tmux_has_session_command
 
 
@@ -41,6 +43,20 @@ def run_active_window_id_query(
     return parse_output(read_output=read_output)
 
 
+def run_active_window_id_host_runtime_query(*, runtime: Any) -> str | None:
+    return run_active_window_id_query(
+        read_output=lambda: subprocess.run(
+            ["xdotool", "getactivewindow"],
+            env=runtime._x11_env(),
+            check=False,
+            text=True,
+            capture_output=True,
+        ).stdout
+        or "",
+        parse_output=read_active_window_id,
+    )
+
+
 def run_tmux_has_session_query(
     *,
     session_name: str,
@@ -71,6 +87,38 @@ def run_kwin_shortcut(
     run_command: Callable[[list[str]], Any],
 ) -> None:
     run_command(build_command(shortcut_name))
+
+
+def run_kwin_shortcut_host_runtime(
+    *,
+    runtime: Any,
+    shortcut_name: str,
+) -> None:
+    run_kwin_shortcut(
+        shortcut_name=shortcut_name,
+        build_command=build_kwin_invoke_shortcut_command,
+        run_command=lambda command: subprocess.run(
+            command,
+            env=runtime._x11_env(),
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        ),
+    )
+
+
+def run_launch_chromium_new_window_host_runtime(*, runtime: Any, url: str) -> None:
+    launch_chromium_new_window(
+        url=url,
+        find_binary=shutil.which,
+        run_process=lambda command: subprocess.Popen(
+            command,
+            env=runtime._x11_env(),
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
+        ),
+    )
 
 
 def run_arrange_script(

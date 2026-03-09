@@ -5,6 +5,7 @@ import pytest
 from arouter import (
     build_xprop_wm_state_command,
     read_window_fullscreen_state,
+    read_window_fullscreen_state_host_runtime,
     run_desktop_size_host_runtime_query,
     run_desktop_size_query,
     run_screen_size_host_runtime_query,
@@ -390,3 +391,37 @@ def test_read_window_fullscreen_state_returns_false_without_token() -> None:
     )
 
     assert out is False
+
+
+def test_read_window_fullscreen_state_host_runtime_uses_runtime_env() -> None:
+    runtime = type("_Runtime", (), {"_x11_env": lambda self: {"DISPLAY": ":0"}})()
+
+    with pytest.MonkeyPatch.context() as mp:
+        calls: list[tuple[list[str], dict[str, object]]] = []
+
+        class _CP:
+            stdout = "_NET_WM_STATE(ATOM) = _NET_WM_STATE_FULLSCREEN\n"
+
+        def _run(command: list[str], **kwargs: object) -> _CP:
+            calls.append((command, kwargs))
+            return _CP()
+
+        mp.setattr("subprocess.run", _run)
+
+        out = read_window_fullscreen_state_host_runtime(
+            runtime=runtime,
+            win_id="0x123",
+        )
+
+    assert out is True
+    assert calls == [
+        (
+            ["xprop", "-id", "0x123", "_NET_WM_STATE"],
+            {
+                "check": False,
+                "text": True,
+                "capture_output": True,
+                "env": {"DISPLAY": ":0"},
+            },
+        )
+    ]
