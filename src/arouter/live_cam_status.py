@@ -4,6 +4,8 @@ import re
 from collections.abc import Callable
 from typing import Any
 
+from .cdp_targets import require_cdp_target_list, run_cdp_target_list_http_query
+
 
 def select_live_cam_page_url(targets: Any) -> str | None:
     if not isinstance(targets, list):
@@ -92,6 +94,27 @@ def run_live_cam_runtime_state_cdp_runtime(
         specs,
         rows=rows,
         fetch_targets=_validated_targets,
+    )
+
+
+def run_live_cam_runtime_state_http_query(
+    specs: list[dict[str, Any]],
+    *,
+    rows: list[dict[str, Any]],
+    fetch_json: Callable[..., Any],
+    timeout: float = 2.0,
+) -> dict[str, Any]:
+    return run_live_cam_runtime_state_cdp_runtime(
+        specs,
+        rows=rows,
+        fetch_targets=lambda port: run_cdp_target_list_http_query(
+            url=f"http://127.0.0.1:{int(port)}/json",
+            timeout=timeout,
+            fetch_json=fetch_json,
+            validate=require_cdp_target_list,
+            error_message=f"unexpected CDP target list on port {int(port)}",
+        ),
+        validate_target_list=None,
     )
 
 
@@ -280,6 +303,32 @@ def run_live_cam_page_brief_cdp_runtime(
             query_snapshot=query_snapshot,
         ),
         merge_snapshot=merge_snapshot,
+    )
+
+
+def run_live_cam_page_brief_http_query(
+    *,
+    port: int,
+    fetch_json: Callable[..., Any],
+    create_client: Callable[[str], Any],
+    query_snapshot: Callable[[Any], dict[str, Any] | None] | None = None,
+    timeout: float = 2.0,
+) -> dict[str, Any]:
+    return run_live_cam_page_brief_cdp_runtime(
+        port=port,
+        fetch_targets=lambda current_port: run_cdp_target_list_http_query(
+            url=f"http://127.0.0.1:{int(current_port)}/json",
+            timeout=timeout,
+            fetch_json=fetch_json,
+            validate=require_cdp_target_list,
+            error_message=f"unexpected CDP target list on port {int(current_port)}",
+        ),
+        validate_target_list=None,
+        select_target=select_live_cam_page_target,
+        build_brief=build_live_cam_page_brief,
+        create_client=create_client,
+        query_snapshot=query_snapshot,
+        merge_snapshot=merge_live_cam_page_snapshot,
     )
 
 

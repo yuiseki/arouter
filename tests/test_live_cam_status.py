@@ -11,9 +11,11 @@ from arouter import (
     page_matches_live_camera_spec,
     run_live_cam_page_brief_cdp_runtime,
     run_live_cam_page_brief_flow,
+    run_live_cam_page_brief_http_query,
     run_live_cam_page_snapshot_query,
     run_live_cam_page_snapshot_via_websocket,
     run_live_cam_runtime_state_cdp_runtime,
+    run_live_cam_runtime_state_http_query,
     run_live_cam_stuck_specs_query,
     run_live_cam_target_inspection,
     run_live_cam_target_snapshot_cdp_runtime,
@@ -126,6 +128,35 @@ def test_run_live_cam_runtime_state_cdp_runtime_validates_target_lists() -> None
             {"port": 9994, "error": "unexpected CDP target list on port 9994"},
         ],
     }
+
+
+def test_run_live_cam_runtime_state_http_query_uses_http_target_query() -> None:
+    calls: list[tuple[str, float]] = []
+    specs = [{"port": 9993}, {"port": 9994}]
+
+    def fetch_json(url: str, timeout: float) -> object:
+        calls.append((url, float(timeout)))
+        if url.endswith(":9993/json"):
+            return [{"type": "page", "url": "https://www.youtube.com/tv#/watch?v=abc123DEF45"}]
+        raise OSError("connection refused")
+
+    out = run_live_cam_runtime_state_http_query(
+        specs,
+        rows=[{"id": "0x1", "pid": 101}],
+        fetch_json=fetch_json,
+    )
+
+    assert out == {
+        "windows": [{"id": "0x1", "pid": 101}],
+        "urls": [
+            {"port": 9993, "url": "https://www.youtube.com/tv#/watch?v=abc123DEF45"},
+            {"port": 9994, "error": "connection refused"},
+        ],
+    }
+    assert calls == [
+        ("http://127.0.0.1:9993/json", 2.0),
+        ("http://127.0.0.1:9994/json", 2.0),
+    ]
 
 
 def test_build_live_cam_page_brief_extracts_title_and_url() -> None:
@@ -456,6 +487,50 @@ def test_run_live_cam_page_brief_cdp_runtime_defaults_snapshot_query_to_evaluate
         "title": "Shibuya",
         "watchText": "watch:ws://127.0.0.1:9993/devtools/page/1",
     }
+    assert events == [
+        ("enable", "ws://127.0.0.1:9993/devtools/page/1"),
+        ("evaluate", True),
+    ]
+
+
+def test_run_live_cam_page_brief_http_query_uses_http_target_query_and_client_factory() -> None:
+    events: list[object] = []
+
+    class FakeClient:
+        def __init__(self, ws_url: str) -> None:
+            self.ws_url = ws_url
+
+        def enable_basics(self) -> None:
+            events.append(("enable", self.ws_url))
+
+        def evaluate(self, expr: str) -> dict[str, str]:
+            events.append(("evaluate", "ytlr-watch-metadata" in expr))
+            return {"watchText": f"watch:{self.ws_url}"}
+
+    fetch_calls: list[tuple[str, float]] = []
+
+    out = run_live_cam_page_brief_http_query(
+        port=9993,
+        fetch_json=lambda url, timeout: (
+            fetch_calls.append((url, float(timeout)))
+            or [
+                {
+                    "type": "page",
+                    "url": "https://www.youtube.com/tv#/watch?v=abc9993",
+                    "title": "Shibuya",
+                    "webSocketDebuggerUrl": "ws://127.0.0.1:9993/devtools/page/1",
+                }
+            ]
+        ),
+        create_client=lambda ws_url: FakeClient(ws_url),
+    )
+
+    assert out == {
+        "url": "https://www.youtube.com/tv#/watch?v=abc9993",
+        "title": "Shibuya",
+        "watchText": "watch:ws://127.0.0.1:9993/devtools/page/1",
+    }
+    assert fetch_calls == [("http://127.0.0.1:9993/json", 2.0)]
     assert events == [
         ("enable", "ws://127.0.0.1:9993/devtools/page/1"),
         ("evaluate", True),
