@@ -716,3 +716,59 @@ def run_live_cam_layout_controller_flow(
         raise_windows_for_pids=raise_windows_for_pids,
         collect_runtime_state=collect_runtime_state,
     )
+
+
+def run_live_cam_layout_runtime_flow(
+    *,
+    mode: str,
+    instances: list[dict[str, Any]],
+    resolve_existing_windowed_pids: Callable[[], dict[int, int] | None],
+    find_stuck_specs: Callable[[], list[dict[str, Any]]],
+    assign_live_camera: Callable[[dict[str, Any]], dict[str, Any]],
+    parallel_runner: Callable[..., list[dict[str, Any]]],
+    ensure_scripts_present: Callable[[], None],
+    ensure_instances_started: Callable[[], list[dict[str, Any]]],
+    ensure_targets_opened: Callable[[], list[dict[str, Any]]],
+    pid_lookup: Callable[[int], int | None],
+    detect_screen_size: Callable[[], tuple[int, int]],
+    detect_work_area: Callable[[], tuple[int, int, int, int] | None],
+    build_targets_full: Callable[..., list[dict[str, Any]]],
+    build_targets_compact: Callable[..., list[dict[str, Any]]],
+    kwin_apply_layout: Callable[..., None],
+    raise_windows_for_pids: Callable[[list[int]], None],
+    collect_runtime_state: Callable[[dict[int, int]], dict[str, Any]],
+    log: Callable[[str], None] | None = None,
+) -> str:
+    bootstrap = resolve_live_cam_layout_bootstrap(
+        mode=mode,
+        instances=instances,
+        resolve_existing_windowed_pids=resolve_existing_windowed_pids,
+        find_stuck_specs=find_stuck_specs,
+        reopen_specs=lambda stuck_specs: run_live_cam_reopen_specs_flow(
+            stuck_specs,
+            assign_live_camera=assign_live_camera,
+            parallel_runner=parallel_runner,
+        ),
+        ensure_scripts_present=ensure_scripts_present,
+        ensure_instances_started=ensure_instances_started,
+        ensure_targets_opened=ensure_targets_opened,
+        pid_lookup=pid_lookup,
+        log=log,
+    )
+    screen_w, screen_h = detect_screen_size()
+    return run_live_cam_layout_controller_flow(
+        mode=mode,
+        screen_w=screen_w,
+        screen_h=screen_h,
+        work_area=detect_work_area(),
+        pids_by_port=dict(bootstrap["pids_by_port"]),
+        fast_path=bool(bootstrap["fast_path"]),
+        started=list(bootstrap["started"]),
+        opened=list(bootstrap["opened"]),
+        open_errors=list(bootstrap["open_errors"]),
+        build_targets_full=build_targets_full,
+        build_targets_compact=build_targets_compact,
+        kwin_apply_layout=kwin_apply_layout,
+        raise_windows_for_pids=raise_windows_for_pids,
+        collect_runtime_state=collect_runtime_state,
+    )

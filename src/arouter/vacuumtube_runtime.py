@@ -250,8 +250,8 @@ def run_vacuumtube_context_runtime_query(
     run_xprop_query: Callable[[list[str]], str],
     quadrant_mode_enabled: Callable[[], bool],
     cdp_ready: Callable[[], bool],
-    open_cdp: Callable[[], Any],
-    read_state: Callable[[Any], dict[str, Any] | None],
+    open_cdp: Callable[[], Any] | None,
+    read_state: Callable[[Any], dict[str, Any] | None] | None,
 ) -> dict[str, Any]:
     return run_vacuumtube_context_query(
         ts=ts,
@@ -272,10 +272,55 @@ def run_vacuumtube_context_runtime_query(
     )
 
 
+def run_vacuumtube_context_runtime_flow(
+    *,
+    ts: float,
+    runtime: Any,
+    find_window_row_by_cdp_port: Callable[[int], dict[str, Any] | None],
+    quadrant_mode_enabled: Callable[[], bool],
+    run_command: Callable[..., Any],
+) -> dict[str, Any]:
+    env_getter = getattr(runtime, "_x11_env", None)
+    return run_vacuumtube_context_runtime_query(
+        ts=ts,
+        cdp_port=getattr(runtime, "cdp_port", None),
+        find_window_row_by_cdp_port=find_window_row_by_cdp_port,
+        find_window_id=lambda: (
+            runtime.find_window_id()
+            if callable(getattr(runtime, "find_window_id", None))
+            else ""
+        ),
+        get_window_geometry=lambda win_id: (
+            runtime.get_window_geometry(win_id)
+            if win_id and callable(getattr(runtime, "get_window_geometry", None))
+            else None
+        ),
+        current_window_is_fullscreenish=lambda win_id: (
+            bool(runtime._current_window_is_fullscreenish(win_id))
+            if callable(getattr(runtime, "_current_window_is_fullscreenish", None))
+            else False
+        ),
+        run_xprop_query=lambda command: str(
+            run_command(
+                command,
+                check=False,
+                env=env_getter() if callable(env_getter) else None,
+            ).stdout
+            or ""
+        ),
+        quadrant_mode_enabled=quadrant_mode_enabled,
+        cdp_ready=lambda: bool(
+            callable(getattr(runtime, "cdp_ready", None)) and runtime.cdp_ready()
+        ),
+        open_cdp=getattr(runtime, "_cdp", None),
+        read_state=getattr(runtime, "_state", None),
+    )
+
+
 def _run_vacuumtube_cdp_state_query(
     *,
-    open_cdp: Callable[[], Any],
-    read_state: Callable[[Any], dict[str, Any] | None],
+    open_cdp: Callable[[], Any] | None,
+    read_state: Callable[[Any], dict[str, Any] | None] | None,
 ) -> dict[str, Any] | None:
     if not callable(open_cdp) or not callable(read_state):
         return None

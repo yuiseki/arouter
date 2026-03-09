@@ -25,6 +25,7 @@ from arouter import (
     run_live_cam_hide_flow,
     run_live_cam_layout_controller_flow,
     run_live_cam_layout_flow,
+    run_live_cam_layout_runtime_flow,
     run_live_cam_minimize_flow,
     run_live_cam_minimize_windows,
     run_live_cam_open_flow,
@@ -779,6 +780,58 @@ def test_run_live_cam_layout_controller_flow_uses_layout_plan_helper() -> None:
     )
 
     assert events == [
+        ("apply", "codex_live_cam_wall_compact", False, True, 101),
+    ]
+    assert result == (
+        'live camera wall {"mode": "compact", "fastPath": true, '
+        '"screen": {"w": 4096, "h": 2160}, '
+        '"workArea": {"x": 0, "y": 0, "w": 4096, "h": 2116}, '
+        '"started": [], "opened": [], "windows": [{"pid": 101}], "urls": []}'
+    )
+
+
+def test_run_live_cam_layout_runtime_flow_uses_bootstrap_and_controller_helpers() -> None:
+    events: list[object] = []
+
+    def _compact_targets(**kwargs: object) -> list[dict[str, int]]:
+        pids_by_port = kwargs["pids_by_port"]
+        assert isinstance(pids_by_port, dict)
+        return [{"pid": int(pids_by_port[9993]), "x": 1, "y": 2, "w": 3, "h": 4}]
+
+    result = run_live_cam_layout_runtime_flow(
+        mode="compact",
+        instances=[{"label": "shibuya", "port": 9993}],
+        resolve_existing_windowed_pids=lambda: {9993: 101},
+        find_stuck_specs=lambda: [],
+        assign_live_camera=_unexpected_callback("assign_live_camera unused"),
+        parallel_runner=_unexpected_callback("parallel_runner unused"),
+        ensure_scripts_present=_unexpected_callback("ensure_scripts_present unused"),
+        ensure_instances_started=_unexpected_callback("ensure_instances_started unused"),
+        ensure_targets_opened=_unexpected_callback("ensure_targets_opened unused"),
+        pid_lookup=lambda port: 101 if port == 9993 else None,
+        detect_screen_size=lambda: (4096, 2160),
+        detect_work_area=lambda: (0, 0, 4096, 2116),
+        build_targets_full=_unexpected_callback("full target builder unused"),
+        build_targets_compact=_compact_targets,
+        kwin_apply_layout=lambda **kwargs: events.append(
+            (
+                "apply",
+                kwargs["plugin_name"],
+                kwargs["keep_above"],
+                kwargs["no_border"],
+                kwargs["targets"][0]["pid"],
+            )
+        ),
+        raise_windows_for_pids=lambda pids: events.append(("raise", pids)),
+        collect_runtime_state=lambda pids_by_port: {
+            "windows": [{"pid": pids_by_port[9993]}],
+            "urls": [],
+        },
+        log=lambda message: events.append(("log", message)),
+    )
+
+    assert events == [
+        ("log", "LIVE_CAM compact fast-path: reusing existing windows and applying layout only"),
         ("apply", "codex_live_cam_wall_compact", False, True, 101),
     ]
     assert result == (

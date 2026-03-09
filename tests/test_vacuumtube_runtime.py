@@ -20,6 +20,7 @@ from arouter import (
     run_vacuumtube_click_tile_center,
     run_vacuumtube_confirm_watch_playback,
     run_vacuumtube_context_query,
+    run_vacuumtube_context_runtime_flow,
     run_vacuumtube_context_runtime_query,
     run_vacuumtube_dom_click_tile,
     run_vacuumtube_ensure_home,
@@ -305,6 +306,75 @@ def test_run_vacuumtube_context_runtime_query_wires_fullscreen_and_cdp_helpers()
         ("state", "cdp"),
         "exit",
     ]
+
+
+def test_run_vacuumtube_context_runtime_flow_reads_runtime_methods() -> None:
+    events: list[object] = []
+
+    class FakeContext:
+        def __enter__(self) -> str:
+            events.append("enter")
+            return "cdp"
+
+        def __exit__(self, exc_type, exc, tb) -> None:
+            events.append("exit")
+            return None
+
+    runtime = mock.Mock()
+    runtime.cdp_port = 9992
+    runtime.find_window_id.return_value = "0x999"
+    runtime.get_window_geometry.return_value = {"x": 0, "y": 0, "w": 1, "h": 1}
+    runtime._current_window_is_fullscreenish.return_value = False
+    runtime._x11_env.return_value = {"DISPLAY": ":1"}
+    runtime.cdp_ready.return_value = True
+    runtime._cdp.return_value = FakeContext()
+    runtime._state.return_value = {"hash": "#/watch?v=abc"}
+
+    def _run_command(command: list[str], **kwargs: Any) -> mock.Mock:
+        events.append(("cmd", command, kwargs))
+        return mock.Mock(stdout="_NET_WM_STATE_FULLSCREEN")
+
+    out = run_vacuumtube_context_runtime_flow(
+        ts=3.0,
+        runtime=runtime,
+        find_window_row_by_cdp_port=lambda port: {
+            "id": "0x123",
+            "x": "10",
+            "y": 20,
+            "w": "300",
+            "h": 400,
+        }
+        if port == 9992
+        else None,
+        quadrant_mode_enabled=lambda: True,
+        run_command=_run_command,
+    )
+
+    assert events == [
+        (
+            "cmd",
+            ["xprop", "-id", "0x123", "_NET_WM_STATE"],
+            {"check": False, "env": {"DISPLAY": ":1"}},
+        ),
+        "enter",
+        "exit",
+    ]
+    assert out == {
+        "ts": 3.0,
+        "available": True,
+        "windowFound": True,
+        "fullscreenish": True,
+        "quadrantish": True,
+        "watchRoute": True,
+        "homeRoute": False,
+        "videoPlaying": False,
+        "videoPaused": None,
+        "geom": {"x": 10, "y": 20, "w": 300, "h": 400},
+        "hash": "#/watch?v=abc",
+        "accountSelectHint": False,
+        "homeHint": False,
+        "watchUiHint": False,
+    }
 
 
 def test_run_vacuumtube_action_with_recovery_retries_once_for_recoverable_error() -> None:
