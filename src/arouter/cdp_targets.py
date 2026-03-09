@@ -17,3 +17,18 @@ def run_cdp_target_list_query(
     error_message: str,
 ) -> list[dict[str, Any]]:
     return validate(fetch_json(), error_message)
+
+
+def run_cdp_target_list_http_query(
+    *,
+    url: str,
+    timeout: float,
+    fetch_json: Callable[..., Any],
+    validate: Callable[[Any, str], list[dict[str, Any]]],
+    error_message: str,
+) -> list[dict[str, Any]]:
+    try:
+        payload = fetch_json(url, timeout)
+    except TypeError:
+        payload = fetch_json(url)
+    return validate(payload, error_message)

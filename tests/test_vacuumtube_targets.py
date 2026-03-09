@@ -3,6 +3,8 @@ from __future__ import annotations
 import pytest
 
 from arouter import (
+    require_cdp_target_list,
+    run_cdp_target_list_http_query,
     run_vacuumtube_cdp_client,
     run_vacuumtube_page_cdp_client,
     run_vacuumtube_page_cdp_runtime,
@@ -73,6 +75,21 @@ def test_run_vacuumtube_page_target_query_raises_without_target() -> None:
             fetch_targets=lambda: [],
             select_target=select_vacuumtube_page_target,
         )
+
+
+def test_run_cdp_target_list_http_query_uses_url_timeout_and_validation() -> None:
+    events: list[object] = []
+
+    out = run_cdp_target_list_http_query(
+        url="http://127.0.0.1:9992/json/list",
+        timeout=2.5,
+        fetch_json=lambda url, timeout: events.append((url, timeout)) or [{"type": "page"}],
+        validate=require_cdp_target_list,
+        error_message="unexpected /json/list response",
+    )
+
+    assert out == [{"type": "page"}]
+    assert events == [("http://127.0.0.1:9992/json/list", 2.5)]
 
 
 def test_run_vacuumtube_cdp_client_selects_websocket_and_enables_client() -> None:
