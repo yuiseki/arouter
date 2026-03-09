@@ -1,13 +1,17 @@
 from __future__ import annotations
 
+from unittest import mock
+
 from arouter import (
     run_kwin_temp_script,
+    run_live_cam_layout_host_runtime,
     run_live_cam_layout_runtime,
     run_live_cam_layout_script,
     run_live_cam_minimize_runtime,
     run_live_cam_minimize_script,
     run_minimize_other_windows_runtime,
     run_minimize_other_windows_script,
+    run_window_frame_geometry_host_runtime,
     run_window_frame_geometry_runtime,
     run_window_frame_geometry_script,
 )
@@ -141,6 +145,40 @@ def test_run_live_cam_layout_runtime_builds_script_and_runs_kwin_temp_script() -
     ]
 
 
+def test_run_live_cam_layout_host_runtime_uses_runtime_runner() -> None:
+    events: list[object] = []
+
+    class Runtime:
+        @staticmethod
+        def _x11_env() -> dict[str, str]:
+            return {"DISPLAY": ":1"}
+
+        @staticmethod
+        def _run(command: list[str], **kwargs: object) -> None:
+            events.append((command, kwargs))
+
+    runtime = Runtime()
+
+    run_live_cam_layout_host_runtime(
+        [{"pid": 123, "x": 1, "y": 2, "w": 3, "h": 4}],
+        runtime=runtime,
+        plugin_name="plugin-name",
+        keep_above=False,
+        no_border=True,
+        build_script=lambda targets, *, keep_above, no_border: "SCRIPT",
+        command_plan_builder=lambda path, plugin: {
+            "run": [["qdbus", "load", path, plugin], ["qdbus", "start"]],
+            "unload": ["qdbus", "unload", plugin],
+        },
+    )
+
+    assert len(events) == 3
+    assert events[0][0][0] == "qdbus"
+    assert events[0][1]["env"] == {"DISPLAY": ":1"}
+    assert events[1][0] == ["qdbus", "start"]
+    assert events[2][0] == ["qdbus", "unload", "plugin-name"]
+
+
 def test_run_window_frame_geometry_script_builds_script_and_uses_kwin_runner() -> None:
     events: list[object] = []
 
@@ -198,6 +236,35 @@ def test_run_window_frame_geometry_runtime_builds_script_and_runs_kwin_temp_scri
         ("run", ["qdbus", "unload", "plugin-name"]),
         ("cleanup", "/tmp/demo.js"),
     ]
+
+
+def test_run_window_frame_geometry_host_runtime_uses_runtime_env() -> None:
+    runtime = type(
+        "Runtime",
+        (),
+        {"_x11_env": staticmethod(lambda: {"DISPLAY": ":1"})},
+    )()
+    events: list[object] = []
+
+    with mock.patch("arouter.kwin_runtime.subprocess.run") as run_command:
+        run_command.side_effect = lambda command, **kwargs: events.append((command, kwargs))
+        run_window_frame_geometry_host_runtime(
+            runtime=runtime,
+            pid=123,
+            geom={"x": 1, "y": 2, "w": 3, "h": 4},
+            no_border=False,
+            plugin_name="plugin-name",
+            build_script=lambda *, pid, geom, no_border: "SCRIPT",
+            command_plan_builder=lambda path, plugin: {
+                "run": [["qdbus", "load", path, plugin], ["qdbus", "start"]],
+                "unload": ["qdbus", "unload", plugin],
+            },
+        )
+
+    assert len(events) == 3
+    assert events[0][1]["env"] == {"DISPLAY": ":1"}
+    assert events[1][0] == ["qdbus", "start"]
+    assert events[2][0] == ["qdbus", "unload", "plugin-name"]
 
 
 def test_run_live_cam_minimize_script_builds_script_and_uses_kwin_runner() -> None:

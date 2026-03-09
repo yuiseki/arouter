@@ -1,12 +1,28 @@
 from __future__ import annotations
 
+import os
+import subprocess
+import tempfile
+import time
 from collections.abc import Callable
-from typing import TypedDict
+from typing import Any, TypedDict
 
 
 class KWinScriptCommandPlan(TypedDict):
     run: list[list[str]]
     unload: list[str]
+
+
+def _write_temp_js_script(script_text: str, prefix: str) -> str:
+    with tempfile.NamedTemporaryFile(
+        "w",
+        encoding="utf-8",
+        suffix=".js",
+        prefix=prefix,
+        delete=False,
+    ) as temp_file:
+        temp_file.write(script_text)
+        return temp_file.name
 
 
 def run_kwin_temp_script(
@@ -89,6 +105,37 @@ def run_live_cam_layout_runtime(
     )
 
 
+def run_live_cam_layout_host_runtime(
+    targets: list[dict[str, object]],
+    *,
+    runtime: Any,
+    plugin_name: str,
+    keep_above: bool,
+    no_border: bool,
+    build_script: Callable[..., str],
+    command_plan_builder: Callable[[str, str], KWinScriptCommandPlan],
+) -> None:
+    def _run_command(command: list[str]) -> None:
+        runtime._run(
+            command,
+            env=runtime._x11_env(),
+            timeout=8.0,
+        )
+
+    run_live_cam_layout_runtime(
+        targets,
+        plugin_name=plugin_name,
+        keep_above=keep_above,
+        no_border=no_border,
+        build_script=build_script,
+        write_temp_script=_write_temp_js_script,
+        command_plan_builder=command_plan_builder,
+        run_command=_run_command,
+        sleep=time.sleep,
+        cleanup=os.unlink,
+    )
+
+
 def run_window_frame_geometry_script(
     *,
     pid: int,
@@ -137,6 +184,41 @@ def run_window_frame_geometry_runtime(
         sleep=sleep,
         sleep_sec=0.5,
         cleanup=cleanup,
+    )
+
+
+def run_window_frame_geometry_host_runtime(
+    *,
+    runtime: Any,
+    pid: int,
+    geom: dict[str, int],
+    no_border: bool,
+    plugin_name: str,
+    build_script: Callable[..., str],
+    command_plan_builder: Callable[[str, str], KWinScriptCommandPlan],
+) -> None:
+    env = runtime._x11_env()
+
+    def _run_command(command: list[str]) -> None:
+        subprocess.run(
+            command,
+            env=env,
+            check=False,
+            text=True,
+            capture_output=True,
+        )
+
+    run_window_frame_geometry_runtime(
+        pid=pid,
+        geom=geom,
+        no_border=no_border,
+        plugin_name=plugin_name,
+        build_script=build_script,
+        write_temp_script=_write_temp_js_script,
+        command_plan_builder=command_plan_builder,
+        run_command=_run_command,
+        sleep=time.sleep,
+        cleanup=os.unlink,
     )
 
 
