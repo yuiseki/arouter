@@ -154,6 +154,10 @@ def run_vacuumtube_hide_overlay(
     evaluate(expr)
 
 
+def run_vacuumtube_hide_overlay_host_runtime(*, cdp: Any) -> None:
+    run_vacuumtube_hide_overlay(evaluate=lambda expr: cdp.evaluate(expr))
+
+
 def run_vacuumtube_snapshot_state(
     *,
     query_state: Callable[[], dict[str, Any]],

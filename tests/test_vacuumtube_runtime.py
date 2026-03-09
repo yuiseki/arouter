@@ -45,6 +45,7 @@ from arouter import (
     run_vacuumtube_hard_reload_home,
     run_vacuumtube_hard_reload_home_host_runtime,
     run_vacuumtube_hide_overlay,
+    run_vacuumtube_hide_overlay_host_runtime,
     run_vacuumtube_minimize,
     run_vacuumtube_minimize_host_runtime,
     run_vacuumtube_open_from_home,
@@ -490,6 +491,16 @@ def test_run_vacuumtube_hide_overlay_invokes_evaluate_with_overlay_selector() ->
 
     assert len(seen) == 1
     assert "vt-settings-overlay-root" in seen[0]
+
+
+def test_run_vacuumtube_hide_overlay_host_runtime_uses_cdp_evaluate() -> None:
+    cdp = mock.Mock()
+
+    run_vacuumtube_hide_overlay_host_runtime(cdp=cdp)
+
+    cdp.evaluate.assert_called_once()
+    expr = cdp.evaluate.call_args.args[0]
+    assert "vt-settings-overlay-root" in expr
 
 
 def test_run_vacuumtube_ensure_home_recovers_from_account_select_after_hard_reload() -> None:
