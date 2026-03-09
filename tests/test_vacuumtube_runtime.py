@@ -32,6 +32,7 @@ from arouter import (
     run_vacuumtube_good_night_pause,
     run_vacuumtube_good_night_pause_cdp_runtime_flow,
     run_vacuumtube_good_night_pause_flow,
+    run_vacuumtube_good_night_pause_host_runtime,
     run_vacuumtube_good_night_pause_runtime,
     run_vacuumtube_good_night_pause_runtime_flow,
     run_vacuumtube_hard_reload_home,
@@ -55,6 +56,7 @@ from arouter import (
     run_vacuumtube_snapshot_state,
     run_vacuumtube_state_query,
     run_vacuumtube_stop_music,
+    run_vacuumtube_stop_music_host_runtime,
     run_vacuumtube_stop_music_runtime,
     run_vacuumtube_try_resume_current_video,
     run_vacuumtube_wait_watch_route,
@@ -756,6 +758,56 @@ def test_run_vacuumtube_good_night_pause_cdp_runtime_flow_uses_default_pause_que
         "snapshot:cdp",
         "evaluate:True",
         "exit",
+    ]
+
+
+def test_run_vacuumtube_good_night_pause_host_runtime_uses_runtime_methods() -> None:
+    class FakeContext:
+        def __enter__(self) -> str:
+            return "cdp"
+
+        def __exit__(self, exc_type, exc, tb) -> None:
+            return None
+
+    class FakeCdp:
+        def __init__(self, events: list[str]) -> None:
+            self._events = events
+
+        def evaluate(self, expr: str) -> dict[str, object]:
+            self._events.append(f"evaluate:{'video' in expr}")
+            return {"ok": True, "afterPaused": True, "hash": "#/watch?v=abc"}
+
+    class FakeRuntime:
+        def __init__(self) -> None:
+            self.events: list[str] = []
+
+        def find_window_id(self) -> str | None:
+            self.events.append("find_window")
+            return "0x123"
+
+        def _cdp(self) -> FakeContext:
+            return FakeContext()
+
+        def _snapshot_state(self, cdp: str) -> dict[str, object]:
+            self.events.append(f"snapshot:{cdp}")
+            return {"hash": "#/watch?v=abc"}
+
+    runtime = FakeRuntime()
+
+    out = run_vacuumtube_good_night_pause_host_runtime(
+        runtime=runtime,
+        cdp_getter=lambda _cdp: FakeCdp(runtime.events),
+    )
+
+    assert out == (
+        'good_night pause '
+        '{"ok": true, "afterPaused": true, "hash": "#/watch?v=abc", '
+        '"stateHash": "#/watch?v=abc"}'
+    )
+    assert runtime.events == [
+        "find_window",
+        "snapshot:cdp",
+        "evaluate:True",
     ]
 
 
@@ -1996,6 +2048,69 @@ def test_run_vacuumtube_stop_music_runtime_opens_cdp_and_reuses_stop_flow() -> N
 
     assert result == "sent Space toggle to VacuumTube (0x123); pause confirmed"
     assert events[:2] == ["space", "ensure_top_right"]
+
+
+def test_run_vacuumtube_stop_music_host_runtime_uses_runtime_methods() -> None:
+    class FakeContext:
+        def __enter__(self) -> str:
+            return "cdp"
+
+        def __exit__(self, exc_type, exc, tb) -> None:
+            return None
+
+    class FakeRuntime:
+        def __init__(self) -> None:
+            self.events: list[str] = []
+            self._states = iter(
+                [
+                    {"hash": "#/watch?v=abc", "video": {"paused": False}},
+                    {"hash": "#/watch?v=abc", "video": {"paused": True}},
+                ]
+            )
+
+        def _cdp(self) -> FakeContext:
+            return FakeContext()
+
+        def find_window_id(self) -> str | None:
+            self.events.append("find_window")
+            return "0x123"
+
+        def _snapshot_state(self, cdp: str) -> dict[str, object]:
+            self.events.append(f"snapshot:{cdp}")
+            return next(self._states)
+
+        def _is_watch_state(self, state: dict[str, object]) -> bool:
+            self.events.append(f"is_watch:{state.get('hash')}")
+            return str(state.get("hash", "")).startswith("#/watch")
+
+        def send_key(self, key: str) -> None:
+            self.events.append(f"key:{key}")
+
+        def ensure_top_right_position(self) -> dict[str, object]:
+            self.events.append("ensure_top_right")
+            return {"ok": True, "window_id": "0x123"}
+
+        def log(self, message: str) -> None:
+            self.events.append(message)
+
+    runtime = FakeRuntime()
+
+    result = run_vacuumtube_stop_music_host_runtime(
+        runtime=runtime,
+        time_now=iter([100.0, 100.1]).__next__,
+        sleep=lambda seconds: runtime.events.append(f"sleep:{seconds}"),
+    )
+
+    assert result == "sent Space toggle to VacuumTube (0x123); pause confirmed"
+    assert runtime.events[:6] == [
+        "find_window",
+        "snapshot:cdp",
+        "is_watch:#/watch?v=abc",
+        "key:space",
+        "snapshot:cdp",
+        "is_watch:#/watch?v=abc",
+    ]
+    assert "ensure_top_right" in runtime.events
 
 
 def test_run_vacuumtube_play_news_opens_with_expected_label() -> None:

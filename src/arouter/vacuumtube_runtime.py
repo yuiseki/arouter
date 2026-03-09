@@ -726,6 +726,19 @@ def run_vacuumtube_good_night_pause_cdp_runtime_flow(
     )
 
 
+def run_vacuumtube_good_night_pause_host_runtime(
+    *,
+    runtime: Any,
+    cdp_getter: Callable[[Any], Any],
+) -> str:
+    return run_vacuumtube_good_night_pause_cdp_runtime_flow(
+        find_window_id=runtime.find_window_id,
+        open_cdp=runtime._cdp,
+        snapshot_state=runtime._snapshot_state,
+        cdp_getter=cdp_getter,
+    )
+
+
 def run_vacuumtube_select_account_if_needed(
     *,
     snapshot_state: Callable[[], dict[str, Any]],
@@ -1509,6 +1522,26 @@ def run_vacuumtube_stop_music_runtime(
             ensure_top_right_position=ensure_top_right_position,
             log=log,
         )
+
+
+def run_vacuumtube_stop_music_host_runtime(
+    *,
+    runtime: Any,
+    time_now: Callable[[], float],
+    sleep: Callable[[float], None],
+) -> str:
+    log = runtime.log if hasattr(runtime, "log") else None
+    return run_vacuumtube_stop_music_runtime(
+        open_cdp=runtime._cdp,
+        find_window_id=runtime.find_window_id,
+        snapshot_state=runtime._snapshot_state,
+        is_watch_state=runtime._is_watch_state,
+        send_space_key=lambda: runtime.send_key("space"),
+        time_now=time_now,
+        sleep=sleep,
+        ensure_top_right_position=runtime.ensure_top_right_position,
+        log=log if callable(log) else (lambda _message: None),
+    )
 
 
 def run_vacuumtube_play_news(
