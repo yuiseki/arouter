@@ -388,6 +388,48 @@ def test_run_live_cam_page_brief_cdp_runtime_uses_cdp_snapshot_runtime() -> None
     assert events == [("enable", "ws://127.0.0.1:9993/devtools/page/1")]
 
 
+def test_run_live_cam_page_brief_cdp_runtime_defaults_snapshot_query_to_evaluate() -> None:
+    events: list[object] = []
+
+    class FakeClient:
+        def __init__(self, ws_url: str) -> None:
+            self.ws_url = ws_url
+
+        def enable_basics(self) -> None:
+            events.append(("enable", self.ws_url))
+
+        def evaluate(self, expr: str) -> dict[str, str]:
+            events.append(("evaluate", "ytlr-watch-metadata" in expr))
+            return {"watchText": f"watch:{self.ws_url}"}
+
+    out = run_live_cam_page_brief_cdp_runtime(
+        port=9993,
+        fetch_targets=lambda port: [
+            {
+                "type": "page",
+                "url": f"https://www.youtube.com/tv#/watch?v=abc{port}",
+                "title": "Shibuya",
+                "webSocketDebuggerUrl": "ws://127.0.0.1:9993/devtools/page/1",
+            }
+        ],
+        validate_target_list=None,
+        select_target=select_live_cam_page_target,
+        build_brief=build_live_cam_page_brief,
+        create_client=lambda ws_url: FakeClient(ws_url),
+        merge_snapshot=merge_live_cam_page_snapshot,
+    )
+
+    assert out == {
+        "url": "https://www.youtube.com/tv#/watch?v=abc9993",
+        "title": "Shibuya",
+        "watchText": "watch:ws://127.0.0.1:9993/devtools/page/1",
+    }
+    assert events == [
+        ("enable", "ws://127.0.0.1:9993/devtools/page/1"),
+        ("evaluate", True),
+    ]
+
+
 def test_run_live_cam_target_inspection_uses_websocket_url() -> None:
     out = run_live_cam_target_inspection(
         target={"webSocketDebuggerUrl": "ws://127.0.0.1:9993/devtools/page/1"},

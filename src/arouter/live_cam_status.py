@@ -214,13 +214,18 @@ def run_live_cam_target_snapshot_cdp_runtime(
     *,
     target: dict[str, Any],
     create_client: Callable[[str], Any],
-    query_snapshot: Callable[[Any], dict[str, Any] | None],
+    query_snapshot: Callable[[Any], dict[str, Any] | None] | None = None,
 ) -> dict[str, Any] | None:
+    snapshot_query = query_snapshot or (
+        lambda client: run_live_cam_page_snapshot_query(
+            evaluate=lambda expr: client.evaluate(expr),
+        )
+    )
     return run_live_cam_target_snapshot_runtime(
         target=target,
         create_client=create_client,
         enable_client=lambda client: client.enable_basics(),
-        query_snapshot=query_snapshot,
+        query_snapshot=snapshot_query,
     )
 
 
@@ -260,7 +265,7 @@ def run_live_cam_page_brief_cdp_runtime(
     select_target: Callable[[Any], dict[str, Any] | None],
     build_brief: Callable[[dict[str, Any]], dict[str, Any]],
     create_client: Callable[[str], Any],
-    query_snapshot: Callable[[Any], dict[str, Any] | None],
+    query_snapshot: Callable[[Any], dict[str, Any] | None] | None = None,
     merge_snapshot: Callable[..., dict[str, Any]],
 ) -> dict[str, Any]:
     return run_live_cam_page_brief_flow(
