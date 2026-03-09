@@ -185,6 +185,20 @@ def run_live_cam_target_snapshot_runtime(
     )
 
 
+def run_live_cam_target_snapshot_cdp_runtime(
+    *,
+    target: dict[str, Any],
+    create_client: Callable[[str], Any],
+    query_snapshot: Callable[[Any], dict[str, Any] | None],
+) -> dict[str, Any] | None:
+    return run_live_cam_target_snapshot_runtime(
+        target=target,
+        create_client=create_client,
+        enable_client=lambda client: client.enable_basics(),
+        query_snapshot=query_snapshot,
+    )
+
+
 def run_live_cam_page_brief_flow(
     *,
     port: int,

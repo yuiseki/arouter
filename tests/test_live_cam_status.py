@@ -13,6 +13,7 @@ from arouter import (
     run_live_cam_page_snapshot_query,
     run_live_cam_page_snapshot_via_websocket,
     run_live_cam_target_inspection,
+    run_live_cam_target_snapshot_cdp_runtime,
     run_live_cam_target_snapshot_runtime,
     select_live_cam_page_target,
     select_live_cam_page_url,
@@ -351,3 +352,27 @@ def test_run_live_cam_target_snapshot_runtime_chains_websocket_snapshot() -> Non
 
     assert out == {"watchText": "ws://127.0.0.1:9993/devtools/page/1"}
     assert events == ["enable:ws://127.0.0.1:9993/devtools/page/1"]
+
+
+def test_run_live_cam_target_snapshot_cdp_runtime_enables_basics() -> None:
+    events: list[object] = []
+
+    class FakeClient:
+        def __init__(self, ws_url: str) -> None:
+            events.append(("create", ws_url))
+            self.ws_url = ws_url
+
+        def enable_basics(self) -> None:
+            events.append(("enable", self.ws_url))
+
+    out = run_live_cam_target_snapshot_cdp_runtime(
+        target={"webSocketDebuggerUrl": "ws://127.0.0.1:9993/devtools/page/1"},
+        create_client=FakeClient,
+        query_snapshot=lambda client: {"watchText": client.ws_url},
+    )
+
+    assert out == {"watchText": "ws://127.0.0.1:9993/devtools/page/1"}
+    assert events == [
+        ("create", "ws://127.0.0.1:9993/devtools/page/1"),
+        ("enable", "ws://127.0.0.1:9993/devtools/page/1"),
+    ]
