@@ -120,6 +120,7 @@ from .live_cam_selection import (
     expand_live_cam_candidates,
     format_live_cam_selection_error,
     normalize_live_cam_force_video_id,
+    run_live_cam_payload_selection_runtime,
     select_live_cam_payload,
     web_watch_retry_video_id,
 )
@@ -456,6 +457,7 @@ __all__ = [
     "collect_live_cam_runtime_state",
     "expand_live_cam_candidates",
     "format_live_cam_selection_error",
+    "run_live_cam_payload_selection_runtime",
     "select_live_cam_payload",
     "collect_live_cam_runtime_urls",
     "build_live_cam_runtime_url_entry",

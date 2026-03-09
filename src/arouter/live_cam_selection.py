@@ -254,3 +254,78 @@ def select_live_cam_payload(
         )
 
     raise RuntimeError(format_selection_error(int(spec["port"]), failures))
+
+
+def run_live_cam_payload_selection_runtime(
+    spec: dict[str, Any],
+    *,
+    fast_open_script: str | Path,
+    run_command: LiveCamCommandRunner,
+    verify_force_candidate_page: LiveCamPageVerifier,
+    log: LiveCamLogger | None = None,
+) -> dict[str, Any]:
+    def _build_force_video_command(
+        candidate: dict[str, Any],
+        force_video_id: str,
+    ) -> list[str]:
+        return build_live_cam_force_video_command(
+            fast_open_script,
+            candidate,
+            force_video_id=force_video_id,
+        )
+
+    def _build_browse_command(candidate: dict[str, Any]) -> list[str]:
+        return build_live_cam_browse_command(
+            fast_open_script,
+            candidate,
+        )
+
+    def _build_json_failure(
+        candidate: dict[str, Any],
+        returncode: int,
+        error: str,
+    ) -> dict[str, Any]:
+        return build_live_cam_json_parse_failure(
+            candidate,
+            returncode=returncode,
+            error=error,
+        )
+
+    def _build_force_retry_failure(
+        candidate: dict[str, Any],
+        video_id: str,
+    ) -> dict[str, Any]:
+        return build_live_cam_force_retry_failure(
+            candidate,
+            video_id=video_id,
+        )
+
+    def _build_command_failure(
+        candidate: dict[str, Any],
+        returncode: int,
+        payload: dict[str, Any] | None,
+        stderr: str,
+    ) -> dict[str, Any]:
+        return build_live_cam_command_failure(
+            candidate,
+            returncode=returncode,
+            payload=payload,
+            stderr=stderr,
+        )
+
+    return select_live_cam_payload(
+        spec,
+        expand_candidates=expand_live_cam_candidates,
+        normalize_force_video_id=normalize_live_cam_force_video_id,
+        build_force_video_command=_build_force_video_command,
+        build_browse_command=_build_browse_command,
+        build_json_parse_failure=_build_json_failure,
+        build_force_retry_failure=_build_force_retry_failure,
+        build_command_failure=_build_command_failure,
+        web_watch_retry_video_id=web_watch_retry_video_id,
+        annotate_payload_selection=annotate_live_cam_payload_selection,
+        format_selection_error=format_live_cam_selection_error,
+        run_command=run_command,
+        verify_force_candidate_page=verify_force_candidate_page,
+        log=log,
+    )

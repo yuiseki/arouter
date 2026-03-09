@@ -12,6 +12,7 @@ from arouter import (
     expand_live_cam_candidates,
     format_live_cam_selection_error,
     normalize_live_cam_force_video_id,
+    run_live_cam_payload_selection_runtime,
     select_live_cam_payload,
     web_watch_retry_video_id,
 )
@@ -359,4 +360,34 @@ def test_select_live_cam_payload_retries_browse_when_force_video_id_verification
     assert payload["videoId"] == "abc123DEF45"
     assert payload["method"] == "direct-id"
     assert len(calls) == 2
+    assert len(verify_calls) == 1
+
+
+def test_run_live_cam_payload_selection_runtime_uses_fast_open_script_and_verifier() -> None:
+    calls: list[list[str]] = []
+    verify_calls: list[dict[str, object]] = []
+
+    def fake_run(command: list[str], timeout: float) -> tuple[int, str, str]:
+        calls.append(command)
+        if "--force-video-id" in command:
+            return 0, '{"ok":true,"videoId":"urE7veQRlrQ","method":"force-video-id"}', ""
+        return 0, '{"ok":true,"videoId":"abc123DEF45","method":"direct-id"}', ""
+
+    payload = run_live_cam_payload_selection_runtime(
+        {
+            "label": "asakusa",
+            "port": 9996,
+            "force_video_id": "urE7veQRlrQ",
+            "browse_url": "https://example.test/asakusa",
+            "keyword": "浅草・雷門前の様子",
+            "verify_regex": "浅草|雷門|Asakusa",
+        },
+        fast_open_script=FAST_OPEN_SCRIPT,
+        run_command=fake_run,
+        verify_force_candidate_page=lambda candidate: verify_calls.append(candidate) or False,
+    )
+
+    assert payload["videoId"] == "abc123DEF45"
+    assert len(calls) == 2
+    assert calls[0][:2] == ["node", "/tmp/open_tv_channel_live_tile_fast.js"]
     assert len(verify_calls) == 1
