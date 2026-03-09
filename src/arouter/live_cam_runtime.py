@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import concurrent.futures
 import json
+import time
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any, Protocol
@@ -165,6 +166,19 @@ def run_live_cam_existing_windowed_pids_query(
     return pids_by_port
 
 
+def run_live_cam_existing_windowed_pids_host_runtime_query(
+    *,
+    runtime: Any,
+) -> dict[int, int] | None:
+    log = runtime.log
+    return run_live_cam_existing_windowed_pids_query(
+        instances=list(runtime.instances),
+        pid_lookup=runtime._pid_for_port,
+        row_provider=runtime._window_rows_by_pids,
+        log=log if callable(log) else None,
+    )
+
+
 def resolve_live_cam_layout_bootstrap(
     *,
     mode: str,
@@ -316,6 +330,26 @@ def run_live_cam_minimize_flow(
             state=state,
         ),
         after_action=after_action,
+    )
+
+
+def run_live_cam_hide_host_runtime_flow(*, runtime: Any) -> str:
+    return run_live_cam_hide_flow(
+        list(runtime.instances),
+        pid_lookup=runtime._pid_for_port,
+        state_fetcher=runtime._collect_runtime_state,
+        close_windows=runtime._close_windows_for_pids,
+        after_action=lambda: time.sleep(0.2),
+    )
+
+
+def run_live_cam_minimize_host_runtime_flow(*, runtime: Any) -> str:
+    return run_live_cam_minimize_flow(
+        list(runtime.instances),
+        pid_lookup=runtime._pid_for_port,
+        state_fetcher=runtime._collect_runtime_state,
+        minimize_windows=runtime._minimize_windows_for_pids,
+        after_action=lambda: time.sleep(0.2),
     )
 
 
@@ -473,6 +507,15 @@ def run_live_cam_start_instances_flow(
     )
 
 
+def run_live_cam_start_instances_host_runtime_flow(*, runtime: Any) -> list[dict[str, Any]]:
+    return run_live_cam_start_instances_flow(
+        list(runtime.instances),
+        ensure_scripts_present=runtime._ensure_scripts_present,
+        start_instance=runtime._start_instance,
+        parallel_runner=runtime._run_instances_parallel,
+    )
+
+
 def run_live_cam_open_flow(
     specs: list[dict[str, Any]],
     *,
@@ -500,6 +543,14 @@ def run_live_cam_open_instances_flow(
         build_result=build_live_cam_open_result,
         label="live_cam_open",
         parallel_runner=parallel_runner,
+    )
+
+
+def run_live_cam_open_instances_host_runtime_flow(*, runtime: Any) -> list[dict[str, Any]]:
+    return run_live_cam_open_instances_flow(
+        list(runtime.instances),
+        assign_live_camera=runtime._assign_live_camera,
+        parallel_runner=runtime._run_instances_parallel,
     )
 
 

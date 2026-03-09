@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import time
 from pathlib import Path
+from unittest import mock
 
 from arouter import (
     build_live_cam_hide_response,
@@ -21,21 +22,26 @@ from arouter import (
     resolve_live_cam_action_state,
     resolve_live_cam_layout_bootstrap,
     run_live_cam_close_windows,
+    run_live_cam_existing_windowed_pids_host_runtime_query,
     run_live_cam_existing_windowed_pids_query,
     run_live_cam_hide_flow,
+    run_live_cam_hide_host_runtime_flow,
     run_live_cam_layout_controller_flow,
     run_live_cam_layout_flow,
     run_live_cam_layout_host_runtime_flow,
     run_live_cam_layout_runtime_flow,
     run_live_cam_minimize_flow,
+    run_live_cam_minimize_host_runtime_flow,
     run_live_cam_minimize_windows,
     run_live_cam_open_flow,
     run_live_cam_open_instances_flow,
+    run_live_cam_open_instances_host_runtime_flow,
     run_live_cam_parallel,
     run_live_cam_raise_windows,
     run_live_cam_reopen_specs_flow,
     run_live_cam_start_flow,
     run_live_cam_start_instances_flow,
+    run_live_cam_start_instances_host_runtime_flow,
     run_live_cam_start_script_flow,
     run_live_cam_window_action_flow,
     run_minimize_other_windows_flow,
@@ -257,6 +263,34 @@ def test_run_live_cam_start_instances_flow_ensures_scripts_and_runs_parallel() -
     ]
 
 
+def test_run_live_cam_start_instances_host_runtime_flow_reads_runtime_methods() -> None:
+    events: list[str] = []
+
+    class FakeRuntime:
+        instances = [{"port": 9993}, {"port": 9994}]
+
+        def _ensure_scripts_present(self) -> None:
+            events.append("ensure_scripts")
+
+        def _start_instance(self, spec: dict[str, int]) -> dict[str, int]:
+            events.append(f"start:{spec['port']}")
+            return {"port": spec["port"]}
+
+        def _run_instances_parallel(self, current_specs, *, worker, label: str):
+            events.append(f"parallel:{label}:{len(current_specs)}")
+            return [worker(spec) for spec in current_specs]
+
+    out = run_live_cam_start_instances_host_runtime_flow(runtime=FakeRuntime())
+
+    assert out == [{"port": 9993}, {"port": 9994}]
+    assert events == [
+        "ensure_scripts",
+        "parallel:live_cam_start:2",
+        "start:9993",
+        "start:9994",
+    ]
+
+
 def test_run_live_cam_open_flow_builds_results_via_parallel_runner() -> None:
     calls: list[dict[str, object]] = []
 
@@ -321,6 +355,37 @@ def test_run_live_cam_open_instances_flow_uses_default_open_result_builder() -> 
         }
     ]
     assert calls == [{"specs": specs, "label": "live_cam_open"}]
+
+
+def test_run_live_cam_open_instances_host_runtime_flow_reads_runtime_methods() -> None:
+    calls: list[dict[str, object]] = []
+
+    class FakeRuntime:
+        instances = [{"label": "akihabara", "port": 9994}]
+
+        def _assign_live_camera(self, spec: dict[str, object]) -> dict[str, object]:
+            return {
+                "videoId": f"vid-{spec['port']}",
+                "method": "direct-id",
+                "final": {"href": f"https://www.youtube.com/tv#/watch?v=vid-{spec['port']}"},
+            }
+
+        def _run_instances_parallel(self, specs, *, worker, label: str):
+            calls.append({"specs": specs, "label": label})
+            return [worker(spec) for spec in specs]
+
+    out = run_live_cam_open_instances_host_runtime_flow(runtime=FakeRuntime())
+
+    assert out == [
+        {
+            "label": "akihabara",
+            "port": 9994,
+            "videoId": "vid-9994",
+            "finalHref": "https://www.youtube.com/tv#/watch?v=vid-9994",
+            "method": "direct-id",
+        }
+    ]
+    assert calls == [{"specs": [{"label": "akihabara", "port": 9994}], "label": "live_cam_open"}]
 
 
 def test_run_live_cam_reopen_specs_flow_uses_default_reopen_result_builder() -> None:
@@ -432,7 +497,25 @@ def test_run_live_cam_existing_windowed_pids_query_returns_pid_map_when_all_wind
     )
 
     assert out == {9993: 101, 9994: 102}
-    assert logs == []
+
+
+def test_run_live_cam_existing_windowed_pids_host_runtime_query_reads_runtime_methods() -> None:
+    class FakeRuntime:
+        instances = [{"port": 9993}, {"port": 9994}]
+
+        def _pid_for_port(self, port: int) -> int | None:
+            return {9993: 101, 9994: 102}.get(int(port))
+
+        def _window_rows_by_pids(self, pids: list[int]) -> list[dict[str, int | str]]:
+            assert pids == [101, 102]
+            return [{"id": "0x1", "pid": 101}, {"id": "0x2", "pid": 102}]
+
+        def log(self, _message: str) -> None:
+            raise AssertionError("log unused when all windows are visible")
+
+    out = run_live_cam_existing_windowed_pids_host_runtime_query(runtime=FakeRuntime())
+
+    assert out == {9993: 101, 9994: 102}
 
 
 def test_resolve_live_cam_action_state_fetches_state_when_pids_exist() -> None:
@@ -573,6 +656,40 @@ def test_run_live_cam_hide_flow_uses_hide_response_builder() -> None:
     )
 
 
+def test_run_live_cam_hide_host_runtime_flow_reads_runtime_methods() -> None:
+    events: list[object] = []
+
+    class FakeRuntime:
+        instances = [{"port": 9993}, {"port": 9994}]
+
+        def _pid_for_port(self, port: int) -> int | None:
+            return {9993: 101, 9994: 102}.get(int(port))
+
+        def _collect_runtime_state(self, pids_by_port: dict[int, int]) -> dict[str, object]:
+            events.append(("state", dict(pids_by_port)))
+            return {"windows": [], "urls": []}
+
+        def _close_windows_for_pids(self, pids: list[int]) -> list[str]:
+            events.append(("close", list(pids)))
+            return ["0x1", "0x2"]
+
+    with mock.patch(
+        "arouter.live_cam_runtime.time.sleep",
+        side_effect=lambda seconds: events.append(("sleep", seconds)),
+    ):
+        result = run_live_cam_hide_host_runtime_flow(runtime=FakeRuntime())
+
+    assert result == (
+        'live camera wall hide {"closed": 2, "windowIds": ["0x1", "0x2"], '
+        '"ports": [9993, 9994], "windows": [], "urls": []}'
+    )
+    assert events == [
+        ("state", {9993: 101, 9994: 102}),
+        ("close", [101, 102]),
+        ("sleep", 0.2),
+    ]
+
+
 def test_run_live_cam_minimize_flow_uses_minimize_response_builder() -> None:
     result = run_live_cam_minimize_flow(
         [{"port": 9993}],
@@ -586,6 +703,40 @@ def test_run_live_cam_minimize_flow_uses_minimize_response_builder() -> None:
         'live camera wall minimize {"minimized": 1, "windowIds": ["0x1"], '
         '"ports": [9993], "windows": [], "urls": []}'
     )
+
+
+def test_run_live_cam_minimize_host_runtime_flow_reads_runtime_methods() -> None:
+    events: list[object] = []
+
+    class FakeRuntime:
+        instances = [{"port": 9993}]
+
+        def _pid_for_port(self, port: int) -> int | None:
+            return 101 if int(port) == 9993 else None
+
+        def _collect_runtime_state(self, pids_by_port: dict[int, int]) -> dict[str, object]:
+            events.append(("state", dict(pids_by_port)))
+            return {"windows": [], "urls": []}
+
+        def _minimize_windows_for_pids(self, pids: list[int]) -> list[str]:
+            events.append(("minimize", list(pids)))
+            return ["0x1"]
+
+    with mock.patch(
+        "arouter.live_cam_runtime.time.sleep",
+        side_effect=lambda seconds: events.append(("sleep", seconds)),
+    ):
+        result = run_live_cam_minimize_host_runtime_flow(runtime=FakeRuntime())
+
+    assert result == (
+        'live camera wall minimize {"minimized": 1, "windowIds": ["0x1"], '
+        '"ports": [9993], "windows": [], "urls": []}'
+    )
+    assert events == [
+        ("state", {9993: 101}),
+        ("minimize", [101]),
+        ("sleep", 0.2),
+    ]
 
 
 def test_collect_window_ids_for_pids_skips_missing_window_ids() -> None:

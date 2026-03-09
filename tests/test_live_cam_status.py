@@ -11,12 +11,15 @@ from arouter import (
     page_matches_live_camera_spec,
     run_live_cam_page_brief_cdp_runtime,
     run_live_cam_page_brief_flow,
+    run_live_cam_page_brief_host_runtime_flow,
     run_live_cam_page_brief_http_query,
     run_live_cam_page_brief_runtime_flow,
     run_live_cam_page_snapshot_query,
     run_live_cam_page_snapshot_via_websocket,
     run_live_cam_runtime_state_cdp_runtime,
+    run_live_cam_runtime_state_host_runtime_query,
     run_live_cam_runtime_state_http_query,
+    run_live_cam_stuck_specs_host_runtime_query,
     run_live_cam_stuck_specs_query,
     run_live_cam_target_inspection,
     run_live_cam_target_snapshot_cdp_runtime,
@@ -155,6 +158,42 @@ def test_run_live_cam_runtime_state_http_query_uses_http_target_query() -> None:
         ],
     }
     assert calls == [
+        ("http://127.0.0.1:9993/json", 2.0),
+        ("http://127.0.0.1:9994/json", 2.0),
+    ]
+
+
+def test_run_live_cam_runtime_state_host_runtime_query_reads_runtime_methods() -> None:
+    class FakeRuntime:
+        instances = [{"port": 9993}, {"port": 9994}]
+
+        def _window_rows_by_pids(self, pids: list[int]) -> list[dict[str, int | str]]:
+            assert pids == [101, 102]
+            return [{"id": "0x1", "pid": 101}]
+
+    fetch_calls: list[tuple[str, float]] = []
+
+    out = run_live_cam_runtime_state_host_runtime_query(
+        runtime=FakeRuntime(),
+        pids_by_port={9993: 101, 9994: 102},
+        fetch_json=lambda url, timeout: (
+            fetch_calls.append((url, float(timeout)))
+            or (
+                [{"type": "page", "url": "https://www.youtube.com/tv#/watch?v=abc123DEF45"}]
+                if url.endswith(":9993/json")
+                else (_ for _ in ()).throw(OSError("connection refused"))
+            )
+        ),
+    )
+
+    assert out == {
+        "windows": [{"id": "0x1", "pid": 101}],
+        "urls": [
+            {"port": 9993, "url": "https://www.youtube.com/tv#/watch?v=abc123DEF45"},
+            {"port": 9994, "error": "connection refused"},
+        ],
+    }
+    assert fetch_calls == [
         ("http://127.0.0.1:9993/json", 2.0),
         ("http://127.0.0.1:9994/json", 2.0),
     ]
@@ -365,6 +404,31 @@ def test_run_live_cam_stuck_specs_query_collects_pages_and_returns_stuck_specs()
     assert out == [specs[0]]
 
 
+def test_run_live_cam_stuck_specs_host_runtime_query_reads_runtime_methods() -> None:
+    class FakeRuntime:
+        instances = [
+            {"label": "shibuya", "port": 9993, "verify_regex": "渋谷|Shibuya"},
+            {"label": "akihabara", "port": 9996, "verify_regex": "秋葉原|Akihabara"},
+        ]
+
+        def _page_brief_for_port(self, port: int) -> dict[str, str]:
+            if port == 9993:
+                return {
+                    "url": "https://www.youtube.com/tv#/watch?v=abc123DEF45",
+                    "watchText": "最新ニュース 日テレNEWS LIVE",
+                    "bodyText": "速報とニュース解説をお届けします",
+                }
+            return {
+                "url": "https://www.youtube.com/tv#/watch?v=abc123DEF46",
+                "watchText": "【LIVE】秋葉原 Akihabara",
+                "bodyText": "秋葉原 ライブカメラ",
+            }
+
+    out = run_live_cam_stuck_specs_host_runtime_query(runtime=FakeRuntime())
+
+    assert out == [FakeRuntime.instances[0]]
+
+
 def test_run_live_cam_page_brief_flow_merges_snapshot_from_inspector() -> None:
     out = run_live_cam_page_brief_flow(
         port=9993,
@@ -536,6 +600,50 @@ def test_run_live_cam_page_brief_http_query_uses_http_target_query_and_client_fa
         ("enable", "ws://127.0.0.1:9993/devtools/page/1"),
         ("evaluate", True),
     ]
+
+
+def test_run_live_cam_page_brief_host_runtime_flow_reads_runtime_methods() -> None:
+    class FakeRuntime:
+        pass
+
+    fetch_calls: list[tuple[str, float]] = []
+    client_calls: list[tuple[str, float]] = []
+
+    class FakeClient:
+        def __init__(self, ws_url: str, *, timeout_sec: float) -> None:
+            client_calls.append((ws_url, float(timeout_sec)))
+            self.ws_url = ws_url
+
+        def enable_basics(self) -> None:
+            pass
+
+        def evaluate(self, _expr: str) -> dict[str, str]:
+            return {"watchText": f"watch:{self.ws_url}"}
+
+    out = run_live_cam_page_brief_host_runtime_flow(
+        runtime=FakeRuntime(),
+        port=9993,
+        fetch_json=lambda url, timeout: (
+            fetch_calls.append((url, float(timeout)))
+            or [
+                {
+                    "type": "page",
+                    "url": "https://www.youtube.com/tv#/watch?v=abc9993",
+                    "title": "Shibuya",
+                    "webSocketDebuggerUrl": "ws://127.0.0.1:9993/devtools/page/1",
+                }
+            ]
+        ),
+        client_factory=FakeClient,
+    )
+
+    assert out == {
+        "url": "https://www.youtube.com/tv#/watch?v=abc9993",
+        "title": "Shibuya",
+        "watchText": "watch:ws://127.0.0.1:9993/devtools/page/1",
+    }
+    assert fetch_calls == [("http://127.0.0.1:9993/json", 2.0)]
+    assert client_calls == [("ws://127.0.0.1:9993/devtools/page/1", 4.0)]
 
 
 def test_run_live_cam_page_brief_runtime_flow_builds_client_with_timeouts() -> None:
