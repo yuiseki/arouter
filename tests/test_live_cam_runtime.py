@@ -23,6 +23,7 @@ from arouter import (
     run_live_cam_close_windows,
     run_live_cam_existing_windowed_pids_query,
     run_live_cam_hide_flow,
+    run_live_cam_layout_controller_flow,
     run_live_cam_layout_flow,
     run_live_cam_minimize_flow,
     run_live_cam_minimize_windows,
@@ -30,6 +31,7 @@ from arouter import (
     run_live_cam_open_instances_flow,
     run_live_cam_parallel,
     run_live_cam_raise_windows,
+    run_live_cam_reopen_specs_flow,
     run_live_cam_start_flow,
     run_live_cam_start_script_flow,
     run_live_cam_window_action_flow,
@@ -290,6 +292,41 @@ def test_run_live_cam_open_instances_flow_uses_default_open_result_builder() -> 
         }
     ]
     assert calls == [{"specs": specs, "label": "live_cam_open"}]
+
+
+def test_run_live_cam_reopen_specs_flow_uses_default_reopen_result_builder() -> None:
+    calls: list[dict[str, object]] = []
+
+    def fake_parallel_runner(
+        specs: list[dict[str, object]],
+        *,
+        worker,
+        label: str,
+    ) -> list[dict[str, object]]:
+        calls.append({"specs": specs, "label": label})
+        return [worker(spec) for spec in specs]
+
+    specs = [{"label": "akihabara", "port": 9996}]
+
+    out = run_live_cam_reopen_specs_flow(
+        specs,
+        assign_live_camera=lambda spec: {
+            "videoId": f"vid-{spec['port']}",
+            "method": "direct-id",
+            "final": {"href": f"https://www.youtube.com/tv#/watch?v=vid-{spec['port']}"},
+        },
+        parallel_runner=fake_parallel_runner,
+    )
+
+    assert out == [
+        {
+            "label": "akihabara",
+            "port": 9996,
+            "videoId": "vid-9996",
+            "method": "direct-id",
+        }
+    ]
+    assert calls == [{"specs": specs, "label": "live_cam_reopen"}]
 
 
 def test_collect_live_cam_pids_returns_none_when_any_pid_missing() -> None:
@@ -699,4 +736,54 @@ def test_run_live_cam_layout_flow_applies_layout_raises_windows_and_builds_respo
         '"workArea": {"x": 0, "y": 0, "w": 4096, "h": 2116}, '
         '"started": [], "opened": [{"label": "shibuya", "port": 9993}], '
         '"windows": [{"pid": 101}], "urls": []}'
+    )
+
+
+def test_run_live_cam_layout_controller_flow_uses_layout_plan_helper() -> None:
+    events: list[object] = []
+
+    def _unused_full_targets(**_kwargs: object) -> list[dict[str, int]]:
+        raise AssertionError("full targets unused")
+
+    def _compact_targets(**kwargs: object) -> list[dict[str, int]]:
+        pids_by_port = kwargs["pids_by_port"]
+        assert isinstance(pids_by_port, dict)
+        return [{"pid": int(pids_by_port[9993]), "x": 1, "y": 2, "w": 3, "h": 4}]
+
+    def _runtime_state(pids_by_port: dict[int, int]) -> dict[str, object]:
+        return {"windows": [{"pid": pids_by_port[9993]}], "urls": []}
+
+    result = run_live_cam_layout_controller_flow(
+        mode="compact",
+        screen_w=4096,
+        screen_h=2160,
+        work_area=(0, 0, 4096, 2116),
+        pids_by_port={9993: 101},
+        fast_path=True,
+        started=[],
+        opened=[],
+        open_errors=[],
+        build_targets_full=_unused_full_targets,
+        build_targets_compact=_compact_targets,
+        kwin_apply_layout=lambda **kwargs: events.append(
+            (
+                "apply",
+                kwargs["plugin_name"],
+                kwargs["keep_above"],
+                kwargs["no_border"],
+                kwargs["targets"][0]["pid"],
+            )
+        ),
+        raise_windows_for_pids=lambda pids: events.append(("raise", pids)),
+        collect_runtime_state=_runtime_state,
+    )
+
+    assert events == [
+        ("apply", "codex_live_cam_wall_compact", False, True, 101),
+    ]
+    assert result == (
+        'live camera wall {"mode": "compact", "fastPath": true, '
+        '"screen": {"w": 4096, "h": 2160}, '
+        '"workArea": {"x": 0, "y": 0, "w": 4096, "h": 2116}, '
+        '"started": [], "opened": [], "windows": [{"pid": 101}], "urls": []}'
     )

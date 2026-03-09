@@ -11,6 +11,7 @@ from .kwin_runtime import (
     run_live_cam_minimize_runtime,
     run_minimize_other_windows_runtime,
 )
+from .live_cam_layout import resolve_live_cam_layout_plan
 
 
 class LiveCamWindowIdCollector(Protocol):
@@ -487,6 +488,21 @@ def run_live_cam_open_instances_flow(
     )
 
 
+def run_live_cam_reopen_specs_flow(
+    specs: list[dict[str, Any]],
+    *,
+    assign_live_camera: Callable[[dict[str, Any]], dict[str, Any]],
+    parallel_runner: Callable[..., list[dict[str, Any]]],
+) -> list[dict[str, Any]]:
+    return run_live_cam_open_flow(
+        specs,
+        assign_live_camera=assign_live_camera,
+        build_result=build_live_cam_reopen_result,
+        label="live_cam_reopen",
+        parallel_runner=parallel_runner,
+    )
+
+
 def build_live_cam_open_result(
     spec: dict[str, Any],
     payload: dict[str, Any],
@@ -650,4 +666,53 @@ def run_live_cam_layout_flow(
         opened=opened,
         state=state,
         open_errors=open_errors,
+    )
+
+
+def run_live_cam_layout_controller_flow(
+    *,
+    mode: str,
+    screen_w: int,
+    screen_h: int,
+    work_area: tuple[int, int, int, int] | None,
+    pids_by_port: dict[int, int],
+    fast_path: bool,
+    started: list[dict[str, Any]],
+    opened: list[dict[str, Any]],
+    open_errors: list[str],
+    build_targets_full: Callable[..., list[dict[str, Any]]],
+    build_targets_compact: Callable[..., list[dict[str, Any]]],
+    kwin_apply_layout: Callable[..., None],
+    raise_windows_for_pids: Callable[[list[int]], None],
+    collect_runtime_state: Callable[[dict[int, int]], dict[str, Any]],
+) -> str:
+    return run_live_cam_layout_flow(
+        mode=mode,
+        screen_w=screen_w,
+        screen_h=screen_h,
+        work_area=work_area,
+        pids_by_port=pids_by_port,
+        fast_path=fast_path,
+        started=started,
+        opened=opened,
+        open_errors=open_errors,
+        resolve_layout_plan=lambda mode, screen_w, screen_h, work_area, pids_by_port: (
+            resolve_live_cam_layout_plan(
+                mode=mode,
+                screen_w=screen_w,
+                screen_h=screen_h,
+                work_area=work_area,
+                pids_by_port=pids_by_port,
+                full_target_builder=build_targets_full,
+                compact_target_builder=build_targets_compact,
+            )
+        ),
+        apply_layout=lambda targets, plugin_name, keep_above, no_border: kwin_apply_layout(
+            targets=targets,
+            plugin_name=plugin_name,
+            keep_above=keep_above,
+            no_border=no_border,
+        ),
+        raise_windows_for_pids=raise_windows_for_pids,
+        collect_runtime_state=collect_runtime_state,
     )

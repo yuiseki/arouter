@@ -20,6 +20,7 @@ from arouter import (
     run_vacuumtube_click_tile_center,
     run_vacuumtube_confirm_watch_playback,
     run_vacuumtube_context_query,
+    run_vacuumtube_context_runtime_query,
     run_vacuumtube_dom_click_tile,
     run_vacuumtube_ensure_home,
     run_vacuumtube_enumerate_tiles,
@@ -244,6 +245,66 @@ def test_run_vacuumtube_context_query_falls_back_to_window_lookup_and_xprop_stat
         "videoPaused": None,
         "geom": {"x": 1, "y": 2, "w": 3, "h": 4},
     }
+
+
+def test_run_vacuumtube_context_runtime_query_wires_fullscreen_and_cdp_helpers() -> None:
+    events: list[object] = []
+
+    class FakeContext:
+        def __enter__(self) -> str:
+            events.append("enter")
+            return "cdp"
+
+        def __exit__(self, exc_type, exc, tb) -> None:
+            events.append("exit")
+            return None
+
+    out = run_vacuumtube_context_runtime_query(
+        ts=3.0,
+        cdp_port=9992,
+        find_window_row_by_cdp_port=lambda port: {
+            "id": "0x123",
+            "x": "10",
+            "y": 20,
+            "w": "300",
+            "h": 400,
+        }
+        if port == 9992
+        else None,
+        find_window_id=lambda: "0x999",
+        get_window_geometry=lambda wid: {"x": 0, "y": 0, "w": 1, "h": 1},
+        current_window_is_fullscreenish=lambda wid: False,
+        run_xprop_query=lambda command: (
+            events.append(("xprop", command)) or "_NET_WM_STATE_FULLSCREEN"
+        ),
+        quadrant_mode_enabled=lambda: True,
+        cdp_ready=lambda: True,
+        open_cdp=lambda: FakeContext(),
+        read_state=lambda cdp: events.append(("state", cdp)) or {"hash": "#/watch?v=abc"},
+    )
+
+    assert out == {
+        "ts": 3.0,
+        "available": True,
+        "windowFound": True,
+        "fullscreenish": True,
+        "quadrantish": True,
+        "watchRoute": True,
+        "homeRoute": False,
+        "videoPlaying": False,
+        "videoPaused": None,
+        "geom": {"x": 10, "y": 20, "w": 300, "h": 400},
+        "hash": "#/watch?v=abc",
+        "accountSelectHint": False,
+        "homeHint": False,
+        "watchUiHint": False,
+    }
+    assert events == [
+        ("xprop", ["xprop", "-id", "0x123", "_NET_WM_STATE"]),
+        "enter",
+        ("state", "cdp"),
+        "exit",
+    ]
 
 
 def test_run_vacuumtube_action_with_recovery_retries_once_for_recoverable_error() -> None:

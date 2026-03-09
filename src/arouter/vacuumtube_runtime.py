@@ -6,6 +6,7 @@ from collections.abc import Callable
 from typing import Any
 
 from .vacuumtube_state import vacuumtube_is_watch_state
+from .window_query_runtime import build_xprop_wm_state_command
 
 
 def build_vacuumtube_context_base(*, ts: float) -> dict[str, Any]:
@@ -236,6 +237,50 @@ def run_vacuumtube_context_query(
         pass
 
     return context
+
+
+def run_vacuumtube_context_runtime_query(
+    *,
+    ts: float,
+    cdp_port: int | None,
+    find_window_row_by_cdp_port: Callable[[int], dict[str, Any] | None],
+    find_window_id: Callable[[], str],
+    get_window_geometry: Callable[[str], dict[str, Any] | None],
+    current_window_is_fullscreenish: Callable[[str], bool],
+    run_xprop_query: Callable[[list[str]], str],
+    quadrant_mode_enabled: Callable[[], bool],
+    cdp_ready: Callable[[], bool],
+    open_cdp: Callable[[], Any],
+    read_state: Callable[[Any], dict[str, Any] | None],
+) -> dict[str, Any]:
+    return run_vacuumtube_context_query(
+        ts=ts,
+        cdp_port=cdp_port,
+        find_window_row_by_cdp_port=find_window_row_by_cdp_port,
+        find_window_id=find_window_id,
+        get_window_geometry=get_window_geometry,
+        current_window_is_fullscreenish=current_window_is_fullscreenish,
+        read_fullscreen_state=lambda win_id: run_xprop_query(
+            build_xprop_wm_state_command(win_id)
+        ),
+        quadrant_mode_enabled=quadrant_mode_enabled,
+        cdp_ready=cdp_ready,
+        query_cdp_state=lambda: _run_vacuumtube_cdp_state_query(
+            open_cdp=open_cdp,
+            read_state=read_state,
+        ),
+    )
+
+
+def _run_vacuumtube_cdp_state_query(
+    *,
+    open_cdp: Callable[[], Any],
+    read_state: Callable[[Any], dict[str, Any] | None],
+) -> dict[str, Any] | None:
+    if not callable(open_cdp) or not callable(read_state):
+        return None
+    with open_cdp() as cdp:
+        return read_state(cdp)
 
 
 def run_vacuumtube_action_with_recovery(
