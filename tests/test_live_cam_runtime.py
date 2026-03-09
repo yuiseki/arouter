@@ -21,6 +21,7 @@ from arouter import (
     resolve_live_cam_action_state,
     resolve_live_cam_layout_bootstrap,
     run_live_cam_close_windows,
+    run_live_cam_existing_windowed_pids_query,
     run_live_cam_layout_flow,
     run_live_cam_minimize_windows,
     run_live_cam_open_flow,
@@ -277,6 +278,36 @@ def test_resolve_existing_live_cam_windowed_pids_returns_pid_map_when_all_window
     )
 
     assert out == {9993: 101, 9994: 102}
+
+
+def test_run_live_cam_existing_windowed_pids_query_logs_and_returns_none_when_windows_missing(
+) -> None:
+    logs: list[str] = []
+
+    out = run_live_cam_existing_windowed_pids_query(
+        instances=[{"port": 9993}, {"port": 9994}],
+        pid_lookup=lambda port: {9993: 101, 9994: 102}.get(port),
+        row_provider=lambda pids: [{"id": "0x1", "pid": 101}],
+        log=logs.append,
+    )
+
+    assert out is None
+    assert logs == ["LIVE_CAM layout fast-path skipped (missing windows for ports: 9994)"]
+
+
+def test_run_live_cam_existing_windowed_pids_query_returns_pid_map_when_all_windows_visible(
+) -> None:
+    logs: list[str] = []
+
+    out = run_live_cam_existing_windowed_pids_query(
+        instances=[{"port": 9993}, {"port": 9994}],
+        pid_lookup=lambda port: {9993: 101, 9994: 102}.get(port),
+        row_provider=lambda pids: [{"id": "0x1", "pid": 101}, {"id": "0x2", "pid": 102}],
+        log=logs.append,
+    )
+
+    assert out == {9993: 101, 9994: 102}
+    assert logs == []
 
 
 def test_resolve_live_cam_action_state_fetches_state_when_pids_exist() -> None:

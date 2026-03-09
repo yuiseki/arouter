@@ -137,6 +137,33 @@ def resolve_existing_live_cam_windowed_pids(
     return pids_by_port
 
 
+def run_live_cam_existing_windowed_pids_query(
+    *,
+    instances: list[dict[str, Any]],
+    pid_lookup: Callable[[int], int | None],
+    row_provider: Callable[[list[int]], list[dict[str, Any]]],
+    log: Callable[[str], None] | None = None,
+) -> dict[int, int] | None:
+    pids_by_port = collect_live_cam_pids(instances, pid_lookup=pid_lookup)
+    if not pids_by_port:
+        return None
+
+    if len(pids_by_port) != len(instances):
+        return None
+
+    rows = row_provider(list(pids_by_port.values()))
+    missing_ports = find_missing_live_cam_window_ports(pids_by_port, rows)
+    if missing_ports:
+        if log is not None:
+            log(
+                "LIVE_CAM layout fast-path skipped (missing windows for ports: "
+                + ", ".join(str(port) for port in sorted(missing_ports))
+                + ")"
+            )
+        return None
+    return pids_by_port
+
+
 def resolve_live_cam_layout_bootstrap(
     *,
     mode: str,
