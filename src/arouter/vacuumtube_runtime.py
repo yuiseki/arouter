@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import socket
 from collections.abc import Callable
+from contextlib import nullcontext
 from typing import Any
 
 from .vacuumtube_state import vacuumtube_is_watch_state
@@ -1293,6 +1294,48 @@ def run_vacuumtube_open_from_home_runtime(
             ),
             restore_window_presentation=restore_window_presentation,
         )
+
+
+def run_vacuumtube_open_from_home_host_runtime(
+    *,
+    cdp: Any,
+    runtime: Any,
+    label: str,
+    scorer: Callable[[dict[str, Any]], float],
+    filter_fn: Callable[[dict[str, Any]], bool] | None,
+    allow_soft_playback_confirm: bool,
+) -> str:
+    log = runtime.log if hasattr(runtime, "log") else None
+    return run_vacuumtube_open_from_home_runtime(
+        open_cdp=lambda: nullcontext(cdp),
+        label=label,
+        scorer=scorer,
+        filter_fn=filter_fn,
+        allow_soft_playback_confirm=allow_soft_playback_confirm,
+        hide_overlay_if_needed=runtime._hide_overlay_if_needed,
+        capture_window_presentation=runtime._capture_window_presentation,
+        ensure_home=runtime._ensure_home,
+        log=log if callable(log) else (lambda _message: None),
+        enumerate_tiles=runtime._enumerate_tiles,
+        click_tile_center=runtime._click_tile_center,
+        wait_watch_route=runtime._wait_watch_route,
+        dom_click_tile=runtime._dom_click_tile,
+        send_return_key=lambda: runtime.send_key("Return"),
+        try_resume_current_video=runtime._try_resume_current_video,
+        wait_confirmed_watch_playback=lambda current_cdp, timeout, allow_soft: (
+            runtime._wait_confirmed_watch_playback(
+                current_cdp,
+                timeout_sec=timeout,
+                allow_soft_confirm_when_unpaused=allow_soft,
+            )
+        ),
+        restore_window_presentation=lambda presentation, restore_label: (
+            runtime._restore_window_presentation(
+                presentation,
+                label=restore_label,
+            )
+        ),
+    )
 
 
 def run_vacuumtube_fullscreen(

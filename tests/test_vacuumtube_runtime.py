@@ -37,6 +37,7 @@ from arouter import (
     run_vacuumtube_hide_overlay,
     run_vacuumtube_minimize,
     run_vacuumtube_open_from_home,
+    run_vacuumtube_open_from_home_host_runtime,
     run_vacuumtube_open_from_home_runtime,
     run_vacuumtube_play_bgm,
     run_vacuumtube_play_bgm_runtime,
@@ -1526,6 +1527,98 @@ def test_run_vacuumtube_open_from_home_runtime_opens_cdp_and_reuses_flow() -> No
         ),
         "restore:0x123:BGM",
         "exit",
+    ]
+
+
+def test_run_vacuumtube_open_from_home_host_runtime_reads_runtime_methods() -> None:
+    class FakeRuntime:
+        def __init__(self) -> None:
+            self.events: list[str] = []
+
+        def log(self, message: str) -> None:
+            self.events.append(message)
+
+        def _hide_overlay_if_needed(self, cdp: str) -> None:
+            self.events.append(f"hide:{cdp}")
+
+        def _capture_window_presentation(self) -> dict[str, str]:
+            self.events.append("capture")
+            return {"window_id": "0x123"}
+
+        def _ensure_home(self, cdp: str) -> dict[str, object]:
+            self.events.append(f"home:{cdp}")
+            return {"hash": "#/", "tilesCount": 1}
+
+        def _enumerate_tiles(self, cdp: str) -> list[dict[str, object]]:
+            self.events.append(f"tiles:{cdp}")
+            return [{"title": "tile", "score": 1.0}]
+
+        def _click_tile_center(self, cdp: str, tile: dict[str, object]) -> None:
+            self.events.append(f"click:{cdp}:{tile['title']}")
+
+        def _wait_watch_route(self, cdp: str, timeout: float) -> bool:
+            self.events.append(f"wait:{cdp}:{timeout}")
+            return True
+
+        def _dom_click_tile(self, cdp: str, tile: dict[str, object]) -> bool:
+            self.events.append(f"dom:{cdp}:{tile['title']}")
+            return False
+
+        def send_key(self, key: str) -> None:
+            self.events.append(f"key:{key}")
+
+        def _try_resume_current_video(self, cdp: str) -> None:
+            self.events.append(f"resume:{cdp}")
+
+        def _wait_confirmed_watch_playback(
+            self,
+            cdp: str,
+            *,
+            timeout_sec: float,
+            allow_soft_confirm_when_unpaused: bool,
+        ) -> dict[str, object]:
+            self.events.append(
+                f"confirm:{cdp}:{timeout_sec}:{allow_soft_confirm_when_unpaused}"
+            )
+            return {"hash": "#/watch?v=abc", "title": "watch", "video": {"paused": False}}
+
+        def _restore_window_presentation(
+            self,
+            presentation: dict[str, str],
+            *,
+            label: str,
+        ) -> None:
+            self.events.append(f"restore:{presentation['window_id']}:{label}")
+
+    runtime = FakeRuntime()
+
+    result = run_vacuumtube_open_from_home_host_runtime(
+        cdp="cdp",
+        runtime=runtime,
+        label="BGM",
+        scorer=lambda tile: float(tile.get("score", 0.0)),
+        filter_fn=None,
+        allow_soft_playback_confirm=True,
+    )
+
+    assert result == "opened watch route #/watch?v=abc"
+    assert runtime.events == [
+        "hide:cdp",
+        "capture",
+        "home:cdp",
+        "BGM precondition home verified: hash=#/ tiles=1",
+        "tiles:cdp",
+        "BGM tile candidates: 1.0:tile",
+        "BGM tile selected attempt=1: tile",
+        "click:cdp:tile",
+        "wait:cdp:2.5",
+        "resume:cdp",
+        "confirm:cdp:8.0:True",
+        (
+            'BGM post-click state: {"hash": "#/watch?v=abc", '
+            '"title": "watch", "video": {"paused": false}}'
+        ),
+        "restore:0x123:BGM",
     ]
 
 
