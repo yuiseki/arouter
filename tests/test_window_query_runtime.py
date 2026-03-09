@@ -17,6 +17,7 @@ from arouter import (
     run_window_id_by_pid_title_host_runtime_query,
     run_window_id_query_by_pid_title,
     run_window_row_by_listen_port,
+    run_window_row_by_listen_port_host_runtime,
     run_window_rows_for_pids_host_runtime_query,
     run_window_rows_query_for_pids,
     run_window_title_host_runtime_query,
@@ -243,6 +244,42 @@ def test_run_window_row_by_listen_port_returns_none_without_listen_pid() -> None
     )
 
     assert row is None
+
+
+def test_run_window_row_by_listen_port_host_runtime_reads_runtime_methods() -> None:
+    class FakeRuntime:
+        def __init__(self) -> None:
+            self._pid_for_listen_port_calls: list[int] = []
+            self._wmctrl_rows_calls: list[tuple[bool, bool]] = []
+
+        def _pid_listening_on_tcp_port(self, port: int) -> int | None:
+            self._pid_for_listen_port_calls.append(port)
+            return 456 if port == 9992 else None
+
+        def _wmctrl_rows(
+            self,
+            *,
+            geometry: bool = False,
+            with_pid: bool = False,
+        ) -> list[str]:
+            self._wmctrl_rows_calls.append((geometry, with_pid))
+            return ["0x002 0 456 11 21 31 41 host VacuumTube"]
+
+    runtime = FakeRuntime()
+
+    row = run_window_row_by_listen_port_host_runtime(runtime=runtime, port=9992)
+
+    assert row == {
+        "id": "0x002",
+        "pid": 456,
+        "title": "VacuumTube",
+        "w": 31,
+        "h": 41,
+        "x": 11,
+        "y": 21,
+    }
+    assert runtime._pid_for_listen_port_calls == [9992]
+    assert runtime._wmctrl_rows_calls == [(True, True)]
 
 
 def test_run_window_id_query_by_pid_title_returns_matching_window_id() -> None:

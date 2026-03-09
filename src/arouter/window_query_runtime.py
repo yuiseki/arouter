@@ -15,6 +15,7 @@ from .window_rows import (
     find_window_geometry_from_wmctrl_lines,
     find_window_id_by_pid_and_title,
     find_window_id_by_title,
+    find_window_row_by_pid_and_title,
     window_rows_for_pids_from_wmctrl_lines,
     window_title_from_wmctrl_lines,
 )
@@ -139,6 +140,19 @@ def run_window_row_by_listen_port(
         row_provider(),
         pid=int(pid),
         title_hint="VacuumTube",
+    )
+
+
+def run_window_row_by_listen_port_host_runtime(
+    *,
+    runtime: Any,
+    port: int,
+) -> dict[str, object] | None:
+    return run_window_row_by_listen_port(
+        port=port,
+        pid_lookup=runtime._pid_listening_on_tcp_port,
+        row_provider=lambda: runtime._wmctrl_rows(geometry=True, with_pid=True),
+        find_row=find_window_row_by_pid_and_title,
     )
 
 
