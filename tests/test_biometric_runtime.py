@@ -13,7 +13,9 @@ from arouter import (
     maybe_lock_from_signal,
     maybe_unlock_from_signal,
     reassert_lock_screen,
+    run_biometric_owner_face_absent_runtime_check,
     run_biometric_owner_face_absent_check,
+    run_biometric_owner_face_recent_runtime_check,
     run_biometric_owner_face_recent_check,
     run_biometric_password_candidate_load,
     run_biometric_signal_consume,
@@ -305,6 +307,30 @@ def test_run_biometric_owner_face_absent_check_prefers_client_helper() -> None:
     status_helper.assert_not_called()
 
 
+def test_run_biometric_owner_face_absent_runtime_check_uses_default_status_helper() -> None:
+    fetch_status_from_url = mock.Mock(
+        return_value={"ownerPresent": False, "ownerSeenAgoMs": 150_000}
+    )
+
+    next_client, ok = run_biometric_owner_face_absent_runtime_check(
+        current_client=None,
+        args=SimpleNamespace(
+            biometric_face_absent_lock_sec=120,
+            god_mode_status_url=" http://127.0.0.1:8765/biometric_status ",
+        ),
+        logger=None,
+        client_available=False,
+        resolve_client=None,
+        fetch_remote_status=None,
+        fetch_status_from_url=fetch_status_from_url,
+        status_helper=None,
+    )
+
+    assert next_client is None
+    assert ok is True
+    fetch_status_from_url.assert_called_once_with("http://127.0.0.1:8765/biometric_status")
+
+
 def test_run_biometric_owner_face_recent_check_falls_back_to_status_helper() -> None:
     resolve_client = mock.Mock(return_value=None)
     fetch_remote_status = mock.Mock(return_value=("client", {"ownerPresent": False}))
@@ -324,6 +350,30 @@ def test_run_biometric_owner_face_recent_check_falls_back_to_status_helper() -> 
     assert next_client == "client"
     assert ok is True
     status_helper.assert_called_once_with({"ownerPresent": False}, fresh_ms=2000)
+
+
+def test_run_biometric_owner_face_recent_runtime_check_uses_default_status_helper() -> None:
+    fetch_status_from_url = mock.Mock(
+        return_value={"ownerPresent": False, "ownerSeenAgoMs": 1_000}
+    )
+
+    next_client, ok = run_biometric_owner_face_recent_runtime_check(
+        current_client=None,
+        args=SimpleNamespace(
+            biometric_unlock_face_fresh_ms=2_000,
+            god_mode_status_url=" http://127.0.0.1:8765/biometric_status ",
+        ),
+        logger=None,
+        client_available=False,
+        resolve_client=None,
+        fetch_remote_status=None,
+        fetch_status_from_url=fetch_status_from_url,
+        status_helper=None,
+    )
+
+    assert next_client is None
+    assert ok is True
+    fetch_status_from_url.assert_called_once_with("http://127.0.0.1:8765/biometric_status")
 
 
 def test_run_biometric_password_candidate_load_returns_cached_copy() -> None:

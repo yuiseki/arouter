@@ -126,6 +126,48 @@ def run_biometric_status_fetch(
     return current_client, status if isinstance(status, dict) else None
 
 
+def _default_owner_face_absent_from_status(
+    status: dict[str, Any] | None,
+    *,
+    absent_lock_sec: int,
+) -> bool:
+    if not isinstance(status, dict):
+        return False
+    if bool(status.get("ownerPresent")):
+        return False
+    age_ms = status.get("ownerSeenAgoMs")
+    if age_ms is None:
+        return True
+    try:
+        return int(age_ms) >= max(0, int(absent_lock_sec) * 1000)
+    except Exception:
+        return False
+
+
+def _default_owner_face_recent_from_status(
+    status: dict[str, Any] | None,
+    *,
+    fresh_ms: int,
+) -> bool:
+    if not isinstance(status, dict):
+        return False
+    if bool(status.get("ownerPresent")):
+        return True
+    age_ms = status.get("ownerSeenAgoMs")
+    if age_ms is None:
+        return False
+    try:
+        return int(age_ms) <= max(0, int(fresh_ms))
+    except Exception:
+        return False
+
+
+def _resolve_biometric_status_url(args: Any) -> str:
+    return str(
+        getattr(args, "god_mode_status_url", "http://127.0.0.1:8765/biometric_status") or ""
+    ).strip()
+
+
 def run_biometric_owner_face_absent_check(
     *,
     current_client: Any | None,
@@ -162,6 +204,33 @@ def run_biometric_owner_face_absent_check(
     return client, bool(status_helper(status, absent_lock_sec=threshold_sec))
 
 
+def run_biometric_owner_face_absent_runtime_check(
+    *,
+    current_client: Any | None,
+    args: Any,
+    logger: Callable[[str], None] | None,
+    client_available: bool,
+    resolve_client: Callable[..., Any | None] | None,
+    fetch_remote_status: Callable[..., tuple[Any | None, dict[str, Any] | None]] | None,
+    fetch_status_from_url: Callable[[str], dict[str, Any] | None] | None,
+    status_helper: Callable[..., bool] | None,
+) -> tuple[Any | None, bool]:
+    threshold_sec = max(
+        0,
+        int(getattr(args, "biometric_face_absent_lock_sec", 120)),
+    )
+    return run_biometric_owner_face_absent_check(
+        current_client=current_client,
+        status_url=_resolve_biometric_status_url(args),
+        absent_lock_sec=threshold_sec,
+        logger=logger,
+        resolve_client=resolve_client if client_available else None,
+        fetch_remote_status=fetch_remote_status if client_available else None,
+        fetch_status_from_url=fetch_status_from_url,
+        status_helper=status_helper or _default_owner_face_absent_from_status,
+    )
+
+
 def run_biometric_owner_face_recent_check(
     *,
     current_client: Any | None,
@@ -196,6 +265,33 @@ def run_biometric_owner_face_recent_check(
         fetch_status_from_url=fetch_status_from_url,
     )
     return client, bool(status_helper(status, fresh_ms=threshold_ms))
+
+
+def run_biometric_owner_face_recent_runtime_check(
+    *,
+    current_client: Any | None,
+    args: Any,
+    logger: Callable[[str], None] | None,
+    client_available: bool,
+    resolve_client: Callable[..., Any | None] | None,
+    fetch_remote_status: Callable[..., tuple[Any | None, dict[str, Any] | None]] | None,
+    fetch_status_from_url: Callable[[str], dict[str, Any] | None] | None,
+    status_helper: Callable[..., bool] | None,
+) -> tuple[Any | None, bool]:
+    threshold_ms = max(
+        0,
+        int(getattr(args, "biometric_unlock_face_fresh_ms", 2000)),
+    )
+    return run_biometric_owner_face_recent_check(
+        current_client=current_client,
+        status_url=_resolve_biometric_status_url(args),
+        fresh_ms=threshold_ms,
+        logger=logger,
+        resolve_client=resolve_client if client_available else None,
+        fetch_remote_status=fetch_remote_status if client_available else None,
+        fetch_status_from_url=fetch_status_from_url,
+        status_helper=status_helper or _default_owner_face_recent_from_status,
+    )
 
 
 def run_biometric_password_candidate_load(
