@@ -227,6 +227,32 @@ def run_live_cam_page_brief_flow(
     return merge_snapshot(brief, snapshot=snapshot if isinstance(snapshot, dict) else None)
 
 
+def run_live_cam_page_brief_cdp_runtime(
+    *,
+    port: int,
+    fetch_targets: Callable[[int], Any],
+    validate_target_list: Callable[[Any, str], Any] | None,
+    select_target: Callable[[Any], dict[str, Any] | None],
+    build_brief: Callable[[dict[str, Any]], dict[str, Any]],
+    create_client: Callable[[str], Any],
+    query_snapshot: Callable[[Any], dict[str, Any] | None],
+    merge_snapshot: Callable[..., dict[str, Any]],
+) -> dict[str, Any]:
+    return run_live_cam_page_brief_flow(
+        port=port,
+        fetch_targets=fetch_targets,
+        validate_target_list=validate_target_list,
+        select_target=select_target,
+        build_brief=build_brief,
+        inspect_target=lambda target: run_live_cam_target_snapshot_cdp_runtime(
+            target=target,
+            create_client=create_client,
+            query_snapshot=query_snapshot,
+        ),
+        merge_snapshot=merge_snapshot,
+    )
+
+
 def page_matches_live_camera_spec(spec: dict[str, Any], page: dict[str, Any]) -> bool:
     url = str(page.get("url") or "")
     if "youtube.com/tv" not in url or "watch?v=" not in url:
