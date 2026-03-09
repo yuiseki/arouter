@@ -1431,6 +1431,17 @@ def run_vacuumtube_fullscreen(
     )
 
 
+def run_vacuumtube_fullscreen_host_runtime(*, runtime: Any) -> str:
+    return run_vacuumtube_fullscreen(
+        ensure_started_and_positioned=runtime.ensure_started_and_positioned,
+        wait_window=runtime.wait_window,
+        activate_window=runtime.activate_window,
+        get_window_geometry=runtime.get_window_geometry,
+        set_fullscreen=runtime._set_fullscreen,
+        wait_fullscreen=runtime._wait_fullscreen,
+    )
+
+
 def run_vacuumtube_quadrant(
     *,
     ensure_started_and_positioned: Callable[[], Any],
@@ -1439,6 +1450,13 @@ def run_vacuumtube_quadrant(
     ensure_started_and_positioned()
     position = ensure_top_right_position()
     return "youtube quadrant " + json.dumps(position, ensure_ascii=False)
+
+
+def run_vacuumtube_quadrant_host_runtime(*, runtime: Any) -> str:
+    return run_vacuumtube_quadrant(
+        ensure_started_and_positioned=runtime.ensure_started_and_positioned,
+        ensure_top_right_position=runtime.ensure_top_right_position,
+    )
 
 
 def run_vacuumtube_minimize(
@@ -1453,6 +1471,19 @@ def run_vacuumtube_minimize(
 
     run_command(build_minimize_command(win_id))
     return f"youtube minimize: ok (win_id={win_id})"
+
+
+def run_vacuumtube_minimize_host_runtime(
+    *,
+    runtime: Any,
+    build_minimize_command: Callable[[str], list[str]],
+    run_command: Callable[[list[str]], None],
+) -> str:
+    return run_vacuumtube_minimize(
+        find_window_id=runtime.find_window_id,
+        build_minimize_command=build_minimize_command,
+        run_command=run_command,
+    )
 
 
 def run_vacuumtube_stop_music(

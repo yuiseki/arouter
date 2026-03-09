@@ -26,6 +26,7 @@ from arouter import (
     run_vacuumtube_ensure_home,
     run_vacuumtube_enumerate_tiles,
     run_vacuumtube_fullscreen,
+    run_vacuumtube_fullscreen_host_runtime,
     run_vacuumtube_go_home,
     run_vacuumtube_go_home_host_runtime,
     run_vacuumtube_go_home_runtime,
@@ -38,6 +39,7 @@ from arouter import (
     run_vacuumtube_hard_reload_home,
     run_vacuumtube_hide_overlay,
     run_vacuumtube_minimize,
+    run_vacuumtube_minimize_host_runtime,
     run_vacuumtube_open_from_home,
     run_vacuumtube_open_from_home_host_runtime,
     run_vacuumtube_open_from_home_runtime,
@@ -48,6 +50,7 @@ from arouter import (
     run_vacuumtube_play_news_host_runtime,
     run_vacuumtube_play_news_runtime,
     run_vacuumtube_quadrant,
+    run_vacuumtube_quadrant_host_runtime,
     run_vacuumtube_resume_playback,
     run_vacuumtube_resume_playback_host_runtime,
     run_vacuumtube_resume_playback_runtime,
@@ -1921,6 +1924,55 @@ def test_run_vacuumtube_fullscreen_returns_before_after_geometry() -> None:
     ]
 
 
+def test_run_vacuumtube_fullscreen_host_runtime_uses_runtime_methods() -> None:
+    class FakeRuntime:
+        def __init__(self) -> None:
+            self.events: list[str] = []
+            self._geometries = iter(
+                [
+                    {"x": 100, "y": 100, "w": 1280, "h": 720},
+                    {"x": 0, "y": 0, "w": 1920, "h": 1080},
+                ]
+            )
+
+        def ensure_started_and_positioned(self) -> None:
+            self.events.append("ensure_started")
+
+        def wait_window(self) -> str:
+            self.events.append("wait_window")
+            return "0x123"
+
+        def activate_window(self, win_id: str) -> None:
+            self.events.append(f"activate:{win_id}")
+
+        def get_window_geometry(self, _win_id: str) -> dict[str, int]:
+            return next(self._geometries)
+
+        def _set_fullscreen(self, win_id: str, *, enabled: bool) -> None:
+            self.events.append(f"fullscreen:{win_id}:{enabled}")
+
+        def _wait_fullscreen(self, win_id: str, *, enabled: bool, timeout_sec: float) -> bool:
+            self.events.append(f"wait_fullscreen:{win_id}:{enabled}:{timeout_sec}")
+            return True
+
+    runtime = FakeRuntime()
+
+    result = run_vacuumtube_fullscreen_host_runtime(runtime=runtime)
+
+    assert json.loads(result.removeprefix("youtube fullscreen ")) == {
+        "fullscreen": True,
+        "before": {"x": 100, "y": 100, "w": 1280, "h": 720},
+        "after": {"x": 0, "y": 0, "w": 1920, "h": 1080},
+    }
+    assert runtime.events == [
+        "ensure_started",
+        "wait_window",
+        "activate:0x123",
+        "fullscreen:0x123:True",
+        "wait_fullscreen:0x123:True:3.0",
+    ]
+
+
 def test_run_vacuumtube_quadrant_wraps_position_result() -> None:
     events: list[str] = []
 
@@ -1932,6 +1984,26 @@ def test_run_vacuumtube_quadrant_wraps_position_result() -> None:
 
     assert result == 'youtube quadrant {"ok": true, "window_id": "0x123"}'
     assert events == ["ensure_started", "ensure_top_right"]
+
+
+def test_run_vacuumtube_quadrant_host_runtime_uses_runtime_methods() -> None:
+    class FakeRuntime:
+        def __init__(self) -> None:
+            self.events: list[str] = []
+
+        def ensure_started_and_positioned(self) -> None:
+            self.events.append("ensure_started")
+
+        def ensure_top_right_position(self) -> dict[str, object]:
+            self.events.append("ensure_top_right")
+            return {"ok": True, "window_id": "0x123"}
+
+    runtime = FakeRuntime()
+
+    result = run_vacuumtube_quadrant_host_runtime(runtime=runtime)
+
+    assert result == 'youtube quadrant {"ok": true, "window_id": "0x123"}'
+    assert runtime.events == ["ensure_started", "ensure_top_right"]
 
 
 def test_run_vacuumtube_stop_music_returns_noop_when_window_missing() -> None:
@@ -2307,6 +2379,23 @@ def test_run_vacuumtube_minimize_runs_built_command() -> None:
 
     result = run_vacuumtube_minimize(
         find_window_id=lambda: "0x123",
+        build_minimize_command=lambda win_id: ["xdotool", "windowminimize", win_id],
+        run_command=commands.append,
+    )
+
+    assert result == "youtube minimize: ok (win_id=0x123)"
+    assert commands == [["xdotool", "windowminimize", "0x123"]]
+
+
+def test_run_vacuumtube_minimize_host_runtime_uses_runtime_methods() -> None:
+    commands: list[list[str]] = []
+
+    class FakeRuntime:
+        def find_window_id(self) -> str | None:
+            return "0x123"
+
+    result = run_vacuumtube_minimize_host_runtime(
+        runtime=FakeRuntime(),
         build_minimize_command=lambda win_id: ["xdotool", "windowminimize", win_id],
         run_command=commands.append,
     )
