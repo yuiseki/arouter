@@ -708,6 +708,23 @@ def run_vacuumtube_good_night_pause_runtime_flow(
     )
 
 
+def run_vacuumtube_good_night_pause_cdp_runtime_flow(
+    *,
+    find_window_id: Callable[[], str | None],
+    open_cdp: Callable[[], Any],
+    snapshot_state: Callable[[Any], dict[str, Any]],
+    cdp_getter: Callable[[Any], Any],
+) -> str:
+    return run_vacuumtube_good_night_pause_runtime_flow(
+        find_window_id=find_window_id,
+        open_cdp=open_cdp,
+        snapshot_state=snapshot_state,
+        run_pause=lambda cdp: run_vacuumtube_good_night_pause(
+            evaluate=lambda expr: cdp_getter(cdp).evaluate(expr),
+        ),
+    )
+
+
 def run_vacuumtube_select_account_if_needed(
     *,
     snapshot_state: Callable[[], dict[str, Any]],

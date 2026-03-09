@@ -29,6 +29,7 @@ from arouter import (
     run_vacuumtube_go_home,
     run_vacuumtube_go_home_runtime,
     run_vacuumtube_good_night_pause,
+    run_vacuumtube_good_night_pause_cdp_runtime_flow,
     run_vacuumtube_good_night_pause_flow,
     run_vacuumtube_good_night_pause_runtime,
     run_vacuumtube_good_night_pause_runtime_flow,
@@ -710,6 +711,45 @@ def test_run_vacuumtube_good_night_pause_runtime_flow_wraps_window_check_and_cdp
         "enter",
         "snapshot:cdp",
         "pause:cdp",
+        "exit",
+    ]
+
+
+def test_run_vacuumtube_good_night_pause_cdp_runtime_flow_uses_default_pause_query() -> None:
+    events: list[str] = []
+
+    class FakeContext:
+        def __enter__(self) -> str:
+            events.append("enter")
+            return "cdp"
+
+        def __exit__(self, exc_type, exc, tb) -> None:
+            events.append("exit")
+            return None
+
+    class FakeCdp:
+        def evaluate(self, expr: str) -> dict[str, object]:
+            events.append(f"evaluate:{'video' in expr}")
+            return {"ok": True, "afterPaused": True, "hash": "#/watch?v=abc"}
+
+    out = run_vacuumtube_good_night_pause_cdp_runtime_flow(
+        find_window_id=lambda: "0x123",
+        open_cdp=lambda: FakeContext(),
+        snapshot_state=lambda cdp: (
+            events.append(f"snapshot:{cdp}") or {"hash": "#/watch?v=abc"}
+        ),
+        cdp_getter=lambda _cdp: FakeCdp(),
+    )
+
+    assert out == (
+        'good_night pause '
+        '{"ok": true, "afterPaused": true, "hash": "#/watch?v=abc", '
+        '"stateHash": "#/watch?v=abc"}'
+    )
+    assert events == [
+        "enter",
+        "snapshot:cdp",
+        "evaluate:True",
         "exit",
     ]
 
