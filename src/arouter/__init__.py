@@ -163,7 +163,8 @@ from .load_check import (
     wait_for_new_window_row,
 )
 from .models import VoiceCommand
-from .overlay import build_overlay_ipc_line, compose_overlay_notify_text, trim_notify_text
+from .notifier import DesktopNotifier, compose_overlay_notify_text, trim_notify_text
+from .overlay import build_overlay_ipc_line
 from .parser import extract_password_unlock_secret, normalize_transcript, parse_command
 from .policy import (
     good_night_voice_text,
@@ -326,6 +327,7 @@ __all__ = [
     "TextCommandRouter",
     "VoiceCommand",
     "authorize_command",
+    "DesktopNotifier",
     "encrypt_biometric_password_payload",
     "ensure_biometric_runtime_attrs",
     "build_overlay_ipc_line",
