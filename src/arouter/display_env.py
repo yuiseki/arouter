@@ -52,3 +52,20 @@ def resolve_x11_display(
         f"{label.lower()} X11 display not available "
         f"(tried: {', '.join(candidates)})"
     )
+
+
+def resolve_x11_display_host_runtime(
+    *,
+    runtime: object,
+    label: str,
+) -> str:
+    log = getattr(runtime, "log", None)
+    resolved = resolve_x11_display(
+        cached_display=runtime._resolved_display,  # type: ignore[attr-defined]
+        configured_display=runtime.display,  # type: ignore[attr-defined]
+        probe_display=runtime._probe_display,  # type: ignore[attr-defined]
+        logger=log if callable(log) else (lambda _message: None),
+        label=label,
+    )
+    runtime._resolved_display = resolved  # type: ignore[attr-defined]
+    return resolved

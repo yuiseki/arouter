@@ -75,7 +75,7 @@ from .desktop_runtime import (
     run_tmux_has_session_query,
     run_tmux_konsole_open,
 )
-from .display_env import build_x11_env, resolve_x11_display
+from .display_env import build_x11_env, resolve_x11_display, resolve_x11_display_host_runtime
 from .display_runtime import probe_x11_display, probe_x11_display_host_runtime
 from .errors import report_segment_error
 from .execution import (
@@ -664,6 +664,7 @@ __all__ = [
     "default_locked_denied_text",
     "encrypt_password_file",
     "resolve_biometric_arg_path",
+    "resolve_x11_display_host_runtime",
     "resolve_x11_display",
     "contextualize_command_with_vacuumtube_state",
     "require_cdp_target_list",
