@@ -1045,6 +1045,21 @@ def run_vacuumtube_resume_playback_runtime(
         )
 
 
+def run_vacuumtube_resume_playback_host_runtime(*, runtime: Any) -> str:
+    log = runtime.log if hasattr(runtime, "log") else None
+    return run_vacuumtube_resume_playback_runtime(
+        open_cdp=runtime._cdp,
+        find_window_id=runtime.find_window_id,
+        snapshot_state=runtime._snapshot_state,
+        is_watch_state=runtime._is_watch_state,
+        confirm_watch_playback=runtime._wait_confirmed_watch_playback,
+        try_resume_current_video=runtime._try_resume_current_video,
+        send_space_key=lambda: runtime.send_key("space"),
+        ensure_top_right_position=runtime.ensure_top_right_position,
+        log=log if callable(log) else (lambda _message: None),
+    )
+
+
 def run_vacuumtube_go_home(
     *,
     presentation_before: dict[str, Any],

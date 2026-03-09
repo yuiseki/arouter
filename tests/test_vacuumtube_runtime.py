@@ -48,6 +48,7 @@ from arouter import (
     run_vacuumtube_play_news_runtime,
     run_vacuumtube_quadrant,
     run_vacuumtube_resume_playback,
+    run_vacuumtube_resume_playback_host_runtime,
     run_vacuumtube_resume_playback_runtime,
     run_vacuumtube_route_to_home,
     run_vacuumtube_select_account_if_needed,
@@ -1231,6 +1232,67 @@ def test_run_vacuumtube_resume_playback_runtime_opens_cdp_and_reuses_resume_flow
         "ensure_top_right",
         'RESUME already-playing window position: {"ok": true}',
         "exit",
+    ]
+
+
+def test_run_vacuumtube_resume_playback_host_runtime_uses_runtime_methods() -> None:
+    class FakeContext:
+        def __enter__(self) -> str:
+            return "cdp"
+
+        def __exit__(self, exc_type, exc, tb) -> None:
+            return None
+
+    class FakeRuntime:
+        def __init__(self) -> None:
+            self.events: list[str] = []
+
+        def _cdp(self) -> FakeContext:
+            return FakeContext()
+
+        def find_window_id(self) -> str | None:
+            self.events.append("find_window")
+            return "0x123"
+
+        def _snapshot_state(self, cdp: str) -> dict[str, object]:
+            self.events.append(f"snapshot:{cdp}")
+            return {"hash": "#/watch?v=abc"}
+
+        def _is_watch_state(self, state: dict[str, object]) -> bool:
+            self.events.append(f"is_watch:{state.get('hash')}")
+            return True
+
+        def _wait_confirmed_watch_playback(self, cdp: str, **kwargs: object) -> dict[str, object]:
+            self.events.append(
+                f"confirm:{cdp}:{kwargs['timeout_sec']}:{kwargs.get('allow_resume_attempts', True)}"
+            )
+            return {"hash": "#/watch?v=abc"}
+
+        def _try_resume_current_video(self, cdp: str) -> None:
+            self.events.append(f"resume:{cdp}")
+
+        def send_key(self, key: str) -> None:
+            self.events.append(f"key:{key}")
+
+        def ensure_top_right_position(self) -> dict[str, object]:
+            self.events.append("ensure_top_right")
+            return {"ok": True}
+
+        def log(self, message: str) -> None:
+            self.events.append(message)
+
+    runtime = FakeRuntime()
+
+    result = run_vacuumtube_resume_playback_host_runtime(runtime=runtime)
+
+    assert result == "watch route already playing (no-op)"
+    assert runtime.events == [
+        "find_window",
+        "snapshot:cdp",
+        "is_watch:#/watch?v=abc",
+        "confirm:cdp:1.2:False",
+        "ensure_top_right",
+        'RESUME already-playing window position: {"ok": true}',
     ]
 
 
