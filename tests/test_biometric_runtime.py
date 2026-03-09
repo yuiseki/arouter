@@ -6,6 +6,7 @@ from types import SimpleNamespace
 from unittest import mock
 
 from arouter import (
+    record_successful_command_activity,
     default_lock_screen_text,
     default_locked_denied_text,
     maybe_auto_lock,
@@ -14,6 +15,8 @@ from arouter import (
     reassert_lock_screen,
     run_biometric_owner_face_absent_check,
     run_biometric_owner_face_recent_check,
+    run_biometric_password_candidate_load,
+    run_biometric_signal_consume,
     run_biometric_status_client_resolution,
     run_biometric_status_fetch,
     set_system_locked,
@@ -244,3 +247,95 @@ def test_run_biometric_owner_face_recent_check_falls_back_to_status_helper() -> 
     assert next_client == "client"
     assert ok is True
     status_helper.assert_called_once_with({"ownerPresent": False}, fresh_ms=2000)
+
+
+def test_run_biometric_password_candidate_load_returns_cached_copy() -> None:
+    cached = ["secret"]
+
+    candidates = run_biometric_password_candidate_load(
+        cached_candidates=cached,
+        args=SimpleNamespace(),
+        debug=lambda _msg: None,
+        log=lambda _msg: None,
+        resolve_path=mock.Mock(),
+        load_candidates=mock.Mock(),
+        encrypted_default_path="/tmp/password.enc",
+        private_key_default_path="/tmp/id_rsa",
+    )
+
+    assert candidates == ["secret"]
+    assert candidates is not cached
+
+
+def test_run_biometric_password_candidate_load_resolves_paths_and_loads() -> None:
+    encrypted_path = "/tmp/password.enc"
+    private_key_path = "/tmp/id_rsa"
+    resolve_path = mock.Mock(side_effect=[encrypted_path, private_key_path])
+    load_candidates = mock.Mock(return_value=["secret"])
+    args = SimpleNamespace()
+
+    candidates = run_biometric_password_candidate_load(
+        cached_candidates=None,
+        args=args,
+        debug=lambda _msg: None,
+        log=lambda _msg: None,
+        resolve_path=resolve_path,
+        load_candidates=load_candidates,
+        encrypted_default_path="/tmp/password.enc",
+        private_key_default_path="/tmp/id_rsa",
+    )
+
+    assert candidates == ["secret"]
+    assert resolve_path.call_args_list == [
+        mock.call(
+            args=args,
+            attr_name="biometric_password_file",
+            default_path="/tmp/password.enc",
+        ),
+        mock.call(
+            args=args,
+            attr_name="biometric_password_private_key",
+            default_path="/tmp/id_rsa",
+        ),
+    ]
+    load_candidates.assert_called_once_with(
+        encrypted_path=encrypted_path,
+        private_key_path=private_key_path,
+        debug=mock.ANY,
+        log=mock.ANY,
+    )
+
+
+def test_run_biometric_signal_consume_resolves_path_and_delegates() -> None:
+    resolve_path = mock.Mock(return_value="/tmp/unlock.signal")
+    consume_signal = mock.Mock(return_value=(True, 5.0))
+    args = SimpleNamespace()
+
+    consumed, seen_mtime = run_biometric_signal_consume(
+        args=args,
+        attr_name="biometric_unlock_signal_file",
+        default_path="/tmp/unlock.signal",
+        seen_mtime=1.0,
+        resolve_path=resolve_path,
+        consume_signal=consume_signal,
+    )
+
+    assert consumed is True
+    assert seen_mtime == 5.0
+    resolve_path.assert_called_once_with(
+        args=args,
+        attr_name="biometric_unlock_signal_file",
+        default_path="/tmp/unlock.signal",
+    )
+    consume_signal.assert_called_once_with(
+        signal_path="/tmp/unlock.signal",
+        seen_mtime=1.0,
+    )
+
+
+def test_record_successful_command_activity_updates_timestamp() -> None:
+    runtime = SimpleNamespace(_last_successful_command_at=0.0)
+
+    record_successful_command_activity(runtime, now=lambda: 123.0)
+
+    assert runtime._last_successful_command_at == 123.0

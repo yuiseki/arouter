@@ -150,6 +150,67 @@ def run_biometric_owner_face_recent_check(
     return client, bool(status_helper(status, fresh_ms=threshold_ms))
 
 
+def run_biometric_password_candidate_load(
+    *,
+    cached_candidates: list[str] | None,
+    args: Any,
+    debug: Callable[[str], None],
+    log: Callable[[str], None],
+    resolve_path: Callable[..., Any],
+    load_candidates: Callable[..., list[str]],
+    encrypted_default_path: str,
+    private_key_default_path: str,
+) -> list[str]:
+    if isinstance(cached_candidates, list):
+        return list(cached_candidates)
+    encrypted_path = resolve_path(
+        args=args,
+        attr_name="biometric_password_file",
+        default_path=encrypted_default_path,
+    )
+    private_key_path = resolve_path(
+        args=args,
+        attr_name="biometric_password_private_key",
+        default_path=private_key_default_path,
+    )
+    return list(
+        load_candidates(
+            encrypted_path=encrypted_path,
+            private_key_path=private_key_path,
+            debug=debug,
+            log=log,
+        )
+    )
+
+
+def run_biometric_signal_consume(
+    *,
+    args: Any,
+    attr_name: str,
+    default_path: str,
+    seen_mtime: float,
+    resolve_path: Callable[..., Any],
+    consume_signal: Callable[..., tuple[bool, float]],
+) -> tuple[bool, float]:
+    signal_path = resolve_path(
+        args=args,
+        attr_name=attr_name,
+        default_path=default_path,
+    )
+    return consume_signal(
+        signal_path=signal_path,
+        seen_mtime=float(seen_mtime),
+    )
+
+
+def record_successful_command_activity(
+    runtime: Any,
+    *,
+    now: Callable[[], float] = time.time,
+) -> None:
+    runtime._last_successful_command_at = now()
+
+
 def set_system_locked(runtime: LockRuntime, locked: bool, *, reason: str) -> bool:
     previous = bool(runtime._system_locked)
     runtime._system_locked = bool(locked)
