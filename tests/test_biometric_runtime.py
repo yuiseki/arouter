@@ -6,6 +6,8 @@ from types import SimpleNamespace
 from unittest import mock
 
 from arouter import (
+    biometric_lock_enabled,
+    biometric_unlock_success_text,
     record_successful_command_activity,
     default_lock_screen_text,
     default_locked_denied_text,
@@ -22,8 +24,13 @@ from arouter import (
     run_biometric_status_client_get,
     run_biometric_status_client_resolution,
     run_biometric_status_fetch,
+    run_biometric_status_runtime_fetch,
     run_biometric_status_url_fetch,
     set_system_locked,
+    unlock_requires_face_auth_text,
+    unlock_requires_live_voice_text,
+    unlock_requires_password_text,
+    unlock_requires_speaker_auth_text,
 )
 
 
@@ -56,6 +63,19 @@ def test_default_lock_screen_text_matches_existing_contract() -> None:
 
 def test_default_locked_denied_text_matches_existing_contract() -> None:
     assert default_locked_denied_text().startswith("現在ロック中です。")
+
+
+def test_biometric_lock_enabled_reads_flag_from_args() -> None:
+    assert biometric_lock_enabled(SimpleNamespace(biometric_lock=True)) is True
+    assert biometric_lock_enabled(SimpleNamespace(biometric_lock=False)) is False
+
+
+def test_unlock_text_helpers_match_existing_contracts() -> None:
+    assert unlock_requires_live_voice_text().startswith("ロック解除には実際の音声入力が必要です。")
+    assert unlock_requires_speaker_auth_text() == "声紋認証が利用できないため、ロックを解除できません。"
+    assert unlock_requires_face_auth_text() == "顔認証を確認できませんでした。カメラの前で、もう一度お試しください。"
+    assert unlock_requires_password_text() == "パスワード認証に失敗しました。もう一度お試しください。"
+    assert biometric_unlock_success_text() == "バイオメトリクス認証に成功しました。おかえりなさい、ユイさま"
 
 
 def test_set_system_locked_shows_overlay_when_locking() -> None:
@@ -206,6 +226,28 @@ def test_run_biometric_status_fetch_falls_back_to_url_fetch() -> None:
     assert client == "current"
     assert status == {"ownerPresent": False}
     fetch_status_from_url.assert_called_once_with("http://127.0.0.1:8765/biometric_status")
+
+
+def test_run_biometric_status_runtime_fetch_uses_args_and_returns_updated_client() -> None:
+    fetch_remote_status = mock.Mock(return_value=("next", {"ownerPresent": True}))
+
+    client, status = run_biometric_status_runtime_fetch(
+        current_client="current",
+        args=SimpleNamespace(god_mode_status_url=" http://127.0.0.1:8765/biometric_status "),
+        logger=None,
+        client_available=True,
+        fetch_remote_status=fetch_remote_status,
+        fetch_status_from_url=mock.Mock(),
+    )
+
+    assert client == "next"
+    assert status == {"ownerPresent": True}
+    fetch_remote_status.assert_called_once_with(
+        current_client="current",
+        status_url="http://127.0.0.1:8765/biometric_status",
+        logger=None,
+        timeout_sec=1.5,
+    )
 
 
 def test_run_biometric_status_client_get_returns_current_client_when_cached() -> None:

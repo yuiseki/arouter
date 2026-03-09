@@ -40,6 +40,33 @@ def default_locked_denied_text() -> str:
     )
 
 
+def biometric_lock_enabled(args: Any) -> bool:
+    return bool(getattr(args, "biometric_lock", False))
+
+
+def unlock_requires_live_voice_text() -> str:
+    return (
+        "ロック解除には実際の音声入力が必要です。"
+        "カメラの前で、システム、おはよう、またはシステム、バイオメトリクス認証と話してください。"
+    )
+
+
+def unlock_requires_speaker_auth_text() -> str:
+    return "声紋認証が利用できないため、ロックを解除できません。"
+
+
+def unlock_requires_face_auth_text() -> str:
+    return "顔認証を確認できませんでした。カメラの前で、もう一度お試しください。"
+
+
+def unlock_requires_password_text() -> str:
+    return "パスワード認証に失敗しました。もう一度お試しください。"
+
+
+def biometric_unlock_success_text() -> str:
+    return "バイオメトリクス認証に成功しました。おかえりなさい、ユイさま"
+
+
 def run_biometric_status_client_resolution(
     *,
     current_client: Any | None,
@@ -166,6 +193,24 @@ def _resolve_biometric_status_url(args: Any) -> str:
     return str(
         getattr(args, "god_mode_status_url", "http://127.0.0.1:8765/biometric_status") or ""
     ).strip()
+
+
+def run_biometric_status_runtime_fetch(
+    *,
+    current_client: Any | None,
+    args: Any,
+    logger: Callable[[str], None] | None,
+    client_available: bool,
+    fetch_remote_status: Callable[..., tuple[Any | None, dict[str, Any] | None]] | None,
+    fetch_status_from_url: Callable[[str], dict[str, Any] | None] | None,
+) -> tuple[Any | None, dict[str, Any] | None]:
+    return run_biometric_status_fetch(
+        current_client=current_client,
+        status_url=_resolve_biometric_status_url(args),
+        logger=logger,
+        fetch_remote_status=fetch_remote_status if client_available else None,
+        fetch_status_from_url=fetch_status_from_url,
+    )
 
 
 def run_biometric_owner_face_absent_check(

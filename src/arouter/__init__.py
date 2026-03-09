@@ -2,6 +2,8 @@ from .authorization import authorize_command
 from .biometric_admin import (
     encrypt_biometric_password_payload,
     request_biometric_lock_payload,
+    run_encrypt_biometric_password_stdin,
+    run_request_biometric_lock,
 )
 from .biometric_bootstrap import ensure_biometric_runtime_attrs
 from .biometric_password import (
@@ -19,6 +21,8 @@ from .biometric_poller import (
     stop_biometric_poller,
 )
 from .biometric_runtime import (
+    biometric_lock_enabled,
+    biometric_unlock_success_text,
     record_successful_command_activity,
     default_lock_screen_text,
     default_locked_denied_text,
@@ -35,8 +39,13 @@ from .biometric_runtime import (
     run_biometric_status_client_resolution,
     run_biometric_status_client_get,
     run_biometric_status_fetch,
+    run_biometric_status_runtime_fetch,
     run_biometric_status_url_fetch,
     set_system_locked,
+    unlock_requires_face_auth_text,
+    unlock_requires_live_voice_text,
+    unlock_requires_password_text,
+    unlock_requires_speaker_auth_text,
 )
 from .biometric_signal import (
     consume_signal_file,
@@ -334,9 +343,12 @@ __all__ = [
     "TextCommandRouter",
     "VoiceCommand",
     "authorize_command",
+    "biometric_lock_enabled",
+    "biometric_unlock_success_text",
     "DesktopNotifier",
     "encrypt_biometric_password_payload",
     "ensure_biometric_runtime_attrs",
+    "run_encrypt_biometric_password_stdin",
     "build_overlay_ipc_line",
     "build_x11_env",
     "probe_x11_display",
@@ -534,6 +546,7 @@ __all__ = [
     "reassert_lock_screen",
     "request_biometric_lock_payload",
     "record_successful_command_activity",
+    "run_request_biometric_lock",
     "select_live_cam_page_target",
     "select_live_cam_page_url",
     "resolve_expected_top_right_geometry",
@@ -557,6 +570,7 @@ __all__ = [
     "run_biometric_status_client_get",
     "run_biometric_status_client_resolution",
     "run_biometric_status_fetch",
+    "run_biometric_status_runtime_fetch",
     "run_biometric_status_url_fetch",
     "run_authorized_command_flow",
     "run_live_cam_parallel",
@@ -614,6 +628,10 @@ __all__ = [
     "web_watch_retry_video_id",
     "trim_notify_text",
     "top_right_region_from_screen_and_work_area",
+    "unlock_requires_face_auth_text",
+    "unlock_requires_live_voice_text",
+    "unlock_requires_password_text",
+    "unlock_requires_speaker_auth_text",
     "verify_unlock_password",
     "write_signal_file",
 ]
