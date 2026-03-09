@@ -342,3 +342,15 @@ def find_stuck_live_cam_specs(
         if not page_matches_live_camera_spec(spec, page_or_error):
             stuck.append(spec)
     return stuck
+
+
+def run_live_cam_stuck_specs_query(
+    specs: list[dict[str, Any]],
+    *,
+    fetch_page_brief: Callable[[int], dict[str, Any]],
+) -> list[dict[str, Any]]:
+    pages_by_port = collect_live_cam_pages_by_port(
+        specs,
+        fetch_page_brief=fetch_page_brief,
+    )
+    return find_stuck_live_cam_specs(specs, pages_by_port=pages_by_port)

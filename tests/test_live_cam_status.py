@@ -14,6 +14,7 @@ from arouter import (
     run_live_cam_page_snapshot_query,
     run_live_cam_page_snapshot_via_websocket,
     run_live_cam_runtime_state_cdp_runtime,
+    run_live_cam_stuck_specs_query,
     run_live_cam_target_inspection,
     run_live_cam_target_snapshot_cdp_runtime,
     run_live_cam_target_snapshot_runtime,
@@ -299,6 +300,37 @@ def test_find_stuck_live_cam_specs_skips_matching_watch_pages() -> None:
     stuck = find_stuck_live_cam_specs(specs, pages_by_port=pages_by_port)
 
     assert stuck == []
+
+
+def test_run_live_cam_stuck_specs_query_collects_pages_and_returns_stuck_specs() -> None:
+    specs = [
+        {"label": "shibuya", "port": 9993, "verify_regex": "渋谷|Shibuya"},
+        {"label": "akihabara", "port": 9996, "verify_regex": "秋葉原|Akihabara"},
+    ]
+    calls: list[int] = []
+
+    out = run_live_cam_stuck_specs_query(
+        specs,
+        fetch_page_brief=lambda port: (
+            calls.append(port)
+            or (
+                {
+                    "url": "https://www.youtube.com/tv#/watch?v=abc123DEF45",
+                    "watchText": "最新ニュース 日テレNEWS LIVE",
+                    "bodyText": "速報とニュース解説をお届けします",
+                }
+                if port == 9993
+                else {
+                    "url": "https://www.youtube.com/tv#/watch?v=abc123DEF46",
+                    "watchText": "【LIVE】秋葉原 Akihabara",
+                    "bodyText": "秋葉原 ライブカメラ",
+                }
+            )
+        ),
+    )
+
+    assert calls == [9993, 9996]
+    assert out == [specs[0]]
 
 
 def test_run_live_cam_page_brief_flow_merges_snapshot_from_inspector() -> None:
