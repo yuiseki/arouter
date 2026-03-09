@@ -22,6 +22,7 @@ from arouter import (
     run_vacuumtube_click_tile_center_host_runtime,
     run_vacuumtube_confirm_watch_playback,
     run_vacuumtube_confirm_watch_playback_host_runtime,
+    run_vacuumtube_context_host_runtime_flow,
     run_vacuumtube_context_query,
     run_vacuumtube_context_runtime_flow,
     run_vacuumtube_context_runtime_query,
@@ -442,6 +443,40 @@ def test_run_vacuumtube_context_runtime_flow_reads_runtime_methods() -> None:
         "homeHint": False,
         "watchUiHint": False,
     }
+
+
+def test_run_vacuumtube_context_host_runtime_flow_reads_host_runtime_methods() -> None:
+    runtime = mock.Mock()
+    runtime.cdp_port = 9992
+    runtime.find_window_id.return_value = "0x999"
+    runtime.get_window_geometry.return_value = {"x": 0, "y": 0, "w": 1, "h": 1}
+    runtime._current_window_is_fullscreenish.return_value = False
+    runtime._x11_env.return_value = {"DISPLAY": ":1"}
+    runtime.cdp_ready.return_value = False
+
+    host_runtime = mock.Mock()
+    host_runtime._vacuumtube_main_window_row_by_cdp_port.return_value = {
+        "id": "0x123",
+        "x": "10",
+        "y": 20,
+        "w": "300",
+        "h": 400,
+    }
+    host_runtime._is_vacuumtube_quadrant_mode_for_load_check.return_value = True
+
+    out = run_vacuumtube_context_host_runtime_flow(
+        ts=5.0,
+        runtime=runtime,
+        host_runtime=host_runtime,
+        run_command=lambda *_args, **_kwargs: mock.Mock(stdout=""),
+    )
+
+    assert out["ts"] == 5.0
+    assert out["windowFound"] is True
+    assert out["geom"] == {"x": 10, "y": 20, "w": 300, "h": 400}
+    assert out["quadrantish"] is True
+    host_runtime._vacuumtube_main_window_row_by_cdp_port.assert_called_once_with(9992)
+    host_runtime._is_vacuumtube_quadrant_mode_for_load_check.assert_called_once_with()
 
 
 def test_run_vacuumtube_action_with_recovery_retries_once_for_recoverable_error() -> None:
