@@ -787,3 +787,31 @@ def run_live_cam_layout_runtime_flow(
         raise_windows_for_pids=raise_windows_for_pids,
         collect_runtime_state=collect_runtime_state,
     )
+
+
+def run_live_cam_layout_host_runtime_flow(
+    *,
+    mode: str,
+    runtime: Any,
+) -> str:
+    log = runtime.log
+    return run_live_cam_layout_runtime_flow(
+        mode=mode,
+        instances=list(runtime.instances),
+        resolve_existing_windowed_pids=runtime._existing_windowed_pids_by_port,
+        find_stuck_specs=runtime._find_stuck_instances,
+        assign_live_camera=runtime._assign_live_camera,
+        parallel_runner=runtime._run_instances_parallel,
+        ensure_scripts_present=runtime._ensure_scripts_present,
+        ensure_instances_started=runtime._ensure_instances_started,
+        ensure_targets_opened=runtime._ensure_tokyo_targets_opened,
+        pid_lookup=runtime._pid_for_port,
+        detect_screen_size=runtime._detect_screen_size,
+        detect_work_area=runtime._detect_work_area,
+        build_targets_full=runtime._layout_targets_full,
+        build_targets_compact=runtime._layout_targets_compact,
+        kwin_apply_layout=runtime._kwin_apply_layout,
+        raise_windows_for_pids=runtime._raise_windows_for_pids,
+        collect_runtime_state=runtime._collect_runtime_state,
+        log=log if callable(log) else None,
+    )

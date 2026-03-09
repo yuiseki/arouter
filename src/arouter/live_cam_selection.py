@@ -368,3 +368,19 @@ def run_live_cam_payload_selection_runtime_flow(
         verify_force_candidate_page=_verify_force_candidate_page,
         log=log,
     )
+
+
+def run_live_cam_payload_selection_host_runtime_flow(
+    spec: dict[str, Any],
+    *,
+    runtime: Any,
+) -> dict[str, Any]:
+    log = runtime.log if hasattr(runtime, "log") else None
+    return run_live_cam_payload_selection_runtime_flow(
+        spec,
+        fast_open_script=runtime.fast_open_script,
+        run_process=runtime._run,
+        page_brief_for_port=runtime._page_brief_for_port,
+        page_matches_spec=runtime._page_matches_live_camera_spec,
+        log=log if callable(log) else None,
+    )

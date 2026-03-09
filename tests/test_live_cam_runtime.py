@@ -25,6 +25,7 @@ from arouter import (
     run_live_cam_hide_flow,
     run_live_cam_layout_controller_flow,
     run_live_cam_layout_flow,
+    run_live_cam_layout_host_runtime_flow,
     run_live_cam_layout_runtime_flow,
     run_live_cam_minimize_flow,
     run_live_cam_minimize_windows,
@@ -856,6 +857,84 @@ def test_run_live_cam_layout_runtime_flow_uses_bootstrap_and_controller_helpers(
         },
         log=lambda message: events.append(("log", message)),
     )
+
+    assert events == [
+        ("log", "LIVE_CAM compact fast-path: reusing existing windows and applying layout only"),
+        ("apply", "codex_live_cam_wall_compact", False, True, 101),
+    ]
+    assert result == (
+        'live camera wall {"mode": "compact", "fastPath": true, '
+        '"screen": {"w": 4096, "h": 2160}, '
+        '"workArea": {"x": 0, "y": 0, "w": 4096, "h": 2116}, '
+        '"started": [], "opened": [], "windows": [{"pid": 101}], "urls": []}'
+    )
+
+
+def test_run_live_cam_layout_host_runtime_flow_reads_runtime_methods() -> None:
+    events: list[object] = []
+
+    class FakeRuntime:
+        instances = [{"label": "shibuya", "port": 9993}]
+
+        def log(self, message: str) -> None:
+            events.append(("log", message))
+
+        def _existing_windowed_pids_by_port(self) -> dict[int, int] | None:
+            return {9993: 101}
+
+        def _find_stuck_instances(self) -> list[dict[str, int]]:
+            return []
+
+        def _assign_live_camera(self, spec: dict[str, object]) -> dict[str, object]:
+            raise AssertionError(f"assign_live_camera unused for {spec}")
+
+        def _run_instances_parallel(self, specs, *, worker, label: str):
+            raise AssertionError(f"parallel_runner unused for {specs}/{label}")
+
+        def _ensure_scripts_present(self) -> None:
+            raise AssertionError("ensure_scripts_present unused")
+
+        def _ensure_instances_started(self) -> list[dict[str, object]]:
+            raise AssertionError("ensure_instances_started unused")
+
+        def _ensure_tokyo_targets_opened(self) -> list[dict[str, object]]:
+            raise AssertionError("ensure_targets_opened unused")
+
+        def _pid_for_port(self, port: int) -> int | None:
+            return 101 if int(port) == 9993 else None
+
+        def _detect_screen_size(self) -> tuple[int, int]:
+            return (4096, 2160)
+
+        def _detect_work_area(self) -> tuple[int, int, int, int] | None:
+            return (0, 0, 4096, 2116)
+
+        def _layout_targets_full(self, **kwargs: object) -> list[dict[str, int]]:
+            raise AssertionError(f"full target builder unused: {kwargs}")
+
+        def _layout_targets_compact(self, **kwargs: object) -> list[dict[str, int]]:
+            pids_by_port = kwargs["pids_by_port"]
+            assert isinstance(pids_by_port, dict)
+            return [{"pid": int(pids_by_port[9993]), "x": 1, "y": 2, "w": 3, "h": 4}]
+
+        def _kwin_apply_layout(self, **kwargs: object) -> None:
+            events.append(
+                (
+                    "apply",
+                    kwargs["plugin_name"],
+                    kwargs["keep_above"],
+                    kwargs["no_border"],
+                    kwargs["targets"][0]["pid"],
+                )
+            )
+
+        def _raise_windows_for_pids(self, pids: list[int]) -> None:
+            events.append(("raise", pids))
+
+        def _collect_runtime_state(self, pids_by_port: dict[int, int]) -> dict[str, object]:
+            return {"windows": [{"pid": pids_by_port[9993]}], "urls": []}
+
+    result = run_live_cam_layout_host_runtime_flow(mode="compact", runtime=FakeRuntime())
 
     assert events == [
         ("log", "LIVE_CAM compact fast-path: reusing existing windows and applying layout only"),

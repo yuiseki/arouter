@@ -12,6 +12,7 @@ from arouter import (
     expand_live_cam_candidates,
     format_live_cam_selection_error,
     normalize_live_cam_force_video_id,
+    run_live_cam_payload_selection_host_runtime_flow,
     run_live_cam_payload_selection_runtime,
     run_live_cam_payload_selection_runtime_flow,
     select_live_cam_payload,
@@ -516,3 +517,70 @@ def test_run_live_cam_payload_selection_runtime_flow_logs_verify_probe_failure()
 
     assert payload["videoId"] == "abc123DEF45"
     assert any("verify probe failed" in entry for entry in logs)
+
+
+def test_run_live_cam_payload_selection_host_runtime_flow_reads_runtime_methods() -> None:
+    calls: list[tuple[list[str], float, bool]] = []
+    brief_calls: list[int] = []
+    match_calls: list[tuple[dict[str, object], dict[str, object]]] = []
+
+    class FakeRuntime:
+        fast_open_script = FAST_OPEN_SCRIPT
+
+        def log(self, _message: str) -> None:
+            return None
+
+        def _run(self, command: list[str], *, timeout: float, check: bool):
+            calls.append((command, timeout, check))
+            if "--force-video-id" in command:
+                return type(
+                    "Completed",
+                    (),
+                    {
+                        "returncode": 0,
+                        "stdout": '{"ok":true,"videoId":"urE7veQRlrQ","method":"force-video-id"}',
+                        "stderr": "",
+                    },
+                )()
+            return type(
+                "Completed",
+                (),
+                {
+                    "returncode": 0,
+                    "stdout": '{"ok":true,"videoId":"abc123DEF45","method":"direct-id"}',
+                    "stderr": "",
+                },
+            )()
+
+        def _page_brief_for_port(self, port: int) -> dict[str, object]:
+            brief_calls.append(port)
+            return {
+                "url": "https://www.youtube.com/tv?env_enableMediaStreams=true#/",
+                "watchText": "",
+                "bodyText": "あなたへのおすすめ",
+            }
+
+        def _page_matches_live_camera_spec(
+            self,
+            spec: dict[str, object],
+            page: dict[str, object],
+        ) -> bool:
+            match_calls.append((spec, page))
+            return False
+
+    payload = run_live_cam_payload_selection_host_runtime_flow(
+        {
+            "label": "asakusa",
+            "port": 9996,
+            "force_video_id": "urE7veQRlrQ",
+            "browse_url": "https://example.test/asakusa",
+            "keyword": "浅草・雷門前の様子",
+            "verify_regex": "浅草|雷門|Asakusa",
+        },
+        runtime=FakeRuntime(),
+    )
+
+    assert payload["videoId"] == "abc123DEF45"
+    assert brief_calls == [9996]
+    assert len(match_calls) == 1
+    assert len(calls) == 2
