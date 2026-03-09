@@ -34,6 +34,7 @@ from arouter import (
     run_live_cam_raise_windows,
     run_live_cam_reopen_specs_flow,
     run_live_cam_start_flow,
+    run_live_cam_start_instances_flow,
     run_live_cam_start_script_flow,
     run_live_cam_window_action_flow,
     run_minimize_other_windows_flow,
@@ -227,6 +228,32 @@ def test_run_live_cam_start_script_flow_uses_default_build_parse_and_result_help
         "port": "9996",
         "session_name": "vacuumtube-bg-5",
     }
+
+
+def test_run_live_cam_start_instances_flow_ensures_scripts_and_runs_parallel() -> None:
+    events: list[str] = []
+    specs = [{"port": 9993}, {"port": 9994}]
+
+    def fake_parallel_runner(current_specs, *, worker, label: str):
+        events.append(f"parallel:{label}:{len(current_specs)}")
+        return [worker(spec) for spec in current_specs]
+
+    out = run_live_cam_start_instances_flow(
+        specs,
+        ensure_scripts_present=lambda: events.append("ensure_scripts"),
+        start_instance=lambda spec: (
+            events.append(f"start:{spec['port']}") or {"port": spec["port"]}
+        ),
+        parallel_runner=fake_parallel_runner,
+    )
+
+    assert out == [{"port": 9993}, {"port": 9994}]
+    assert events == [
+        "ensure_scripts",
+        "parallel:live_cam_start:2",
+        "start:9993",
+        "start:9994",
+    ]
 
 
 def test_run_live_cam_open_flow_builds_results_via_parallel_runner() -> None:

@@ -458,6 +458,21 @@ def run_live_cam_start_script_flow(
     )
 
 
+def run_live_cam_start_instances_flow(
+    specs: list[dict[str, Any]],
+    *,
+    ensure_scripts_present: Callable[[], None],
+    start_instance: Callable[[dict[str, Any]], dict[str, Any]],
+    parallel_runner: Callable[..., list[dict[str, Any]]],
+) -> list[dict[str, Any]]:
+    ensure_scripts_present()
+    return parallel_runner(
+        specs,
+        worker=start_instance,
+        label="live_cam_start",
+    )
+
+
 def run_live_cam_open_flow(
     specs: list[dict[str, Any]],
     *,
