@@ -691,6 +691,23 @@ def run_vacuumtube_good_night_pause_flow(
         return f"good_night pause error: {err}"
 
 
+def run_vacuumtube_good_night_pause_runtime_flow(
+    *,
+    find_window_id: Callable[[], str | None],
+    open_cdp: Callable[[], Any],
+    snapshot_state: Callable[[Any], dict[str, Any]],
+    run_pause: Callable[[Any], dict[str, Any]],
+) -> str:
+    return run_vacuumtube_good_night_pause_flow(
+        find_window_id=find_window_id,
+        pause_runtime=lambda: run_vacuumtube_good_night_pause_runtime(
+            open_cdp=open_cdp,
+            snapshot_state=snapshot_state,
+            run_pause=run_pause,
+        ),
+    )
+
+
 def run_vacuumtube_select_account_if_needed(
     *,
     snapshot_state: Callable[[], dict[str, Any]],

@@ -31,6 +31,7 @@ from arouter import (
     run_vacuumtube_good_night_pause,
     run_vacuumtube_good_night_pause_flow,
     run_vacuumtube_good_night_pause_runtime,
+    run_vacuumtube_good_night_pause_runtime_flow,
     run_vacuumtube_hard_reload_home,
     run_vacuumtube_hide_overlay,
     run_vacuumtube_minimize,
@@ -682,6 +683,34 @@ def test_run_vacuumtube_good_night_pause_flow_formats_runtime_error() -> None:
     )
 
     assert out == "good_night pause error: boom"
+
+
+def test_run_vacuumtube_good_night_pause_runtime_flow_wraps_window_check_and_cdp_runtime() -> None:
+    events: list[str] = []
+
+    class FakeContext:
+        def __enter__(self) -> str:
+            events.append("enter")
+            return "cdp"
+
+        def __exit__(self, exc_type, exc, tb) -> None:
+            events.append("exit")
+            return None
+
+    out = run_vacuumtube_good_night_pause_runtime_flow(
+        find_window_id=lambda: "0x123",
+        open_cdp=lambda: FakeContext(),
+        snapshot_state=lambda cdp: events.append(f"snapshot:{cdp}") or {"hash": "#/watch?v=abc"},
+        run_pause=lambda cdp: events.append(f"pause:{cdp}") or {"ok": True},
+    )
+
+    assert out == 'good_night pause {"ok": true, "stateHash": "#/watch?v=abc"}'
+    assert events == [
+        "enter",
+        "snapshot:cdp",
+        "pause:cdp",
+        "exit",
+    ]
 
 
 def test_run_vacuumtube_select_account_if_needed_sends_enter_until_hint_clears() -> None:
