@@ -472,6 +472,21 @@ def run_live_cam_open_flow(
     return parallel_runner(specs, worker=_worker, label=label)
 
 
+def run_live_cam_open_instances_flow(
+    specs: list[dict[str, Any]],
+    *,
+    assign_live_camera: Callable[[dict[str, Any]], dict[str, Any]],
+    parallel_runner: Callable[..., list[dict[str, Any]]],
+) -> list[dict[str, Any]]:
+    return run_live_cam_open_flow(
+        specs,
+        assign_live_camera=assign_live_camera,
+        build_result=build_live_cam_open_result,
+        label="live_cam_open",
+        parallel_runner=parallel_runner,
+    )
+
+
 def build_live_cam_open_result(
     spec: dict[str, Any],
     payload: dict[str, Any],

@@ -27,6 +27,7 @@ from arouter import (
     run_live_cam_minimize_flow,
     run_live_cam_minimize_windows,
     run_live_cam_open_flow,
+    run_live_cam_open_instances_flow,
     run_live_cam_parallel,
     run_live_cam_raise_windows,
     run_live_cam_start_flow,
@@ -252,6 +253,42 @@ def test_run_live_cam_open_flow_builds_results_via_parallel_runner() -> None:
     )
 
     assert out == [{"label": "akihabara", "port": 9994, "videoId": "vid-9994"}]
+    assert calls == [{"specs": specs, "label": "live_cam_open"}]
+
+
+def test_run_live_cam_open_instances_flow_uses_default_open_result_builder() -> None:
+    calls: list[dict[str, object]] = []
+
+    def fake_parallel_runner(
+        specs: list[dict[str, object]],
+        *,
+        worker,
+        label: str,
+    ) -> list[dict[str, object]]:
+        calls.append({"specs": specs, "label": label})
+        return [worker(spec) for spec in specs]
+
+    specs = [{"label": "akihabara", "port": 9994}]
+
+    out = run_live_cam_open_instances_flow(
+        specs,
+        assign_live_camera=lambda spec: {
+            "videoId": f"vid-{spec['port']}",
+            "method": "direct-id",
+            "final": {"href": f"https://www.youtube.com/tv#/watch?v=vid-{spec['port']}"},
+        },
+        parallel_runner=fake_parallel_runner,
+    )
+
+    assert out == [
+        {
+            "label": "akihabara",
+            "port": 9994,
+            "videoId": "vid-9994",
+            "finalHref": "https://www.youtube.com/tv#/watch?v=vid-9994",
+            "method": "direct-id",
+        }
+    ]
     assert calls == [{"specs": specs, "label": "live_cam_open"}]
 
 
