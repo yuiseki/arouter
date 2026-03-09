@@ -435,6 +435,28 @@ def run_live_cam_start_flow(
     return build_result(spec, parsed)
 
 
+def run_live_cam_start_script_flow(
+    spec: dict[str, Any],
+    *,
+    start_silent_script: str | Path,
+    display: str,
+    run_command: Callable[[list[str]], Any],
+    sink: str = "vacuumtube_silent",
+) -> dict[str, Any]:
+    return run_live_cam_start_flow(
+        spec,
+        build_command=lambda current_spec: build_live_cam_start_command(
+            start_silent_script,
+            current_spec,
+            display=display,
+            sink=sink,
+        ),
+        run_command=run_command,
+        parse_stdout=parse_key_value_stdout,
+        build_result=build_live_cam_started_result,
+    )
+
+
 def run_live_cam_open_flow(
     specs: list[dict[str, Any]],
     *,

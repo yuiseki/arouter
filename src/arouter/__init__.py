@@ -131,6 +131,7 @@ from .live_cam_runtime import (
     run_live_cam_parallel,
     run_live_cam_raise_windows,
     run_live_cam_start_flow,
+    run_live_cam_start_script_flow,
     run_live_cam_window_action_flow,
     run_minimize_other_windows_flow,
 )
@@ -424,6 +425,7 @@ __all__ = [
     "run_live_cam_minimize_windows",
     "run_live_cam_open_flow",
     "run_live_cam_start_flow",
+    "run_live_cam_start_script_flow",
     "build_load_check_wmctrl_commands",
     "build_window_activate_command",
     "build_window_close_command",

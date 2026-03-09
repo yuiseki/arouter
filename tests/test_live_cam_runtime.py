@@ -30,6 +30,7 @@ from arouter import (
     run_live_cam_parallel,
     run_live_cam_raise_windows,
     run_live_cam_start_flow,
+    run_live_cam_start_script_flow,
     run_live_cam_window_action_flow,
     run_minimize_other_windows_flow,
 )
@@ -199,6 +200,25 @@ def test_run_live_cam_start_flow_builds_and_executes_command() -> None:
 
     assert out == {
         "CMD": "bash /tmp/vacuumtube-bg-5.sh",
+        "PID": "12345",
+        "port": "9996",
+        "session_name": "vacuumtube-bg-5",
+    }
+
+
+def test_run_live_cam_start_script_flow_uses_default_build_parse_and_result_helpers() -> None:
+    out = run_live_cam_start_script_flow(
+        {"session": "vacuumtube-bg-5", "port": 9996, "instance_dir": "/tmp/instance5"},
+        start_silent_script=Path("/tmp/start_silent_instance.sh"),
+        display=":0",
+        run_command=lambda cmd: type("CP", (), {"stdout": f"CMD={' '.join(cmd)}\nPID=12345\n"})(),
+    )
+
+    assert out == {
+        "CMD": (
+            "bash /tmp/start_silent_instance.sh --session vacuumtube-bg-5 --port 9996 "
+            "--sink vacuumtube_silent --display :0 --instance-dir /tmp/instance5"
+        ),
         "PID": "12345",
         "port": "9996",
         "session_name": "vacuumtube-bg-5",
