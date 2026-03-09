@@ -5,7 +5,19 @@ from types import SimpleNamespace
 from unittest import mock
 
 from arouter import VoiceCommand
-from arouter.execution import command_has_system_prefix, execute_command
+from arouter.execution import (
+    command_has_system_prefix,
+    execute_command,
+    run_god_mode_layout_host_runtime,
+    run_good_morning_host_runtime,
+    run_good_night_host_runtime,
+    run_show_weather_pages_today_host_runtime,
+    run_system_live_camera_compact_host_runtime,
+    run_system_live_camera_hide_host_runtime,
+    run_system_live_camera_show_host_runtime,
+    run_system_status_report_host_runtime,
+    run_system_street_camera_mode_host_runtime,
+)
 
 
 def _make_runtime() -> SimpleNamespace:
@@ -269,6 +281,143 @@ def test_execute_command_dispatches_system_biometric_auth() -> None:
 
     assert out == "system unlocked by biometric authentication; normal mode ok"
     runtime.system_normal_mode.assert_called_once()
+
+
+def test_run_system_status_report_host_runtime_closes_weather_pages() -> None:
+    runtime = SimpleNamespace(
+        vacuumtube=SimpleNamespace(
+            close_weather_pages_tiled=mock.Mock(return_value='weather pages closed {"closed":2}')
+        )
+    )
+
+    out = run_system_status_report_host_runtime(runtime=runtime)
+
+    assert out == 'system running; normal mode; weather pages closed {"closed":2}'
+    runtime.vacuumtube.close_weather_pages_tiled.assert_called_once_with()
+
+
+def test_run_system_status_report_host_runtime_formats_close_error() -> None:
+    runtime = SimpleNamespace(
+        vacuumtube=SimpleNamespace(
+            close_weather_pages_tiled=mock.Mock(side_effect=RuntimeError("boom"))
+        )
+    )
+
+    out = run_system_status_report_host_runtime(runtime=runtime)
+
+    assert out == "system running; normal mode; weather pages close error: boom"
+
+
+def test_run_show_weather_pages_today_host_runtime_delegates_to_vacuumtube() -> None:
+    runtime = SimpleNamespace(
+        vacuumtube=SimpleNamespace(
+            open_weather_pages_tiled=mock.Mock(return_value="weather pages tiled []")
+        )
+    )
+
+    out = run_show_weather_pages_today_host_runtime(runtime=runtime)
+
+    assert out == "weather pages tiled []"
+    runtime.vacuumtube.open_weather_pages_tiled.assert_called_once_with()
+
+
+def test_run_good_morning_host_runtime_uses_news_fullscreen_and_lights() -> None:
+    runtime = SimpleNamespace(
+        _run_vacuumtube_action=mock.Mock(side_effect=lambda action, **_kwargs: action()),
+        vacuumtube=SimpleNamespace(
+            play_news=mock.Mock(return_value="news ok"),
+            youtube_fullscreen=mock.Mock(return_value="fullscreen ok"),
+        ),
+    )
+
+    out = run_good_morning_host_runtime(
+        runtime=runtime,
+        lights_on=lambda: "switchbot lights on: ok",
+    )
+
+    assert out == "good_morning news ok fullscreen=fullscreen ok lights=switchbot lights on: ok"
+    assert runtime._run_vacuumtube_action.call_count == 2
+    runtime.vacuumtube.play_news.assert_called_once_with(slot="morning")
+    runtime.vacuumtube.youtube_fullscreen.assert_called_once_with()
+
+
+def test_run_good_night_host_runtime_uses_pause_and_lights_off() -> None:
+    runtime = SimpleNamespace(
+        vacuumtube=SimpleNamespace(
+            good_night_pause=mock.Mock(return_value='good_night pause {"ok": true}')
+        )
+    )
+
+    out = run_good_night_host_runtime(
+        runtime=runtime,
+        lights_off=lambda: "switchbot lights off: ok",
+    )
+
+    assert out == 'good_night pause {"ok": true} lights=switchbot lights off: ok'
+    runtime.vacuumtube.good_night_pause.assert_called_once_with()
+
+
+def test_run_system_live_camera_show_host_runtime_tracks_layout_and_calls_show_full() -> None:
+    runtime = SimpleNamespace(
+        _live_cam_last_layout=None,
+        live_cam_wall=SimpleNamespace(show_full=mock.Mock(return_value="show ok")),
+    )
+
+    out = run_system_live_camera_show_host_runtime(runtime=runtime)
+
+    assert out == "show ok"
+    assert runtime._live_cam_last_layout == "show"
+    runtime.live_cam_wall.show_full.assert_called_once_with()
+
+
+def test_run_system_live_camera_compact_host_runtime_tracks_layout_and_calls_show_compact() -> None:
+    runtime = SimpleNamespace(
+        _live_cam_last_layout=None,
+        live_cam_wall=SimpleNamespace(show_compact=mock.Mock(return_value="compact ok")),
+    )
+
+    out = run_system_live_camera_compact_host_runtime(runtime=runtime)
+
+    assert out == "compact ok"
+    assert runtime._live_cam_last_layout == "compact"
+    runtime.live_cam_wall.show_compact.assert_called_once_with()
+
+
+def test_run_system_live_camera_hide_host_runtime_tracks_layout_and_calls_hide() -> None:
+    runtime = SimpleNamespace(
+        _live_cam_last_layout=None,
+        live_cam_wall=SimpleNamespace(hide=mock.Mock(return_value="hide ok")),
+    )
+
+    out = run_system_live_camera_hide_host_runtime(runtime=runtime)
+
+    assert out == "hide ok"
+    assert runtime._live_cam_last_layout == "hide"
+    runtime.live_cam_wall.hide.assert_called_once_with()
+
+
+def test_run_system_street_camera_mode_host_runtime_reuses_show_helper() -> None:
+    called: list[str] = []
+
+    out = run_system_street_camera_mode_host_runtime(
+        show_live_camera=lambda: called.append("show") or "show ok"
+    )
+
+    assert out == "show ok"
+    assert called == ["show"]
+
+
+def test_run_god_mode_layout_host_runtime_tracks_layout_state() -> None:
+    runtime = SimpleNamespace(_god_mode_last_layout=None)
+
+    out = run_god_mode_layout_host_runtime(
+        runtime=runtime,
+        mode="frontmost",
+        run_layout=lambda: "god mode ok",
+    )
+
+    assert out == "god mode ok"
+    assert runtime._god_mode_last_layout == "frontmost"
 
 
 def test_command_has_system_prefix_detects_explicit_prefix() -> None:

@@ -70,6 +70,22 @@ def run_weather_pages_tiled(
     }
 
 
+def run_weather_pages_tiled_host_runtime(
+    *,
+    runtime: Any,
+    weather_desktop_tiles: list[dict[str, Any]],
+) -> str:
+    flow = run_weather_pages_tiled(
+        weather_desktop_tiles=weather_desktop_tiles,
+        current_window_ids=runtime._chromium_window_ids,
+        launch_window=runtime._launch_chromium_new_window,
+        detect_new_window=runtime._detect_new_chromium_window,
+        move_window=runtime._move_window_to_geometry,
+    )
+    runtime._last_weather_window_ids = list(flow["history"])
+    return str(flow["response"])
+
+
 def run_weather_pages_closed(
     *,
     lines: list[str],
@@ -94,6 +110,24 @@ def run_weather_pages_closed(
         "history": list(flow["history"]),
         "response": flow["response"],
     }
+
+
+def run_weather_pages_closed_host_runtime(
+    *,
+    runtime: Any,
+    select_candidate_window_ids: WeatherCandidateSelector,
+    after_close: WeatherAfterClose | None = None,
+) -> str:
+    flow = run_weather_pages_closed(
+        lines=runtime._wmctrl_lines(),
+        last_weather_window_ids=list(getattr(runtime, "_last_weather_window_ids", [])),
+        select_candidate_window_ids=select_candidate_window_ids,
+        close_window=runtime._wmctrl_close_window,
+        current_window_ids=runtime._chromium_window_ids,
+        after_close=after_close,
+    )
+    runtime._last_weather_window_ids = list(flow["history"])
+    return str(flow["response"])
 
 
 def open_weather_pages_flow(

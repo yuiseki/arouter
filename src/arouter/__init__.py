@@ -72,7 +72,23 @@ from .desktop_runtime import (
 from .display_env import build_x11_env, resolve_x11_display
 from .display_runtime import probe_x11_display
 from .errors import report_segment_error
-from .execution import command_has_system_prefix, execute_command, execute_news_command
+from .execution import (
+    command_has_system_prefix,
+    execute_command,
+    execute_news_command,
+    run_god_mode_layout_host_runtime,
+    run_good_morning,
+    run_good_morning_host_runtime,
+    run_good_night,
+    run_good_night_host_runtime,
+    run_show_weather_pages_today_host_runtime,
+    run_system_live_camera_compact_host_runtime,
+    run_system_live_camera_hide_host_runtime,
+    run_system_live_camera_show_host_runtime,
+    run_system_status_report,
+    run_system_status_report_host_runtime,
+    run_system_street_camera_mode_host_runtime,
+)
 from .flow import run_authorized_command_flow
 from .kwin_runtime import (
     run_kwin_temp_script,
@@ -338,7 +354,9 @@ from .weather_windows import (
     open_weather_pages_flow,
     prune_weather_window_history,
     run_weather_pages_closed,
+    run_weather_pages_closed_host_runtime,
     run_weather_pages_tiled,
+    run_weather_pages_tiled_host_runtime,
 )
 from .window_actions import (
     build_window_activate_command,
@@ -555,7 +573,9 @@ __all__ = [
     "close_weather_pages_flow",
     "open_weather_pages_flow",
     "run_weather_pages_closed",
+    "run_weather_pages_closed_host_runtime",
     "run_weather_pages_tiled",
+    "run_weather_pages_tiled_host_runtime",
     "build_window_presentation_snapshot",
     "command_has_system_prefix",
     "chromium_window_ids_from_wmctrl_lines",
@@ -576,6 +596,18 @@ __all__ = [
     "detect_non_command_reaction",
     "execute_command",
     "execute_news_command",
+    "run_god_mode_layout_host_runtime",
+    "run_good_morning",
+    "run_good_morning_host_runtime",
+    "run_good_night",
+    "run_good_night_host_runtime",
+    "run_show_weather_pages_today_host_runtime",
+    "run_system_live_camera_compact_host_runtime",
+    "run_system_live_camera_hide_host_runtime",
+    "run_system_live_camera_show_host_runtime",
+    "run_system_status_report",
+    "run_system_status_report_host_runtime",
+    "run_system_street_camera_mode_host_runtime",
     "extract_password_unlock_secret",
     "finalize_top_right_position_result",
     "finalize_vacuumtube_context",

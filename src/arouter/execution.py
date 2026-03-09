@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
-from typing import Protocol
+from typing import Any, Protocol
 
 from .models import VoiceCommand
 from .parser import normalize_transcript
@@ -102,6 +102,117 @@ def execute_news_command(runtime: CommandRuntime, cmd: VoiceCommand, *, slot: st
         runtime.log(f"news fullscreen skipped after successful playback: {exc}")
         return result
     return f"{result}; {fullscreen}"
+
+
+def run_system_status_report(
+    *,
+    close_weather_pages_tiled: Callable[[], str],
+) -> str:
+    try:
+        close_result = close_weather_pages_tiled()
+    except Exception as exc:
+        close_result = f"weather pages close error: {exc}"
+    return f"system running; normal mode; {close_result}"
+
+
+def run_system_status_report_host_runtime(*, runtime: Any) -> str:
+    return run_system_status_report(
+        close_weather_pages_tiled=runtime.vacuumtube.close_weather_pages_tiled,
+    )
+
+
+def run_show_weather_pages_today_host_runtime(*, runtime: Any) -> str:
+    return str(runtime.vacuumtube.open_weather_pages_tiled())
+
+
+def run_good_morning(
+    *,
+    play_morning_news: Callable[[], str],
+    fullscreen_news: Callable[[], str],
+    lights_on: Callable[[], str],
+) -> str:
+    news_result = play_morning_news()
+    fullscreen_result = fullscreen_news()
+    try:
+        lights_result = lights_on()
+    except Exception as exc:
+        lights_result = f"switchbot error: {exc}"
+    return f"good_morning {news_result} fullscreen={fullscreen_result} lights={lights_result}"
+
+
+def run_good_morning_host_runtime(
+    *,
+    runtime: Any,
+    lights_on: Callable[[], str],
+) -> str:
+    return run_good_morning(
+        play_morning_news=lambda: runtime._run_vacuumtube_action(
+            lambda: runtime.vacuumtube.play_news(slot="morning"),
+            label="good_morning_news",
+        ),
+        fullscreen_news=lambda: runtime._run_vacuumtube_action(
+            runtime.vacuumtube.youtube_fullscreen,
+            label="good_morning_fullscreen",
+        ),
+        lights_on=lights_on,
+    )
+
+
+def run_good_night(
+    *,
+    pause_for_night: Callable[[], str],
+    lights_off: Callable[[], str],
+) -> str:
+    result = pause_for_night()
+    try:
+        lights_result = lights_off()
+    except Exception as exc:
+        lights_result = f"switchbot error: {exc}"
+    return f"{result} lights={lights_result}"
+
+
+def run_good_night_host_runtime(
+    *,
+    runtime: Any,
+    lights_off: Callable[[], str],
+) -> str:
+    return run_good_night(
+        pause_for_night=runtime.vacuumtube.good_night_pause,
+        lights_off=lights_off,
+    )
+
+
+def run_system_live_camera_show_host_runtime(*, runtime: Any) -> str:
+    runtime._live_cam_last_layout = "show"
+    return str(runtime.live_cam_wall.show_full())
+
+
+def run_system_live_camera_compact_host_runtime(*, runtime: Any) -> str:
+    runtime._live_cam_last_layout = "compact"
+    return str(runtime.live_cam_wall.show_compact())
+
+
+def run_system_live_camera_hide_host_runtime(*, runtime: Any) -> str:
+    runtime._live_cam_last_layout = "hide"
+    return str(runtime.live_cam_wall.hide())
+
+
+def run_system_street_camera_mode_host_runtime(
+    *,
+    show_live_camera: Callable[[], str],
+) -> str:
+    return show_live_camera()
+
+
+def run_god_mode_layout_host_runtime(
+    *,
+    runtime: Any,
+    mode: str,
+    run_layout: Callable[[], str],
+) -> str:
+    result = run_layout()
+    runtime._god_mode_last_layout = mode
+    return result
 
 
 def execute_command(runtime: CommandRuntime, cmd: VoiceCommand) -> str:

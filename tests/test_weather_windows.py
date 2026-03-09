@@ -8,7 +8,9 @@ from arouter import (
     open_weather_pages_flow,
     prune_weather_window_history,
     run_weather_pages_closed,
+    run_weather_pages_closed_host_runtime,
     run_weather_pages_tiled,
+    run_weather_pages_tiled_host_runtime,
 )
 
 
@@ -164,3 +166,65 @@ def test_run_weather_pages_closed_uses_default_helpers_and_returns_updated_histo
         "response": 'weather pages closed {"closed": 1, "ids": ["0x1"]}',
         "candidate_ids": ["0x1"],
     }
+
+
+def test_run_weather_pages_tiled_host_runtime_updates_history_from_runtime_methods() -> None:
+    class FakeRuntime:
+        _last_weather_window_ids: list[str] = []
+
+        def _chromium_window_ids(self) -> set[str]:
+            return {"0x0bad"}
+
+        def _launch_chromium_new_window(self, _url: str) -> None:
+            return None
+
+        def _detect_new_chromium_window(self, _before: set[str], timeout_sec: float = 18.0) -> str:
+            assert timeout_sec == 18.0
+            return "0xBEEF"
+
+        def _move_window_to_geometry(self, win_id: str, geom: dict[str, int]) -> dict[str, object]:
+            return {"window_id": win_id, "target": dict(geom)}
+
+    runtime = FakeRuntime()
+
+    out = run_weather_pages_tiled_host_runtime(
+        runtime=runtime,
+        weather_desktop_tiles=[
+            {
+                "label": "amesh",
+                "url": "https://example.test/amesh",
+                "geom": {"x": 10, "y": 20, "w": 640, "h": 360},
+            }
+        ],
+    )
+
+    assert out == (
+        'weather pages tiled [{"window_id": "0xBEEF", "target": {"x": 10, "y": 20, '
+        '"w": 640, "h": 360}, "label": "amesh", "url": "https://example.test/amesh"}]'
+    )
+    assert runtime._last_weather_window_ids == ["0xbeef"]
+
+
+def test_run_weather_pages_closed_host_runtime_updates_history_from_runtime_methods() -> None:
+    class FakeRuntime:
+        _last_weather_window_ids = ["0x1", "0x2"]
+
+        def _wmctrl_lines(self) -> list[str]:
+            return ["0x1 0 host 東京アメッシュ - Chromium"]
+
+        def _wmctrl_close_window(self, _win_id: str) -> None:
+            return None
+
+        def _chromium_window_ids(self) -> set[str]:
+            return {"0x2"}
+
+    runtime = FakeRuntime()
+
+    out = run_weather_pages_closed_host_runtime(
+        runtime=runtime,
+        select_candidate_window_ids=lambda lines, history: ["0x1"],
+        after_close=lambda: None,
+    )
+
+    assert out == 'weather pages closed {"closed": 1, "ids": ["0x1"]}'
+    assert runtime._last_weather_window_ids == ["0x2"]
