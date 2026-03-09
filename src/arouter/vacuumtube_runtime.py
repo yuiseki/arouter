@@ -973,6 +973,43 @@ def run_vacuumtube_resume_playback(
         return f"resumed playback via Space toggle ({win_id})"
 
 
+def run_vacuumtube_resume_playback_runtime(
+    *,
+    open_cdp: Callable[[], Any],
+    find_window_id: Callable[[], str | None],
+    snapshot_state: Callable[[Any], dict[str, Any]],
+    is_watch_state: Callable[[dict[str, Any]], bool],
+    confirm_watch_playback: Callable[..., Any],
+    try_resume_current_video: Callable[[Any], None],
+    send_space_key: Callable[[], None],
+    ensure_top_right_position: Callable[[], dict[str, Any]],
+    log: Callable[[str], None],
+) -> str:
+    with open_cdp() as cdp:
+        return run_vacuumtube_resume_playback(
+            find_window_id=find_window_id,
+            snapshot_state=lambda: snapshot_state(cdp),
+            is_watch_state=is_watch_state,
+            confirm_already_playing=lambda: confirm_watch_playback(
+                cdp,
+                timeout_sec=1.2,
+                allow_resume_attempts=False,
+            ),
+            try_resume_current_video=lambda: try_resume_current_video(cdp),
+            confirm_dom_resume=lambda: confirm_watch_playback(
+                cdp,
+                timeout_sec=4.5,
+            ),
+            send_space_key=send_space_key,
+            confirm_space_resume=lambda: confirm_watch_playback(
+                cdp,
+                timeout_sec=5.0,
+            ),
+            ensure_top_right_position=ensure_top_right_position,
+            log=log,
+        )
+
+
 def run_vacuumtube_go_home(
     *,
     presentation_before: dict[str, Any],
@@ -991,6 +1028,25 @@ def run_vacuumtube_go_home(
         {"hash": snapshot.get("hash"), "tiles": snapshot.get("tilesCount")},
         ensure_ascii=False,
     )
+
+
+def run_vacuumtube_go_home_runtime(
+    *,
+    open_cdp: Callable[[], Any],
+    presentation_before: dict[str, Any],
+    hide_overlay_if_needed: Callable[[Any], None],
+    ensure_home: Callable[[Any], dict[str, Any]],
+    restore_window_presentation: Callable[..., None],
+    log: Callable[[str], None],
+) -> str:
+    with open_cdp() as cdp:
+        return run_vacuumtube_go_home(
+            presentation_before=presentation_before,
+            hide_overlay_if_needed=lambda: hide_overlay_if_needed(cdp),
+            ensure_home=lambda: ensure_home(cdp),
+            restore_window_presentation=restore_window_presentation,
+            log=log,
+        )
 
 
 def run_vacuumtube_play_bgm(
@@ -1038,6 +1094,33 @@ def run_vacuumtube_play_bgm(
             return "watch page detected; sent Space toggle and confirmed playback"
 
     return open_from_home()
+
+
+def run_vacuumtube_play_bgm_runtime(
+    *,
+    open_cdp: Callable[[], Any],
+    get_state: Callable[[Any], dict[str, Any]],
+    send_return_key: Callable[[], None],
+    send_space_key: Callable[[], None],
+    sleep: Callable[[float], None],
+    try_resume_current_video: Callable[[Any], None],
+    confirm_watch_playback: Callable[..., Any],
+    open_from_home: Callable[[Any], str],
+    ensure_top_right_position: Callable[[], dict[str, Any]],
+    log: Callable[[str], None],
+) -> str:
+    with open_cdp() as cdp:
+        return run_vacuumtube_play_bgm(
+            get_state=lambda: get_state(cdp),
+            send_return_key=send_return_key,
+            send_space_key=send_space_key,
+            sleep=sleep,
+            try_resume_current_video=lambda: try_resume_current_video(cdp),
+            confirm_watch_playback=lambda **kwargs: confirm_watch_playback(cdp, **kwargs),
+            open_from_home=lambda: open_from_home(cdp),
+            ensure_top_right_position=ensure_top_right_position,
+            log=log,
+        )
 
 
 def run_vacuumtube_open_from_home(
@@ -1262,3 +1345,22 @@ def run_vacuumtube_play_news(
         sleep(0.6)
     label = "NEWS" if slot == "generic" else f"NEWS-{slot.upper()}"
     return open_from_home(label)
+
+
+def run_vacuumtube_play_news_runtime(
+    *,
+    open_cdp: Callable[[], Any],
+    slot: str,
+    get_state: Callable[[Any], dict[str, Any]],
+    send_return_key: Callable[[], None],
+    sleep: Callable[[float], None],
+    open_from_home: Callable[[Any, str], str],
+) -> str:
+    with open_cdp() as cdp:
+        return run_vacuumtube_play_news(
+            slot=slot,
+            get_state=lambda: get_state(cdp),
+            send_return_key=send_return_key,
+            sleep=sleep,
+            open_from_home=lambda label: open_from_home(cdp, label),
+        )

@@ -27,6 +27,7 @@ from arouter import (
     run_vacuumtube_enumerate_tiles,
     run_vacuumtube_fullscreen,
     run_vacuumtube_go_home,
+    run_vacuumtube_go_home_runtime,
     run_vacuumtube_good_night_pause,
     run_vacuumtube_good_night_pause_flow,
     run_vacuumtube_good_night_pause_runtime,
@@ -35,9 +36,12 @@ from arouter import (
     run_vacuumtube_minimize,
     run_vacuumtube_open_from_home,
     run_vacuumtube_play_bgm,
+    run_vacuumtube_play_bgm_runtime,
     run_vacuumtube_play_news,
+    run_vacuumtube_play_news_runtime,
     run_vacuumtube_quadrant,
     run_vacuumtube_resume_playback,
+    run_vacuumtube_resume_playback_runtime,
     run_vacuumtube_route_to_home,
     run_vacuumtube_select_account_if_needed,
     run_vacuumtube_snapshot_state,
@@ -1120,6 +1124,42 @@ def test_run_vacuumtube_resume_playback_uses_space_toggle_after_dom_resume_fails
     assert any(event.startswith("RESUME space-toggle window position: ") for event in events)
 
 
+def test_run_vacuumtube_resume_playback_runtime_opens_cdp_and_reuses_resume_flow() -> None:
+    events: list[str] = []
+
+    class FakeContext:
+        def __enter__(self) -> str:
+            events.append("enter")
+            return "cdp"
+
+        def __exit__(self, exc_type, exc, tb) -> None:
+            events.append("exit")
+            return None
+
+    result = run_vacuumtube_resume_playback_runtime(
+        open_cdp=lambda: FakeContext(),
+        find_window_id=lambda: "0x123",
+        snapshot_state=lambda cdp: {"hash": "#/watch?v=abc", "cdp": cdp},
+        is_watch_state=lambda _state: True,
+        confirm_watch_playback=lambda cdp, **kwargs: events.append(
+            f"confirm:{cdp}:{kwargs['timeout_sec']}:{kwargs.get('allow_resume_attempts', True)}"
+        ),
+        try_resume_current_video=lambda cdp: events.append(f"resume:{cdp}"),
+        send_space_key=lambda: events.append("space"),
+        ensure_top_right_position=lambda: events.append("ensure_top_right") or {"ok": True},
+        log=events.append,
+    )
+
+    assert result == "watch route already playing (no-op)"
+    assert events == [
+        "enter",
+        "confirm:cdp:1.2:False",
+        "ensure_top_right",
+        'RESUME already-playing window position: {"ok": true}',
+        "exit",
+    ]
+
+
 def test_run_vacuumtube_go_home_restores_presentation() -> None:
     events: list[str] = []
 
@@ -1154,6 +1194,41 @@ def test_run_vacuumtube_go_home_logs_restore_failure_and_returns_snapshot() -> N
     assert events == [
         "hide_overlay",
         "YOUTUBE_HOME presentation restore skipped: YOUTUBE_HOME: failed",
+    ]
+
+
+def test_run_vacuumtube_go_home_runtime_opens_cdp_and_reuses_home_flow() -> None:
+    events: list[str] = []
+
+    class FakeContext:
+        def __enter__(self) -> str:
+            events.append("enter")
+            return "cdp"
+
+        def __exit__(self, exc_type, exc, tb) -> None:
+            events.append("exit")
+            return None
+
+    result = run_vacuumtube_go_home_runtime(
+        open_cdp=lambda: FakeContext(),
+        presentation_before={"fullscreen": True, "window_id": "0x123"},
+        hide_overlay_if_needed=lambda cdp: events.append(f"hide:{cdp}"),
+        ensure_home=lambda cdp: (
+            events.append(f"ensure_home:{cdp}") or {"hash": "#/", "tilesCount": 8}
+        ),
+        restore_window_presentation=lambda presentation, *, label: events.append(
+            f"restore:{presentation['window_id']}:{label}"
+        ),
+        log=events.append,
+    )
+
+    assert result == 'youtube home verified {"hash": "#/", "tiles": 8}'
+    assert events == [
+        "enter",
+        "hide:cdp",
+        "ensure_home:cdp",
+        "restore:0x123:YOUTUBE_HOME",
+        "exit",
     ]
 
 
@@ -1214,6 +1289,44 @@ def test_run_vacuumtube_play_bgm_watch_route_uses_resume_path() -> None:
     assert any(event.startswith("BGM watch-resume window position: ") for event in events)
 
 
+def test_run_vacuumtube_play_bgm_runtime_opens_cdp_and_reuses_bgm_flow() -> None:
+    events: list[str] = []
+
+    class FakeContext:
+        def __enter__(self) -> str:
+            events.append("enter")
+            return "cdp"
+
+        def __exit__(self, exc_type, exc, tb) -> None:
+            events.append("exit")
+            return None
+
+    result = run_vacuumtube_play_bgm_runtime(
+        open_cdp=lambda: FakeContext(),
+        get_state=lambda cdp: {"accountSelectHint": False, "hash": "#/watch?v=abc", "cdp": cdp},
+        send_return_key=lambda: events.append("return"),
+        send_space_key=lambda: events.append("space"),
+        sleep=lambda seconds: events.append(f"sleep:{seconds}"),
+        try_resume_current_video=lambda cdp: events.append(f"resume:{cdp}"),
+        confirm_watch_playback=lambda cdp, **kwargs: events.append(
+            f"confirm:{cdp}:{kwargs['timeout_sec']}:{kwargs['allow_soft_confirm_when_unpaused']}"
+        ),
+        open_from_home=lambda _cdp: (_ for _ in ()).throw(AssertionError("unexpected home open")),
+        ensure_top_right_position=lambda: events.append("ensure_top_right") or {"ok": True},
+        log=events.append,
+    )
+
+    assert result == "watch page detected; confirmed playback"
+    assert events == [
+        "enter",
+        "resume:cdp",
+        "confirm:cdp:4.0:True",
+        "ensure_top_right",
+        'BGM watch-resume window position: {"ok": true}',
+        "exit",
+    ]
+
+
 def test_run_vacuumtube_play_bgm_nudges_account_selection_before_home_open() -> None:
     events: list[str] = []
     states = iter(
@@ -1244,6 +1357,44 @@ def test_run_vacuumtube_play_bgm_nudges_account_selection_before_home_open() -> 
 
     assert result == "opened watch route #/watch?v=bgm"
     assert events == ["return", "sleep:0.6", "open_home"]
+
+
+def test_run_vacuumtube_play_bgm_runtime_passes_cdp_to_home_open() -> None:
+    events: list[str] = []
+
+    class FakeContext:
+        def __enter__(self) -> str:
+            events.append("enter")
+            return "cdp"
+
+        def __exit__(self, exc_type, exc, tb) -> None:
+            events.append("exit")
+            return None
+
+    result = run_vacuumtube_play_bgm_runtime(
+        open_cdp=lambda: FakeContext(),
+        get_state=lambda cdp: (
+            events.append(f"state:{cdp}") or {"accountSelectHint": False, "hash": "#/"}
+        ),
+        send_return_key=lambda: events.append("return"),
+        send_space_key=lambda: events.append("space"),
+        sleep=lambda seconds: events.append(f"sleep:{seconds}"),
+        try_resume_current_video=lambda cdp: events.append(f"resume:{cdp}"),
+        confirm_watch_playback=lambda cdp, **kwargs: events.append(f"confirm:{cdp}:{kwargs}"),
+        open_from_home=lambda cdp: (
+            events.append(f"open:{cdp}") or "opened watch route #/watch?v=bgm"
+        ),
+        ensure_top_right_position=lambda: {"ok": True},
+        log=events.append,
+    )
+
+    assert result == "opened watch route #/watch?v=bgm"
+    assert events == [
+        "enter",
+        "state:cdp",
+        "open:cdp",
+        "exit",
+    ]
 
 
 def test_run_vacuumtube_fullscreen_returns_before_after_geometry() -> None:
@@ -1453,6 +1604,38 @@ def test_run_vacuumtube_play_news_nudges_account_selection() -> None:
 
     assert result == "opened watch route #/watch?v=morning"
     assert events == ["return", "sleep:0.6", "open:NEWS-MORNING"]
+
+
+def test_run_vacuumtube_play_news_runtime_opens_cdp_and_reuses_news_flow() -> None:
+    events: list[str] = []
+
+    class FakeContext:
+        def __enter__(self) -> str:
+            events.append("enter")
+            return "cdp"
+
+        def __exit__(self, exc_type, exc, tb) -> None:
+            events.append("exit")
+            return None
+
+    result = run_vacuumtube_play_news_runtime(
+        open_cdp=lambda: FakeContext(),
+        slot="morning",
+        get_state=lambda cdp: events.append(f"state:{cdp}") or {"accountSelectHint": False},
+        send_return_key=lambda: events.append("return"),
+        sleep=lambda seconds: events.append(f"sleep:{seconds}"),
+        open_from_home=lambda cdp, label: (
+            events.append(f"open:{cdp}:{label}") or "opened watch route #/watch?v=morning"
+        ),
+    )
+
+    assert result == "opened watch route #/watch?v=morning"
+    assert events == [
+        "enter",
+        "state:cdp",
+        "open:cdp:NEWS-MORNING",
+        "exit",
+    ]
 
 
 def test_run_vacuumtube_minimize_is_noop_when_window_is_missing() -> None:
