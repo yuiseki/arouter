@@ -1158,6 +1158,33 @@ def run_vacuumtube_play_bgm_runtime(
         )
 
 
+def run_vacuumtube_play_bgm_host_runtime(
+    *,
+    runtime: Any,
+    sleep: Callable[[float], None],
+) -> str:
+    log = runtime.log if hasattr(runtime, "log") else None
+    return run_vacuumtube_play_bgm_runtime(
+        open_cdp=runtime._cdp,
+        get_state=runtime._state,
+        send_return_key=lambda: runtime.send_key("Return"),
+        send_space_key=lambda: runtime.send_key("space"),
+        sleep=sleep,
+        try_resume_current_video=runtime._try_resume_current_video,
+        confirm_watch_playback=runtime._wait_confirmed_watch_playback,
+        open_from_home=lambda cdp: run_vacuumtube_open_from_home_host_runtime(
+            cdp=cdp,
+            runtime=runtime,
+            label="BGM",
+            scorer=runtime._score_bgm_tile,
+            filter_fn=None,
+            allow_soft_playback_confirm=True,
+        ),
+        ensure_top_right_position=runtime.ensure_top_right_position,
+        log=log if callable(log) else (lambda _message: None),
+    )
+
+
 def run_vacuumtube_open_from_home(
     *,
     label: str,
