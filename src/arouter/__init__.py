@@ -76,7 +76,7 @@ from .desktop_runtime import (
     run_tmux_konsole_open,
 )
 from .display_env import build_x11_env, resolve_x11_display
-from .display_runtime import probe_x11_display
+from .display_runtime import probe_x11_display, probe_x11_display_host_runtime
 from .errors import report_segment_error
 from .execution import (
     command_has_system_prefix,
@@ -467,6 +467,7 @@ __all__ = [
     "build_overlay_ipc_line",
     "build_x11_env",
     "probe_x11_display",
+    "probe_x11_display_host_runtime",
     "launch_chromium_new_window",
     "read_active_window_id",
     "run_active_window_id_query",
