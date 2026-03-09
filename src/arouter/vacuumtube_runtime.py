@@ -1513,3 +1513,27 @@ def run_vacuumtube_play_news_runtime(
             sleep=sleep,
             open_from_home=lambda label: open_from_home(cdp, label),
         )
+
+
+def run_vacuumtube_play_news_host_runtime(
+    *,
+    runtime: Any,
+    slot: str,
+    sleep: Callable[[float], None],
+    filter_tile: Callable[[dict[str, Any]], bool],
+) -> str:
+    return run_vacuumtube_play_news_runtime(
+        open_cdp=runtime._cdp,
+        slot=slot,
+        get_state=runtime._state,
+        send_return_key=lambda: runtime.send_key("Return"),
+        sleep=sleep,
+        open_from_home=lambda cdp, label: run_vacuumtube_open_from_home_host_runtime(
+            cdp=cdp,
+            runtime=runtime,
+            label=label,
+            scorer=lambda tile: runtime._score_news_tile(tile, slot=slot),
+            filter_fn=filter_tile,
+            allow_soft_playback_confirm=True,
+        ),
+    )
