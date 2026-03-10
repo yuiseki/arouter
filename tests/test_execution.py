@@ -60,6 +60,24 @@ def _make_runtime() -> SimpleNamespace:
         open_weather_pages_tiled=mock.Mock(return_value="weather pages tiled []"),
         close_weather_pages_tiled=mock.Mock(return_value='weather pages closed {"closed":2}'),
     )
+    runtime._play_music = mock.Mock(
+        side_effect=lambda: runtime._run_vacuumtube_action(
+            runtime.vacuumtube.play_bgm,
+            label="music_play",
+        )
+    )
+    runtime._stop_music = mock.Mock(
+        side_effect=lambda *, label: runtime._run_vacuumtube_action(
+            runtime.vacuumtube.stop_music,
+            label=label,
+        )
+    )
+    runtime._resume_playback = mock.Mock(
+        side_effect=lambda: runtime._run_vacuumtube_action(
+            runtime.vacuumtube.resume_playback,
+            label="playback_resume",
+        )
+    )
     runtime._play_news_slot = mock.Mock(
         side_effect=lambda *, slot, label=None: runtime._run_vacuumtube_action(
             lambda: runtime.vacuumtube.play_news(slot=slot),
@@ -79,6 +97,28 @@ def _make_runtime() -> SimpleNamespace:
         side_effect=runtime.vacuumtube.close_weather_pages_tiled
     )
     runtime._pause_for_night = mock.Mock(side_effect=runtime.vacuumtube.good_night_pause)
+    runtime._youtube_quadrant = mock.Mock(
+        side_effect=lambda: runtime._run_vacuumtube_action(
+            runtime.vacuumtube.youtube_quadrant,
+            label="youtube_quadrant",
+        )
+    )
+    runtime._youtube_minimize = mock.Mock(
+        side_effect=lambda: runtime._run_vacuumtube_action(
+            runtime.vacuumtube.youtube_minimize,
+            label="youtube_minimize",
+        )
+    )
+    runtime._go_youtube_home = mock.Mock(
+        side_effect=lambda: runtime._run_vacuumtube_action(
+            runtime.vacuumtube.go_youtube_home,
+            label="youtube_home",
+        )
+    )
+    runtime._show_live_camera_full = mock.Mock(return_value="show ok")
+    runtime._show_live_camera_compact = mock.Mock(return_value="compact ok")
+    runtime._hide_live_camera = mock.Mock(return_value="hide ok")
+    runtime._minimize_live_camera = mock.Mock(return_value="street minimized")
     return runtime
 
 
@@ -159,8 +199,8 @@ def test_execute_command_dispatches_system_prefixed_news_live_and_fullscreens() 
 
     assert "opened watch route" in out
     assert "youtube fullscreen" in out
-    runtime.vacuumtube.play_news.assert_called_once_with(slot="generic")
-    runtime.vacuumtube.youtube_fullscreen.assert_called_once()
+    runtime._play_news_slot.assert_called_once_with(slot="generic", label="news_generic")
+    runtime._fullscreen_vacuumtube.assert_called_once_with(label="news_generic_fullscreen")
 
 
 def test_execute_command_dispatches_plain_news_live_without_fullscreen() -> None:
@@ -170,8 +210,58 @@ def test_execute_command_dispatches_plain_news_live_without_fullscreen() -> None
     out = execute_command(runtime, cmd)
 
     assert out == "opened watch route #/watch?v=abc"
-    runtime.vacuumtube.play_news.assert_called_once_with(slot="generic")
-    runtime.vacuumtube.youtube_fullscreen.assert_not_called()
+    runtime._play_news_slot.assert_called_once_with(slot="generic", label="news_generic")
+    runtime._fullscreen_vacuumtube.assert_not_called()
+
+
+def test_execute_command_dispatches_music_play_via_runtime_method() -> None:
+    runtime = _make_runtime()
+    cmd = VoiceCommand("music_play", "音楽再生して", "音楽再生して")
+
+    out = execute_command(runtime, cmd)
+
+    assert out == "ok"
+    runtime._play_music.assert_called_once_with()
+
+
+def test_execute_command_dispatches_playback_resume_via_runtime_method() -> None:
+    runtime = _make_runtime()
+    cmd = VoiceCommand("playback_resume", "続きから再生して", "続きから再生して")
+
+    out = execute_command(runtime, cmd)
+
+    assert out == "ok"
+    runtime._resume_playback.assert_called_once_with()
+
+
+def test_execute_command_dispatches_youtube_quadrant_via_runtime_method() -> None:
+    runtime = _make_runtime()
+    cmd = VoiceCommand("youtube_quadrant", "YouTubeを右上にして", "YouTubeを右上にして")
+
+    out = execute_command(runtime, cmd)
+
+    assert out == "ok"
+    runtime._youtube_quadrant.assert_called_once_with()
+
+
+def test_execute_command_dispatches_youtube_minimize_via_runtime_method() -> None:
+    runtime = _make_runtime()
+    cmd = VoiceCommand("youtube_minimize", "YouTubeを最小化して", "YouTubeを最小化して")
+
+    out = execute_command(runtime, cmd)
+
+    assert out == "ok"
+    runtime._youtube_minimize.assert_called_once_with()
+
+
+def test_execute_command_dispatches_youtube_home_via_runtime_method() -> None:
+    runtime = _make_runtime()
+    cmd = VoiceCommand("youtube_home", "YouTubeのホームに戻って", "YouTubeのホームに戻って")
+
+    out = execute_command(runtime, cmd)
+
+    assert out == "ok"
+    runtime._go_youtube_home.assert_called_once_with()
 
 
 def test_execute_command_dispatches_system_live_camera_show() -> None:
@@ -376,40 +466,40 @@ def test_run_good_night_host_runtime_uses_pause_and_lights_off() -> None:
 def test_run_system_live_camera_show_host_runtime_tracks_layout_and_calls_show_full() -> None:
     runtime = SimpleNamespace(
         _live_cam_last_layout=None,
-        live_cam_wall=SimpleNamespace(show_full=mock.Mock(return_value="show ok")),
+        _show_live_camera_full=mock.Mock(return_value="show ok"),
     )
 
     out = run_system_live_camera_show_host_runtime(runtime=runtime)
 
     assert out == "show ok"
     assert runtime._live_cam_last_layout == "show"
-    runtime.live_cam_wall.show_full.assert_called_once_with()
+    runtime._show_live_camera_full.assert_called_once_with()
 
 
 def test_run_system_live_camera_compact_host_runtime_tracks_layout_and_calls_show_compact() -> None:
     runtime = SimpleNamespace(
         _live_cam_last_layout=None,
-        live_cam_wall=SimpleNamespace(show_compact=mock.Mock(return_value="compact ok")),
+        _show_live_camera_compact=mock.Mock(return_value="compact ok"),
     )
 
     out = run_system_live_camera_compact_host_runtime(runtime=runtime)
 
     assert out == "compact ok"
     assert runtime._live_cam_last_layout == "compact"
-    runtime.live_cam_wall.show_compact.assert_called_once_with()
+    runtime._show_live_camera_compact.assert_called_once_with()
 
 
 def test_run_system_live_camera_hide_host_runtime_tracks_layout_and_calls_hide() -> None:
     runtime = SimpleNamespace(
         _live_cam_last_layout=None,
-        live_cam_wall=SimpleNamespace(hide=mock.Mock(return_value="hide ok")),
+        _hide_live_camera=mock.Mock(return_value="hide ok"),
     )
 
     out = run_system_live_camera_hide_host_runtime(runtime=runtime)
 
     assert out == "hide ok"
     assert runtime._live_cam_last_layout == "hide"
-    runtime.live_cam_wall.hide.assert_called_once_with()
+    runtime._hide_live_camera.assert_called_once_with()
 
 
 def test_run_system_street_camera_mode_host_runtime_reuses_show_helper() -> None:
@@ -424,7 +514,7 @@ def test_run_system_street_camera_mode_host_runtime_reuses_show_helper() -> None
 def test_run_system_webcam_mode_host_runtime_tracks_layout_and_reuses_system_mode_helper() -> None:
     runtime = SimpleNamespace(
         _live_cam_last_layout=None,
-        live_cam_wall=SimpleNamespace(minimize=mock.Mock(return_value="street minimized")),
+        _minimize_live_camera=mock.Mock(return_value="street minimized"),
         god_mode_layout=mock.Mock(return_value="webcam ok"),
     )
 
@@ -432,14 +522,14 @@ def test_run_system_webcam_mode_host_runtime_tracks_layout_and_reuses_system_mod
 
     assert out == "street minimized; webcam ok"
     assert runtime._live_cam_last_layout == "hide"
-    runtime.live_cam_wall.minimize.assert_called_once_with()
+    runtime._minimize_live_camera.assert_called_once_with()
     runtime.god_mode_layout.assert_called_once_with("frontmost")
 
 
 def test_run_system_normal_mode_host_runtime_reuses_system_mode_helper() -> None:
     runtime = SimpleNamespace(
         god_mode_layout=mock.Mock(side_effect=["ignored", "backmost ok"]),
-        live_cam_wall=SimpleNamespace(show_compact=mock.Mock(return_value="compact ok")),
+        _show_live_camera_compact=mock.Mock(return_value="compact ok"),
         _minimize_other_windows=mock.Mock(return_value="minimized ok"),
     )
 
@@ -450,7 +540,7 @@ def test_run_system_normal_mode_host_runtime_reuses_system_mode_helper() -> None
         mock.call("full-screen"),
         mock.call("backmost"),
     ]
-    runtime.live_cam_wall.show_compact.assert_called_once_with()
+    runtime._show_live_camera_compact.assert_called_once_with()
     runtime._minimize_other_windows.assert_called_once_with()
 
 

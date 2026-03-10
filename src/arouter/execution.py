@@ -13,26 +13,7 @@ from .parser import normalize_transcript
 from .system_modes import run_system_normal_mode, run_system_webcam_mode
 
 
-class VacuumTubeRuntime(Protocol):
-    def play_bgm(self) -> str: ...
-
-    def stop_music(self) -> str: ...
-
-    def resume_playback(self) -> str: ...
-
-    def youtube_fullscreen(self) -> str: ...
-
-    def youtube_quadrant(self) -> str: ...
-
-    def youtube_minimize(self) -> str: ...
-
-    def go_youtube_home(self) -> str: ...
-
-    def play_news(self, *, slot: str) -> str: ...
-
-
 class CommandRuntime(Protocol):
-    vacuumtube: VacuumTubeRuntime
     _god_mode_last_layout: str | None
     _live_cam_last_layout: str | None
 
@@ -52,9 +33,21 @@ class CommandRuntime(Protocol):
 
     def _set_system_locked(self, locked: bool, *, reason: str) -> bool: ...
 
+    def _play_music(self) -> str: ...
+
+    def _stop_music(self, *, label: str) -> str: ...
+
+    def _resume_playback(self) -> str: ...
+
     def _play_news_slot(self, *, slot: str, label: str | None = None) -> str: ...
 
     def _fullscreen_vacuumtube(self, *, label: str) -> str: ...
+
+    def _youtube_quadrant(self) -> str: ...
+
+    def _youtube_minimize(self) -> str: ...
+
+    def _go_youtube_home(self) -> str: ...
 
     def _open_weather_pages_tiled(self) -> str: ...
 
@@ -65,6 +58,16 @@ class CommandRuntime(Protocol):
     def _lights_on(self) -> str: ...
 
     def _lights_off(self) -> str: ...
+
+    def _show_live_camera_full(self) -> str: ...
+
+    def _show_live_camera_compact(self) -> str: ...
+
+    def _hide_live_camera(self) -> str: ...
+
+    def _minimize_live_camera(self) -> str: ...
+
+    def _minimize_other_windows(self) -> str: ...
 
     def system_status_report(self) -> str: ...
 
@@ -195,17 +198,17 @@ def run_good_night_host_runtime(
 
 def run_system_live_camera_show_host_runtime(*, runtime: Any) -> str:
     runtime._live_cam_last_layout = "show"
-    return str(runtime.live_cam_wall.show_full())
+    return str(runtime._show_live_camera_full())
 
 
 def run_system_live_camera_compact_host_runtime(*, runtime: Any) -> str:
     runtime._live_cam_last_layout = "compact"
-    return str(runtime.live_cam_wall.show_compact())
+    return str(runtime._show_live_camera_compact())
 
 
 def run_system_live_camera_hide_host_runtime(*, runtime: Any) -> str:
     runtime._live_cam_last_layout = "hide"
-    return str(runtime.live_cam_wall.hide())
+    return str(runtime._hide_live_camera())
 
 
 def run_system_street_camera_mode_host_runtime(
@@ -218,7 +221,7 @@ def run_system_street_camera_mode_host_runtime(
 def run_system_webcam_mode_host_runtime(*, runtime: Any) -> str:
     runtime._live_cam_last_layout = "hide"
     return run_system_webcam_mode(
-        minimize_live_camera=runtime.live_cam_wall.minimize,
+        minimize_live_camera=runtime._minimize_live_camera,
         god_mode_layout=runtime.god_mode_layout,
     )
 
@@ -226,7 +229,7 @@ def run_system_webcam_mode_host_runtime(*, runtime: Any) -> str:
 def run_system_normal_mode_host_runtime(*, runtime: Any) -> str:
     return run_system_normal_mode(
         god_mode_layout=runtime.god_mode_layout,
-        show_live_camera_compact=runtime.live_cam_wall.show_compact,
+        show_live_camera_compact=runtime._show_live_camera_compact,
         minimize_other_windows=runtime._minimize_other_windows,
     )
 
@@ -284,16 +287,13 @@ def execute_command(runtime: CommandRuntime, cmd: VoiceCommand) -> str:
             return "youtube already playing (context no-op)"
 
     if cmd.intent == "music_play":
-        return runtime._run_vacuumtube_action(runtime.vacuumtube.play_bgm, label="music_play")
+        return runtime._play_music()
     if cmd.intent == "music_stop":
-        return runtime._run_vacuumtube_action(runtime.vacuumtube.stop_music, label="music_stop")
+        return runtime._stop_music(label="music_stop")
     if cmd.intent == "playback_resume":
-        return runtime._run_vacuumtube_action(
-            runtime.vacuumtube.resume_playback,
-            label="playback_resume",
-        )
+        return runtime._resume_playback()
     if cmd.intent == "playback_stop":
-        return runtime._run_vacuumtube_action(runtime.vacuumtube.stop_music, label="playback_stop")
+        return runtime._stop_music(label="playback_stop")
     if cmd.intent == "news_live":
         return execute_news_command(runtime, cmd, slot="generic")
     if cmd.intent == "news_morning":
@@ -304,28 +304,16 @@ def execute_command(runtime: CommandRuntime, cmd: VoiceCommand) -> str:
         context = runtime._get_vacuumtube_context(max_age_sec=5.0, refresh_if_stale=False)
         if isinstance(context, Mapping) and bool(context.get("fullscreenish")):
             return "youtube fullscreen already active (context no-op)"
-        return runtime._run_vacuumtube_action(
-            runtime.vacuumtube.youtube_fullscreen,
-            label="youtube_fullscreen",
-        )
+        return runtime._fullscreen_vacuumtube(label="youtube_fullscreen")
     if cmd.intent == "youtube_quadrant":
         context = runtime._get_vacuumtube_context(max_age_sec=5.0, refresh_if_stale=False)
         if isinstance(context, Mapping) and bool(context.get("quadrantish")):
             return "youtube quadrant already active (context no-op)"
-        return runtime._run_vacuumtube_action(
-            runtime.vacuumtube.youtube_quadrant,
-            label="youtube_quadrant",
-        )
+        return runtime._youtube_quadrant()
     if cmd.intent == "youtube_minimize":
-        return runtime._run_vacuumtube_action(
-            runtime.vacuumtube.youtube_minimize,
-            label="youtube_minimize",
-        )
+        return runtime._youtube_minimize()
     if cmd.intent == "youtube_home":
-        return runtime._run_vacuumtube_action(
-            runtime.vacuumtube.go_youtube_home,
-            label="youtube_home",
-        )
+        return runtime._go_youtube_home()
     if cmd.intent == "system_status_report":
         return runtime.system_status_report()
     if cmd.intent == "system_weather_today":
