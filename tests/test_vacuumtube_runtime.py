@@ -2102,8 +2102,14 @@ def test_run_vacuumtube_play_bgm_host_runtime_uses_runtime_methods() -> None:
             self.events.append(f"state:{cdp}")
             return {"accountSelectHint": False, "hash": "#/"}
 
-        def send_key(self, key: str) -> None:
-            self.events.append(f"key:{key}")
+        def _send_return_key(self) -> None:
+            self.events.append("key:Return")
+
+        def _send_space_key(self) -> None:
+            self.events.append("key:space")
+
+        def _sleep(self, seconds: float) -> None:
+            self.events.append(f"sleep:{seconds}")
 
         def _try_resume_current_video(self, cdp: str) -> None:
             self.events.append(f"resume:{cdp}")
@@ -2154,6 +2160,16 @@ def test_run_vacuumtube_play_bgm_host_runtime_uses_runtime_methods() -> None:
         def ensure_top_right_position(self) -> dict[str, object]:
             self.events.append("position")
             return {"ok": True}
+
+        def _open_bgm_from_home(self, cdp: str) -> str:
+            return run_vacuumtube_open_from_home_host_runtime(
+                cdp=cdp,
+                runtime=self,
+                label="BGM",
+                scorer=score_vacuumtube_bgm_tile,
+                filter_fn=None,
+                allow_soft_playback_confirm=True,
+            )
 
     runtime = FakeRuntime()
 
@@ -2732,8 +2748,11 @@ def test_run_vacuumtube_play_news_host_runtime_uses_runtime_methods() -> None:
             self.events.append(f"state:{cdp}")
             return {"accountSelectHint": False, "hash": "#/"}
 
-        def send_key(self, key: str) -> None:
-            self.events.append(f"key:{key}")
+        def _send_return_key(self) -> None:
+            self.events.append("key:Return")
+
+        def _sleep(self, seconds: float) -> None:
+            self.events.append(f"sleep:{seconds}")
 
         def _hide_overlay_if_needed(self, cdp: str) -> None:
             self.events.append(f"hide:{cdp}")
@@ -2780,6 +2799,20 @@ def test_run_vacuumtube_play_news_host_runtime_uses_runtime_methods() -> None:
 
         def _score_news_tile(self, tile: dict[str, object], *, slot: str = "generic") -> float:
             return float(tile.get("score", 0.0))
+
+        def _open_news_from_home(self, cdp: str, *, slot: str) -> str:
+            return run_vacuumtube_open_from_home_host_runtime(
+                cdp=cdp,
+                runtime=self,
+                label=f"NEWS-{slot.upper()}",
+                scorer=lambda tile: score_vacuumtube_news_tile(tile, slot=slot),
+                filter_fn=lambda tile: looks_like_vacuumtube_news_blob(
+                    f"{tile.get('title') or ''} {tile.get('text') or ''}",
+                    slot=slot,
+                    has_ja_live_badge=bool(tile.get("hasJaLiveBadge")),
+                ),
+                allow_soft_playback_confirm=True,
+            )
 
     runtime = FakeRuntime()
 
