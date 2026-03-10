@@ -303,7 +303,7 @@ def run_load_check_konsole_placement_host_runtime(
 ) -> dict[str, Any]:
     prepared = prepare_load_check_konsole_placement(
         quadrant_mode=runtime._is_vacuumtube_quadrant_mode_for_load_check(),
-        screen=runtime.vacuumtube._desktop_size(),
+        screen=runtime._vacuumtube_desktop_size(),
         row=row,
         before_konsole_ids=before_konsole_ids,
         wait_for_row=lambda: runtime._wait_new_konsole_window(
@@ -317,7 +317,7 @@ def run_load_check_konsole_placement_host_runtime(
 
     geom = dict(prepared["target"])
     wid = str(prepared["window_id"])
-    env = runtime.vacuumtube._x11_env()
+    env = runtime._vacuumtube_x11_env()
     try:
         result = run_load_check_wmctrl_commands(
             window_id=wid,

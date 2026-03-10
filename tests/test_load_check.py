@@ -457,10 +457,8 @@ def test_run_system_load_check_flow_opens_new_session() -> None:
 def test_run_load_check_konsole_placement_host_runtime_reads_runtime_methods() -> None:
     runtime = SimpleNamespace(
         log=mock.Mock(),
-        vacuumtube=SimpleNamespace(
-            _desktop_size=mock.Mock(return_value=(4096, 2160)),
-            _x11_env=mock.Mock(return_value={"DISPLAY": ":1"}),
-        ),
+        _vacuumtube_desktop_size=mock.Mock(return_value=(4096, 2160)),
+        _vacuumtube_x11_env=mock.Mock(return_value={"DISPLAY": ":1"}),
         _is_vacuumtube_quadrant_mode_for_load_check=mock.Mock(return_value=True),
         _wait_new_konsole_window=mock.Mock(return_value={"id": "0x00b"}),
         _load_check_bottom_left_geom=mock.Mock(
@@ -483,6 +481,8 @@ def test_run_load_check_konsole_placement_host_runtime_reads_runtime_methods() -
         before_ids={"0x00a"},
         timeout_sec=8.0,
     )
+    runtime._vacuumtube_desktop_size.assert_called_once_with()
+    runtime._vacuumtube_x11_env.assert_called_once_with()
     assert run_command.call_count == 4
     runtime.log.assert_called_once()
 
