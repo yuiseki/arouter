@@ -7,7 +7,9 @@ from arouter import (
     encrypt_biometric_password_payload,
     request_biometric_lock_payload,
     run_encrypt_biometric_password_stdin,
+    run_encrypt_biometric_password_stdin_cli_flow,
     run_request_biometric_lock,
+    run_request_biometric_lock_cli_flow,
 )
 
 
@@ -105,4 +107,39 @@ def test_run_encrypt_biometric_password_stdin_resolves_paths_and_builds_payload(
         "publicKeyPath": "/tmp/id_rsa.pub",
         "passwordLines": ["alpha"],
         "encryptPasswordIsCallable": True,
+    }
+
+
+def test_run_request_biometric_lock_cli_flow_uses_shared_helpers() -> None:
+    args = SimpleNamespace(biometric_lock_signal_file="/tmp/custom-lock.signal")
+
+    payload = run_request_biometric_lock_cli_flow(
+        args=args,
+        default_path="/tmp/default-lock.signal",
+        write_signal=lambda **_: Path("/tmp/custom-lock.signal"),
+    )
+
+    assert payload == {
+        "ok": True,
+        "lockSignalFile": "/tmp/custom-lock.signal",
+    }
+
+
+def test_run_encrypt_biometric_password_stdin_cli_flow_uses_shared_helpers() -> None:
+    args = SimpleNamespace(
+        biometric_password_public_key="/tmp/id_rsa.pub",
+        biometric_password_file="/tmp/biometric-password.enc",
+    )
+
+    payload = run_encrypt_biometric_password_stdin_cli_flow(
+        args=args,
+        default_public_key_path="/tmp/default.pub",
+        default_output_path="/tmp/default.enc",
+        read_passwords=lambda: ["alpha"],
+        encrypt_password=lambda **_: Path("/tmp/biometric-password.enc"),
+    )
+
+    assert payload == {
+        "ok": True,
+        "passwordFile": "/tmp/biometric-password.enc",
     }

@@ -3,7 +3,9 @@ from .biometric_admin import (
     encrypt_biometric_password_payload,
     request_biometric_lock_payload,
     run_encrypt_biometric_password_stdin,
+    run_encrypt_biometric_password_stdin_cli_flow,
     run_request_biometric_lock,
+    run_request_biometric_lock_cli_flow,
 )
 from .biometric_bootstrap import ensure_biometric_runtime_attrs
 from .biometric_password import (
@@ -489,6 +491,7 @@ __all__ = [
     "DesktopNotifier",
     "encrypt_biometric_password_payload",
     "ensure_biometric_runtime_attrs",
+    "run_encrypt_biometric_password_stdin_cli_flow",
     "run_encrypt_biometric_password_stdin",
     "build_overlay_ipc_line",
     "build_x11_env",
@@ -782,6 +785,7 @@ __all__ = [
     "reassert_lock_screen",
     "request_biometric_lock_payload",
     "record_successful_command_activity",
+    "run_request_biometric_lock_cli_flow",
     "run_request_biometric_lock",
     "select_live_cam_page_target",
     "select_live_cam_page_url",

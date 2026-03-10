@@ -4,6 +4,8 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from .biometric_paths import resolve_biometric_arg_path
+
 
 def request_biometric_lock_payload(
     *,
@@ -65,5 +67,49 @@ def run_encrypt_biometric_password_stdin(
         public_key_path=public_key_path,
         output_path=output_path,
         password_lines=password_lines,
+        encrypt_password=encrypt_password,
+    )
+
+
+def run_request_biometric_lock_cli_flow(
+    *,
+    args: Any,
+    default_path: str,
+    write_signal: Callable[..., Path],
+) -> dict[str, object]:
+    return run_request_biometric_lock(
+        args=args,
+        resolve_path=lambda *, args: resolve_biometric_arg_path(
+            args=args,
+            attr_name="biometric_lock_signal_file",
+            default_path=default_path,
+        ),
+        request_payload=request_biometric_lock_payload,
+        write_signal=write_signal,
+    )
+
+
+def run_encrypt_biometric_password_stdin_cli_flow(
+    *,
+    args: Any,
+    default_public_key_path: str,
+    default_output_path: str,
+    read_passwords: Callable[[], list[str]],
+    encrypt_password: Callable[..., Path],
+) -> dict[str, object]:
+    return run_encrypt_biometric_password_stdin(
+        args=args,
+        read_passwords=read_passwords,
+        resolve_public_key_path=lambda *, args: resolve_biometric_arg_path(
+            args=args,
+            attr_name="biometric_password_public_key",
+            default_path=default_public_key_path,
+        ),
+        resolve_output_path=lambda *, args: resolve_biometric_arg_path(
+            args=args,
+            attr_name="biometric_password_file",
+            default_path=default_output_path,
+        ),
+        encrypt_payload=encrypt_biometric_password_payload,
         encrypt_password=encrypt_password,
     )
