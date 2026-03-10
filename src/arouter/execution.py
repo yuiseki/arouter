@@ -41,9 +41,13 @@ class CommandRuntime(Protocol):
 
     def _play_morning_news(self) -> str: ...
 
+    def _play_news_command(self, *, slot: str) -> str: ...
+
     def _play_news_slot(self, *, slot: str, label: str | None = None) -> str: ...
 
     def _fullscreen_morning_news(self) -> str: ...
+
+    def _fullscreen_news_command(self, *, slot: str) -> str: ...
 
     def _fullscreen_vacuumtube(self, *, label: str) -> str: ...
 
@@ -120,11 +124,11 @@ def command_has_system_prefix(cmd: VoiceCommand) -> bool:
 
 
 def execute_news_command(runtime: CommandRuntime, cmd: VoiceCommand, *, slot: str) -> str:
-    result = runtime._play_news_slot(slot=slot, label=f"news_{slot}")
+    result = runtime._play_news_command(slot=slot)
     if not command_has_system_prefix(cmd):
         return result
     try:
-        fullscreen = runtime._fullscreen_vacuumtube(label=f"news_{slot}_fullscreen")
+        fullscreen = runtime._fullscreen_news_command(slot=slot)
     except Exception as exc:
         runtime.log(f"news fullscreen skipped after successful playback: {exc}")
         return result

@@ -84,6 +84,12 @@ def _make_runtime() -> SimpleNamespace:
             label="good_morning_news",
         )
     )
+    runtime._play_news_command = mock.Mock(
+        side_effect=lambda *, slot: runtime._play_news_slot(
+            slot=slot,
+            label=f"news_{slot}",
+        )
+    )
     runtime._play_news_slot = mock.Mock(
         side_effect=lambda *, slot, label=None: runtime._run_vacuumtube_action(
             lambda: runtime.vacuumtube.play_news(slot=slot),
@@ -106,6 +112,11 @@ def _make_runtime() -> SimpleNamespace:
     runtime._fullscreen_morning_news = mock.Mock(
         side_effect=lambda: runtime._fullscreen_vacuumtube(
             label="good_morning_fullscreen"
+        )
+    )
+    runtime._fullscreen_news_command = mock.Mock(
+        side_effect=lambda *, slot: runtime._fullscreen_vacuumtube(
+            label=f"news_{slot}_fullscreen"
         )
     )
     runtime._youtube_quadrant = mock.Mock(
@@ -213,8 +224,8 @@ def test_execute_command_dispatches_system_prefixed_news_live_and_fullscreens() 
 
     assert "opened watch route" in out
     assert "youtube fullscreen" in out
-    runtime._play_news_slot.assert_called_once_with(slot="generic", label="news_generic")
-    runtime._fullscreen_vacuumtube.assert_called_once_with(label="news_generic_fullscreen")
+    runtime._play_news_command.assert_called_once_with(slot="generic")
+    runtime._fullscreen_news_command.assert_called_once_with(slot="generic")
 
 
 def test_execute_command_dispatches_plain_news_live_without_fullscreen() -> None:
@@ -224,8 +235,8 @@ def test_execute_command_dispatches_plain_news_live_without_fullscreen() -> None
     out = execute_command(runtime, cmd)
 
     assert out == "opened watch route #/watch?v=abc"
-    runtime._play_news_slot.assert_called_once_with(slot="generic", label="news_generic")
-    runtime._fullscreen_vacuumtube.assert_not_called()
+    runtime._play_news_command.assert_called_once_with(slot="generic")
+    runtime._fullscreen_news_command.assert_not_called()
 
 
 def test_execute_command_dispatches_music_play_via_runtime_method() -> None:
