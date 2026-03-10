@@ -1547,7 +1547,7 @@ def run_vacuumtube_resume_playback_host_runtime(*, runtime: Any) -> str:
         is_watch_state=runtime._is_watch_state,
         confirm_watch_playback=runtime._wait_confirmed_watch_playback,
         try_resume_current_video=runtime._try_resume_current_video,
-        send_space_key=lambda: runtime.send_key("space"),
+        send_space_key=runtime._send_space_key,
         ensure_top_right_position=runtime.ensure_top_right_position,
         log=log if callable(log) else (lambda _message: None),
     )
@@ -2045,7 +2045,7 @@ def run_vacuumtube_stop_music_host_runtime(
         find_window_id=runtime.find_window_id,
         snapshot_state=runtime._snapshot_state,
         is_watch_state=runtime._is_watch_state,
-        send_space_key=lambda: runtime.send_key("space"),
+        send_space_key=runtime._send_space_key,
         time_now=runtime._time_now,
         sleep=runtime._sleep,
         ensure_top_right_position=runtime.ensure_top_right_position,

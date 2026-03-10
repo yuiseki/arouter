@@ -1745,6 +1745,7 @@ def test_run_vacuumtube_resume_playback_host_runtime_uses_runtime_methods() -> N
     class FakeRuntime:
         def __init__(self) -> None:
             self.events: list[str] = []
+            self.confirm_attempts = 0
 
         def _cdp(self) -> FakeContext:
             return FakeContext()
@@ -1765,13 +1766,16 @@ def test_run_vacuumtube_resume_playback_host_runtime_uses_runtime_methods() -> N
             self.events.append(
                 f"confirm:{cdp}:{kwargs['timeout_sec']}:{kwargs.get('allow_resume_attempts', True)}"
             )
+            self.confirm_attempts += 1
+            if self.confirm_attempts < 3:
+                raise RuntimeError("not yet confirmed")
             return {"hash": "#/watch?v=abc"}
 
         def _try_resume_current_video(self, cdp: str) -> None:
             self.events.append(f"resume:{cdp}")
 
-        def send_key(self, key: str) -> None:
-            self.events.append(f"key:{key}")
+        def _send_space_key(self) -> None:
+            self.events.append("key:space")
 
         def ensure_top_right_position(self) -> dict[str, object]:
             self.events.append("ensure_top_right")
@@ -1784,14 +1788,18 @@ def test_run_vacuumtube_resume_playback_host_runtime_uses_runtime_methods() -> N
 
     result = run_vacuumtube_resume_playback_host_runtime(runtime=runtime)
 
-    assert result == "watch route already playing (no-op)"
+    assert result == "resumed playback via Space toggle (0x123)"
     assert runtime.events == [
         "find_window",
         "snapshot:cdp",
         "is_watch:#/watch?v=abc",
         "confirm:cdp:1.2:False",
+        "resume:cdp",
+        "confirm:cdp:4.5:True",
+        "key:space",
+        "confirm:cdp:5.0:True",
         "ensure_top_right",
-        'RESUME already-playing window position: {"ok": true}',
+        'RESUME space-toggle window position: {"ok": true}',
     ]
 
 
@@ -2615,8 +2623,8 @@ def test_run_vacuumtube_stop_music_host_runtime_uses_runtime_methods() -> None:
             self.events.append(f"is_watch:{state.get('hash')}")
             return str(state.get("hash", "")).startswith("#/watch")
 
-        def send_key(self, key: str) -> None:
-            self.events.append(f"key:{key}")
+        def _send_space_key(self) -> None:
+            self.events.append("key:space")
 
         def ensure_top_right_position(self) -> dict[str, object]:
             self.events.append("ensure_top_right")
