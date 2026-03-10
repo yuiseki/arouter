@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import socket
 import subprocess
 import time
@@ -16,6 +17,181 @@ from .tmux_commands import (
 from .vacuumtube_state import vacuumtube_is_watch_state
 from .window_actions import build_window_minimize_command
 from .window_query_runtime import build_xprop_wm_state_command
+
+BGM_POSITIVE_KEYWORDS = [
+    "ambient",
+    "ambience",
+    "relax",
+    "relaxing",
+    "study",
+    "focus",
+    "music",
+    "bgm",
+    "lofi",
+    "jazz",
+    "piano",
+    "chill",
+    "sleep",
+    "deep work",
+    "flow state",
+    "calm",
+    "serene",
+    "snow",
+    "cabin",
+]
+
+NEWS_POSITIVE_KEYWORDS = [
+    "news",
+    "ニュース",
+    "live",
+    "ライブ",
+    "速報",
+    "breaking",
+    "配信中",
+    "生放送",
+    "ann",
+    "annnews",
+    "annnewsch",
+    "tbs",
+    "nhk",
+    "fnn",
+    "jnn",
+    "bbc",
+    "reuters",
+    "日テレnews",
+    "テレ朝news",
+    "abema news",
+    "news live",
+    "live news",
+]
+
+NEWS_MORNING_KEYWORDS = [
+    "朝",
+    "morning",
+    "モーニング",
+    "おはよう",
+    "めざまし",
+    "zip",
+    "the time",
+    "モーサテ",
+]
+
+NEWS_EVENING_KEYWORDS = [
+    "夕方",
+    "夜",
+    "evening",
+    "night",
+    "news23",
+    "news zero",
+    "報道ステーション",
+    "newszero",
+    "news zero",
+    "wbs",
+]
+
+
+def _norm_blob(text: str) -> str:
+    return re.sub(r"\s+", " ", (text or "")).strip().lower()
+
+
+def _blob_has_keyword(blob: str, keyword: str) -> bool:
+    if not blob or not keyword:
+        return False
+    kw = keyword.lower()
+    if kw == "ライブ":
+        return re.search(r"(?<!ド)ライブ", blob) is not None
+    if re.fullmatch(r"[a-z][a-z0-9 .-]*", kw):
+        pattern = r"(?<![a-z0-9])" + re.escape(kw) + r"(?![a-z0-9])"
+        return re.search(pattern, blob) is not None
+    return kw in blob
+
+
+def _count_hits(blob: str, keywords: list[str]) -> int:
+    return sum(1 for kw in keywords if _blob_has_keyword(blob, kw))
+
+
+def looks_like_vacuumtube_news_blob(
+    text: str,
+    *,
+    slot: str = "generic",
+    has_ja_live_badge: bool = False,
+) -> bool:
+    blob = _norm_blob(text)
+    if not blob:
+        return False
+
+    core_news_keywords = [kw for kw in NEWS_POSITIVE_KEYWORDS if kw not in ("live", "ライブ")]
+    news_hits = _count_hits(blob, core_news_keywords)
+    bgm_hits = _count_hits(blob, BGM_POSITIVE_KEYWORDS)
+    live_text_hits = _count_hits(blob, ["live", "ライブ", "生放送", "配信中"])
+    fresh_hits = _count_hits(blob, ["速報", "分前", "時間前", "minutes ago", "hours ago"])
+    morning_hits = _count_hits(blob, NEWS_MORNING_KEYWORDS)
+    evening_hits = _count_hits(blob, NEWS_EVENING_KEYWORDS)
+    live_signal = live_text_hits + (1 if has_ja_live_badge else 0)
+
+    if news_hits <= 0 and live_signal <= 0 and fresh_hits <= 0:
+        return False
+    if bgm_hits >= 2 and news_hits == 0:
+        return False
+
+    if slot == "morning":
+        if morning_hits > 0 and news_hits > 0:
+            return True
+        return news_hits >= 1 and (live_signal + fresh_hits >= 1) and evening_hits == 0
+
+    if slot == "evening":
+        if evening_hits > 0 and news_hits > 0:
+            return True
+        return news_hits >= 1 and (live_signal + fresh_hits >= 1) and morning_hits == 0
+
+    return news_hits >= 1 and (live_signal >= 1 or fresh_hits >= 1)
+
+
+def score_vacuumtube_news_tile(tile: dict[str, Any], *, slot: str = "generic") -> float:
+    title = str(tile.get("title") or "")
+    text = str(tile.get("text") or "")
+    blob = _norm_blob(title + " " + text)
+    has_ja_live_badge = bool(tile.get("hasJaLiveBadge"))
+    has_ja_live_badge_bottom_right = bool(tile.get("hasJaLiveBadgeBottomRight"))
+    score = 0.0
+    if tile.get("visible"):
+        score += 5.0
+    score += min(len(title), 120) / 45.0
+
+    news_hits = _count_hits(blob, NEWS_POSITIVE_KEYWORDS)
+    bgm_hits = _count_hits(blob, BGM_POSITIVE_KEYWORDS)
+    score += news_hits * 3.0
+    score -= bgm_hits * 4.0
+    fresh_hits = _count_hits(
+        blob,
+        ["ライブ", "live", "生放送", "配信中", "分前", "時間前", "minutes ago", "hours ago"],
+    )
+    score += fresh_hits * 2.0
+    if has_ja_live_badge:
+        score += 5.0
+    if has_ja_live_badge_bottom_right:
+        score += 4.0
+
+    if slot == "morning":
+        score += _count_hits(blob, NEWS_MORNING_KEYWORDS) * 3.0
+        score -= _count_hits(blob, NEWS_EVENING_KEYWORDS) * 1.5
+    elif slot == "evening":
+        score += _count_hits(blob, NEWS_EVENING_KEYWORDS) * 3.0
+        score -= _count_hits(blob, NEWS_MORNING_KEYWORDS) * 1.5
+
+    if not looks_like_vacuumtube_news_blob(
+        blob,
+        slot=slot,
+        has_ja_live_badge=has_ja_live_badge,
+    ):
+        score -= 10.0
+
+    try:
+        y = float(tile.get("y") or 0)
+        score += max(0.0, 2.0 - min(y, 1600.0) / 850.0)
+    except Exception:
+        pass
+    return score
 
 
 def build_vacuumtube_context_base(*, ts: float) -> dict[str, Any]:
@@ -1880,7 +2056,6 @@ def run_vacuumtube_play_news_host_runtime(
     *,
     runtime: Any,
     slot: str,
-    filter_tile: Callable[[dict[str, Any]], bool],
 ) -> str:
     return run_vacuumtube_play_news_runtime(
         open_cdp=runtime._cdp,
@@ -1892,8 +2067,12 @@ def run_vacuumtube_play_news_host_runtime(
             cdp=cdp,
             runtime=runtime,
             label=label,
-            scorer=lambda tile: runtime._score_news_tile(tile, slot=slot),
-            filter_fn=filter_tile,
+            scorer=lambda tile: score_vacuumtube_news_tile(tile, slot=slot),
+            filter_fn=lambda tile: looks_like_vacuumtube_news_blob(
+                f"{tile.get('title') or ''} {tile.get('text') or ''}",
+                slot=slot,
+                has_ja_live_badge=bool(tile.get("hasJaLiveBadge")),
+            ),
             allow_soft_playback_confirm=True,
         ),
     )

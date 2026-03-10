@@ -13,6 +13,7 @@ from arouter import (
     ensure_vacuumtube_started_and_positioned_host_runtime,
     finalize_vacuumtube_context,
     is_recoverable_vacuumtube_error,
+    looks_like_vacuumtube_news_blob,
     merge_vacuumtube_cdp_state,
     merge_vacuumtube_window_snapshot,
     recover_vacuumtube_unresponsive_state,
@@ -81,6 +82,7 @@ from arouter import (
     run_vacuumtube_try_resume_current_video_host_runtime,
     run_vacuumtube_wait_watch_route,
     run_vacuumtube_wait_watch_route_host_runtime,
+    score_vacuumtube_news_tile,
     start_vacuumtube_tmux_session,
 )
 
@@ -2745,7 +2747,6 @@ def test_run_vacuumtube_play_news_host_runtime_uses_runtime_methods() -> None:
     result = run_vacuumtube_play_news_host_runtime(
         runtime=runtime,
         slot="morning",
-        filter_tile=lambda tile: bool(tile.get("visible")),
     )
 
     assert result == "opened watch route #/watch?v=morning"
@@ -2757,7 +2758,7 @@ def test_run_vacuumtube_play_news_host_runtime_uses_runtime_methods() -> None:
         "NEWS-MORNING precondition home verified: hash=#/ tiles=1",
         "tiles:cdp",
         "NEWS-MORNING filtered candidates: 1/1",
-        "NEWS-MORNING tile candidates: 1.0:morning news",
+        "NEWS-MORNING tile candidates: 13.3:morning news",
         "NEWS-MORNING tile selected attempt=1: morning news",
         "click:cdp:morning news",
         "wait:cdp:2.5",
@@ -2769,6 +2770,29 @@ def test_run_vacuumtube_play_news_host_runtime_uses_runtime_methods() -> None:
         ),
         "restore:0x123:NEWS-MORNING",
     ]
+
+
+def test_looks_like_vacuumtube_news_blob_rejects_bgm_tile() -> None:
+    assert not looks_like_vacuumtube_news_blob(
+        "BGM playlist music live",
+        slot="generic",
+        has_ja_live_badge=False,
+    )
+
+
+def test_score_vacuumtube_news_tile_prefers_morning_live_tile() -> None:
+    score = score_vacuumtube_news_tile(
+        {
+            "title": "朝ニュース ライブ",
+            "text": "最新ニュース 生放送",
+            "visible": True,
+            "hasJaLiveBadge": True,
+            "y": 120,
+        },
+        slot="morning",
+    )
+
+    assert score > 10.0
 
 
 def test_run_vacuumtube_minimize_is_noop_when_window_is_missing() -> None:

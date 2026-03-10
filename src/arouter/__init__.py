@@ -302,6 +302,7 @@ from .vacuumtube_runtime import (
     ensure_vacuumtube_started_and_positioned_host_runtime,
     finalize_vacuumtube_context,
     is_recoverable_vacuumtube_error,
+    looks_like_vacuumtube_news_blob,
     merge_vacuumtube_cdp_state,
     merge_vacuumtube_window_snapshot,
     recover_vacuumtube_unresponsive_state,
@@ -370,6 +371,7 @@ from .vacuumtube_runtime import (
     run_vacuumtube_try_resume_current_video_host_runtime,
     run_vacuumtube_wait_watch_route,
     run_vacuumtube_wait_watch_route_host_runtime,
+    score_vacuumtube_news_tile,
     start_vacuumtube_tmux_session,
 )
 from .vacuumtube_state import (
@@ -655,6 +657,7 @@ __all__ = [
     "run_vacuumtube_stop_music_runtime",
     "run_vacuumtube_play_news",
     "run_vacuumtube_play_news_runtime",
+    "looks_like_vacuumtube_news_blob",
     "run_vacuumtube_good_night_pause_runtime_flow",
     "run_vacuumtube_tmux_restart_host_runtime",
     "run_vacuumtube_tmux_start_host_runtime",
@@ -707,6 +710,7 @@ __all__ = [
     "extract_password_unlock_secret",
     "finalize_top_right_position_result",
     "finalize_vacuumtube_context",
+    "score_vacuumtube_news_tile",
     "annotate_live_cam_payload_selection",
     "build_live_cam_browse_command",
     "build_live_cam_command_failure",
