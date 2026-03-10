@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Callable, Mapping
-from typing import TypedDict
+from typing import Any, TypedDict
 
 from .models import VoiceCommand
 from .parser import normalize_transcript
@@ -24,6 +24,25 @@ Contextualizer = Callable[[str, VoiceCommand | None], VoiceCommand | None]
 ContextProvider = Callable[[], Mapping[str, object] | None]
 Logger = Callable[[str], None]
 SuccessRecorder = Callable[[], None]
+
+
+def contextualize_command_with_vacuumtube_state_host_runtime(
+    *,
+    runtime: Any,
+    text: str,
+    cmd: VoiceCommand | None,
+) -> VoiceCommand | None:
+    logger = runtime.log if callable(getattr(runtime, "log", None)) else (lambda _msg: None)
+    return contextualize_command_with_vacuumtube_state(
+        text,
+        cmd,
+        get_context=lambda: runtime._get_vacuumtube_context(
+            max_age_sec=3.0,
+            refresh_if_stale=True,
+        ),
+        logger=logger,
+    )
+
 
 def contextualize_command_with_vacuumtube_state(
     text: str,

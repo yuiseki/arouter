@@ -3,6 +3,7 @@ from __future__ import annotations
 from arouter import (
     build_vacuumtube_context_error,
     resolve_vacuumtube_context_cache,
+    resolve_vacuumtube_context_cache_host_runtime,
 )
 
 
@@ -54,3 +55,25 @@ def test_resolve_vacuumtube_context_cache_keeps_stale_snapshot_when_refresh_disa
     )
 
     assert out == cached
+
+
+def test_resolve_vacuumtube_context_cache_host_runtime_uses_runtime_refresh() -> None:
+    runtime = type(
+        "Runtime",
+        (),
+        {
+            "_refresh_vacuumtube_context_cache": staticmethod(
+                lambda *, reason: {"reason": reason, "refreshed": True}
+            )
+        },
+    )()
+
+    out = resolve_vacuumtube_context_cache_host_runtime(
+        runtime=runtime,
+        cached={"ts": 1.0, "available": True},
+        now_ts=10.0,
+        max_age_sec=3.0,
+        refresh_if_stale=True,
+    )
+
+    assert out == {"reason": "on-demand", "refreshed": True}

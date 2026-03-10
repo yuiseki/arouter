@@ -32,3 +32,22 @@ def resolve_vacuumtube_context_cache(
     if refresh_if_stale:
         return refresh_context()
     return snapshot
+
+
+def resolve_vacuumtube_context_cache_host_runtime(
+    *,
+    runtime: Any,
+    cached: dict[str, Any],
+    now_ts: float,
+    max_age_sec: float,
+    refresh_if_stale: bool,
+) -> dict[str, Any]:
+    return resolve_vacuumtube_context_cache(
+        cached,
+        now_ts=now_ts,
+        max_age_sec=max_age_sec,
+        refresh_if_stale=refresh_if_stale,
+        refresh_context=lambda: runtime._refresh_vacuumtube_context_cache(
+            reason="on-demand"
+        ),
+    )

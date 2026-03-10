@@ -8,6 +8,7 @@ from arouter import (
     TextCommandRouter,
     VoiceCommand,
     contextualize_command_with_vacuumtube_state,
+    contextualize_command_with_vacuumtube_state_host_runtime,
     detect_non_command_reaction,
 )
 
@@ -122,6 +123,34 @@ def test_contextualize_command_keeps_youtube_resume_when_paused() -> None:
 
     assert out is not None
     assert out.intent == "playback_resume"
+
+
+def test_contextualize_command_host_runtime_uses_runtime_context() -> None:
+    runtime = mock.Mock()
+    runtime._get_vacuumtube_context.return_value = {
+        "watchRoute": True,
+        "videoPlaying": True,
+        "videoPaused": False,
+        "fullscreenish": False,
+    }
+    cmd = VoiceCommand(
+        intent="playback_resume",
+        normalized_text="youtubeを再開して",
+        raw_text="YouTubeを再開して",
+    )
+
+    out = contextualize_command_with_vacuumtube_state_host_runtime(
+        runtime=runtime,
+        text="YouTubeを再開して",
+        cmd=cmd,
+    )
+
+    assert out is not None
+    assert out.intent == "youtube_fullscreen"
+    runtime._get_vacuumtube_context.assert_called_once_with(
+        max_age_sec=3.0,
+        refresh_if_stale=True,
+    )
 
 
 @pytest.mark.parametrize(

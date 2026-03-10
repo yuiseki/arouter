@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+from unittest import mock
+
 from arouter import (
     resolve_vacuumtube_context_poll_interval,
     run_vacuumtube_context_poller_loop,
+    run_vacuumtube_context_poller_loop_host_runtime,
     start_vacuumtube_context_poller,
+    start_vacuumtube_context_poller_host_runtime,
     stop_vacuumtube_context_poller,
 )
 
@@ -73,6 +77,30 @@ def test_run_vacuumtube_context_poller_loop_refreshes_until_stop() -> None:
     assert event.wait_calls == [1.5]
 
 
+def test_run_vacuumtube_context_poller_loop_host_runtime_uses_runtime_refresh() -> None:
+    event = DummyEvent()
+    runtime = type(
+        "Runtime",
+        (),
+        {
+            "stop_requested": False,
+            "_refresh_vacuumtube_context_cache": staticmethod(
+                lambda *, reason: calls.append(reason)
+            ),
+        },
+    )()
+    calls: list[str] = []
+
+    run_vacuumtube_context_poller_loop_host_runtime(
+        runtime=runtime,
+        stop_event=event,
+        interval_sec=1.5,
+    )
+
+    assert calls == ["poll"]
+    assert event.wait_calls == [1.5]
+
+
 def test_start_vacuumtube_context_poller_returns_existing_alive_thread() -> None:
     event = DummyEvent()
     current = DummyThread(alive=True)
@@ -101,6 +129,31 @@ def test_start_vacuumtube_context_poller_starts_new_thread() -> None:
     assert result is not None
     assert result.started == 1
     assert event.clear_calls == 1
+
+
+def test_start_vacuumtube_context_poller_host_runtime_builds_runtime_thread() -> None:
+    event = DummyEvent()
+    runtime = mock.Mock()
+    fake_thread = DummyThread()
+
+    with mock.patch(
+        "arouter.vacuumtube_poller.threading.Thread",
+        return_value=fake_thread,
+    ) as thread_factory:
+        result = start_vacuumtube_context_poller_host_runtime(
+            runtime=runtime,
+            current_thread=None,
+            stop_event=event,
+        )
+
+    assert result is fake_thread
+    assert fake_thread.started == 1
+    assert event.clear_calls == 1
+    thread_factory.assert_called_once_with(
+        target=runtime._vacuumtube_context_poller,
+        name="vacuumtube-context-poller",
+        daemon=True,
+    )
 
 
 def test_stop_vacuumtube_context_poller_sets_event_and_joins() -> None:

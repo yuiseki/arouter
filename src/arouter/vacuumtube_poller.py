@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+import threading
 from collections.abc import Callable
-from typing import Protocol
+from typing import Any, Protocol
 
 
 class EventLike(Protocol):
@@ -50,6 +51,22 @@ def run_vacuumtube_context_poller_loop(
         stop_event.wait(interval_sec)
 
 
+def run_vacuumtube_context_poller_loop_host_runtime(
+    *,
+    runtime: Any,
+    stop_event: EventLike,
+    interval_sec: float,
+) -> None:
+    run_vacuumtube_context_poller_loop(
+        stop_requested=lambda: bool(getattr(runtime, "stop_requested", False)),
+        stop_event=stop_event,
+        interval_sec=interval_sec,
+        refresh_context=lambda: runtime._refresh_vacuumtube_context_cache(
+            reason="poll"
+        ),
+    )
+
+
 def start_vacuumtube_context_poller(
     *,
     enabled: bool,
@@ -65,6 +82,24 @@ def start_vacuumtube_context_poller(
     thread = thread_factory()
     thread.start()
     return thread
+
+
+def start_vacuumtube_context_poller_host_runtime(
+    *,
+    runtime: Any,
+    current_thread: ThreadLike | None,
+    stop_event: EventLike,
+) -> ThreadLike | None:
+    return start_vacuumtube_context_poller(
+        enabled=True,
+        current_thread=current_thread,
+        stop_event=stop_event,
+        thread_factory=lambda: threading.Thread(
+            target=runtime._vacuumtube_context_poller,
+            name="vacuumtube-context-poller",
+            daemon=True,
+        ),
+    )
 
 
 def stop_vacuumtube_context_poller(

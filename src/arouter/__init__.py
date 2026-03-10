@@ -263,6 +263,7 @@ from .router import (
     CommandExecutionPayload,
     TextCommandRouter,
     contextualize_command_with_vacuumtube_state,
+    contextualize_command_with_vacuumtube_state_host_runtime,
 )
 from .segment import process_pcm_segment, process_transcribed_segment
 from .speaker_runtime import (
@@ -280,11 +281,14 @@ from .tmux_commands import (
 from .vacuumtube_cache import (
     build_vacuumtube_context_error,
     resolve_vacuumtube_context_cache,
+    resolve_vacuumtube_context_cache_host_runtime,
 )
 from .vacuumtube_poller import (
     resolve_vacuumtube_context_poll_interval,
     run_vacuumtube_context_poller_loop,
+    run_vacuumtube_context_poller_loop_host_runtime,
     start_vacuumtube_context_poller,
+    start_vacuumtube_context_poller_host_runtime,
     stop_vacuumtube_context_poller,
 )
 from .vacuumtube_runtime import (
@@ -673,6 +677,7 @@ __all__ = [
     "resolve_x11_display_host_runtime",
     "resolve_x11_display",
     "contextualize_command_with_vacuumtube_state",
+    "contextualize_command_with_vacuumtube_state_host_runtime",
     "require_cdp_target_list",
     "run_cdp_target_list_http_query",
     "run_cdp_target_list_query",
@@ -781,6 +786,7 @@ __all__ = [
     "run_window_restore_flow",
     "resolve_biometric_poll_interval",
     "resolve_vacuumtube_context_cache",
+    "resolve_vacuumtube_context_cache_host_runtime",
     "resolve_vacuumtube_context_poll_interval",
     "report_segment_error",
     "run_biometric_poll_iteration",
@@ -805,6 +811,7 @@ __all__ = [
     "run_speaker_auth_initialization",
     "run_speaker_identity_verification",
     "run_vacuumtube_context_poller_loop",
+    "run_vacuumtube_context_poller_loop_host_runtime",
     "run_vacuumtube_cdp_client",
     "run_vacuumtube_page_cdp_host_runtime",
     "run_vacuumtube_page_cdp_client",
@@ -862,6 +869,7 @@ __all__ = [
     "suppress_transcribed_command_reason",
     "start_biometric_poller",
     "start_vacuumtube_context_poller",
+    "start_vacuumtube_context_poller_host_runtime",
     "store_authfail_wav",
     "store_authorized_wav",
     "stop_biometric_poller",
