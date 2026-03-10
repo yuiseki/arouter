@@ -39,7 +39,11 @@ class CommandRuntime(Protocol):
 
     def _resume_playback(self) -> str: ...
 
+    def _play_morning_news(self) -> str: ...
+
     def _play_news_slot(self, *, slot: str, label: str | None = None) -> str: ...
+
+    def _fullscreen_morning_news(self) -> str: ...
 
     def _fullscreen_vacuumtube(self, *, label: str) -> str: ...
 
@@ -168,13 +172,8 @@ def run_good_morning_host_runtime(
     runtime: Any,
 ) -> str:
     return run_good_morning(
-        play_morning_news=lambda: runtime._play_news_slot(
-            slot="morning",
-            label="good_morning_news",
-        ),
-        fullscreen_news=lambda: runtime._fullscreen_vacuumtube(
-            label="good_morning_fullscreen"
-        ),
+        play_morning_news=runtime._play_morning_news,
+        fullscreen_news=runtime._fullscreen_morning_news,
         lights_on=runtime._lights_on,
     )
 

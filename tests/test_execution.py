@@ -78,6 +78,12 @@ def _make_runtime() -> SimpleNamespace:
             label="playback_resume",
         )
     )
+    runtime._play_morning_news = mock.Mock(
+        side_effect=lambda: runtime._play_news_slot(
+            slot="morning",
+            label="good_morning_news",
+        )
+    )
     runtime._play_news_slot = mock.Mock(
         side_effect=lambda *, slot, label=None: runtime._run_vacuumtube_action(
             lambda: runtime.vacuumtube.play_news(slot=slot),
@@ -97,6 +103,11 @@ def _make_runtime() -> SimpleNamespace:
         side_effect=runtime.vacuumtube.close_weather_pages_tiled
     )
     runtime._pause_for_night = mock.Mock(side_effect=runtime.vacuumtube.good_night_pause)
+    runtime._fullscreen_morning_news = mock.Mock(
+        side_effect=lambda: runtime._fullscreen_vacuumtube(
+            label="good_morning_fullscreen"
+        )
+    )
     runtime._youtube_quadrant = mock.Mock(
         side_effect=lambda: runtime._run_vacuumtube_action(
             runtime.vacuumtube.youtube_quadrant,
@@ -436,8 +447,8 @@ def test_run_show_weather_pages_today_host_runtime_delegates_to_vacuumtube() -> 
 
 def test_run_good_morning_host_runtime_uses_news_fullscreen_and_lights() -> None:
     runtime = SimpleNamespace(
-        _play_news_slot=mock.Mock(return_value="news ok"),
-        _fullscreen_vacuumtube=mock.Mock(return_value="fullscreen ok"),
+        _play_morning_news=mock.Mock(return_value="news ok"),
+        _fullscreen_morning_news=mock.Mock(return_value="fullscreen ok"),
         _lights_on=mock.Mock(return_value="switchbot lights on: ok"),
     )
 
@@ -446,8 +457,8 @@ def test_run_good_morning_host_runtime_uses_news_fullscreen_and_lights() -> None
     )
 
     assert out == "good_morning news ok fullscreen=fullscreen ok lights=switchbot lights on: ok"
-    runtime._play_news_slot.assert_called_once_with(slot="morning", label="good_morning_news")
-    runtime._fullscreen_vacuumtube.assert_called_once_with(label="good_morning_fullscreen")
+    runtime._play_morning_news.assert_called_once_with()
+    runtime._fullscreen_morning_news.assert_called_once_with()
     runtime._lights_on.assert_called_once_with()
 
 
