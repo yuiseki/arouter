@@ -679,8 +679,8 @@ def run_vacuumtube_ensure_home_host_runtime(
         select_account_if_needed=runtime._select_account_if_needed,
         needs_hard_reload_home=runtime._needs_hard_reload_home,
         log=log,
-        now=time.time,
-        sleep=time.sleep,
+        now=runtime._time_now,
+        sleep=runtime._sleep,
         timeout_sec=timeout_sec,
     )
 
@@ -747,8 +747,8 @@ def run_vacuumtube_wait_watch_route_host_runtime(
 ) -> bool:
     return run_vacuumtube_wait_watch_route(
         get_state=lambda: runtime._state(cdp),
-        now=time.time,
-        sleep=time.sleep,
+        now=runtime._time_now,
+        sleep=runtime._sleep,
         timeout_sec=timeout_sec,
     )
 
@@ -1125,8 +1125,6 @@ def run_vacuumtube_select_account_if_needed(
 def run_vacuumtube_select_account_if_needed_host_runtime(
     *,
     runtime: Any,
-    now: Callable[[], float] = time.time,
-    sleep: Callable[[float], None] = time.sleep,
 ) -> bool:
     log = runtime.log if callable(getattr(runtime, "log", None)) else (lambda _message: None)
 
@@ -1136,10 +1134,10 @@ def run_vacuumtube_select_account_if_needed_host_runtime(
 
     return run_vacuumtube_select_account_if_needed(
         snapshot_state=snapshot_state,
-        send_return_key=lambda: runtime.send_key("Return"),
+        send_return_key=runtime._send_return_key,
         log=log,
-        now=now,
-        sleep=sleep,
+        now=runtime._time_now,
+        sleep=runtime._sleep,
     )
 
 

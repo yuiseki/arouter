@@ -616,9 +616,11 @@ def test_run_vacuumtube_ensure_home_recovers_from_account_select_after_hard_relo
 
 def test_run_vacuumtube_ensure_home_host_runtime_reads_runtime_methods() -> None:
     runtime = mock.Mock()
-    runtime._is_home_browse_state.return_value = True
+    runtime._snapshot_state.side_effect = [{"hash": "#/watch?v=abc"}, {"hash": "#/"}]
+    runtime._is_home_browse_state.side_effect = [False, True]
     runtime._needs_hard_reload_home.return_value = False
-    runtime._snapshot_state.return_value = {"hash": "#/"}
+    runtime._time_now = mock.Mock(return_value=100.0)
+    runtime._sleep = mock.Mock()
     runtime.log = mock.Mock()
     cdp = object()
 
@@ -629,8 +631,14 @@ def test_run_vacuumtube_ensure_home_host_runtime_reads_runtime_methods() -> None
     )
 
     assert out == {"hash": "#/"}
-    runtime._snapshot_state.assert_called_once_with(cdp)
-    runtime._is_home_browse_state.assert_called_once_with({"hash": "#/"})
+    assert runtime._snapshot_state.call_args_list == [mock.call(cdp), mock.call(cdp)]
+    assert runtime._is_home_browse_state.call_args_list == [
+        mock.call({"hash": "#/watch?v=abc"}),
+        mock.call({"hash": "#/"}),
+    ]
+    runtime._route_to_home.assert_called_once_with(cdp)
+    runtime._time_now.assert_called()
+    runtime._sleep.assert_not_called()
     runtime.log.assert_called()
 
 
@@ -704,6 +712,8 @@ def test_run_vacuumtube_wait_watch_route_tolerates_state_errors_until_timeout() 
 def test_run_vacuumtube_wait_watch_route_host_runtime_reads_runtime_methods() -> None:
     runtime = mock.Mock()
     runtime._state.return_value = {"hash": "#/watch?v=abc"}
+    runtime._time_now = mock.Mock(side_effect=[100.0, 100.1])
+    runtime._sleep = mock.Mock()
 
     out = run_vacuumtube_wait_watch_route_host_runtime(
         runtime=runtime,
@@ -713,6 +723,8 @@ def test_run_vacuumtube_wait_watch_route_host_runtime_reads_runtime_methods() ->
 
     assert out is True
     runtime._state.assert_called_once()
+    runtime._time_now.assert_called()
+    runtime._sleep.assert_not_called()
 
 
 def test_run_vacuumtube_route_to_home_invokes_hash_assignment() -> None:
@@ -1070,6 +1082,7 @@ def test_run_vacuumtube_select_account_if_needed_host_runtime_uses_runtime_metho
     class FakeRuntime:
         def __init__(self) -> None:
             self.events: list[str] = []
+            self._times = iter([100.0, 100.1, 100.6, 100.9])
 
         def _cdp(self) -> FakeContext:
             return FakeContext()
@@ -1078,21 +1091,20 @@ def test_run_vacuumtube_select_account_if_needed_host_runtime_uses_runtime_metho
             self.events.append(f"state:{cdp}")
             return {"accountSelectHint": len(self.events) == 1}
 
-        def send_key(self, key: str) -> None:
-            self.events.append(f"key:{key}")
+        def _send_return_key(self) -> None:
+            self.events.append("key:Return")
 
         def log(self, message: str) -> None:
             self.events.append(message)
 
-    now_values = iter([100.0, 100.1, 100.6, 100.9])
-    sleep_calls: list[float] = []
+        def _time_now(self) -> float:
+            return next(self._times)
+
+        def _sleep(self, seconds: float) -> None:
+            self.events.append(f"sleep:{seconds}")
     runtime = FakeRuntime()
 
-    out = run_vacuumtube_select_account_if_needed_host_runtime(
-        runtime=runtime,
-        now=lambda: next(now_values),
-        sleep=lambda seconds: sleep_calls.append(seconds),
-    )
+    out = run_vacuumtube_select_account_if_needed_host_runtime(runtime=runtime)
 
     assert out is True
     assert runtime.events == [
@@ -1101,7 +1113,6 @@ def test_run_vacuumtube_select_account_if_needed_host_runtime_uses_runtime_metho
         "key:Return",
         "state:cdp",
     ]
-    assert sleep_calls == []
 
 
 def test_run_vacuumtube_confirm_watch_playback_returns_confirmed_snapshot() -> None:
