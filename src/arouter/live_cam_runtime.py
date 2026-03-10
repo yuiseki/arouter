@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import concurrent.futures
 import json
-import os
 import subprocess
 import tempfile
 import time
@@ -358,7 +357,7 @@ def run_live_cam_hide_host_runtime_flow(*, runtime: Any) -> str:
         pid_lookup=runtime._pid_for_port,
         state_fetcher=runtime._collect_runtime_state,
         close_windows=runtime._close_windows_for_pids,
-        after_action=lambda: time.sleep(0.2),
+        after_action=runtime._after_window_action_pause,
     )
 
 
@@ -368,7 +367,7 @@ def run_live_cam_minimize_host_runtime_flow(*, runtime: Any) -> str:
         pid_lookup=runtime._pid_for_port,
         state_fetcher=runtime._collect_runtime_state,
         minimize_windows=runtime._minimize_windows_for_pids,
-        after_action=lambda: time.sleep(0.2),
+        after_action=runtime._after_window_action_pause,
     )
 
 
@@ -387,20 +386,11 @@ def run_live_cam_raise_windows(
 
 
 def run_live_cam_raise_windows_host_runtime_flow(*, runtime: Any, pids: list[int]) -> None:
-    def _run_command(command: list[str]) -> None:
-        subprocess.run(
-            command,
-            check=False,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            env=runtime._x11_env(),
-        )
-
     run_live_cam_raise_windows(
         pids,
         window_id_lookup=runtime._window_id_for_pid,
         build_activate_command=lambda wid: ["xdotool", "windowactivate", "--sync", wid],
-        run_command=_run_command,
+        run_command=runtime._run_x11_command,
     )
 
 
@@ -426,20 +416,11 @@ def run_live_cam_close_windows_host_runtime_flow(
     runtime: Any,
     pids: list[int],
 ) -> list[str]:
-    def _run_command(command: list[str]) -> None:
-        subprocess.run(
-            command,
-            check=False,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            env=runtime._x11_env(),
-        )
-
     return run_live_cam_close_windows(
         pids,
         window_id_lookup=runtime._window_id_for_pid,
         build_close_command=lambda wid: ["wmctrl", "-i", "-c", wid],
-        run_command=_run_command,
+        run_command=runtime._run_x11_command,
     )
 
 
@@ -523,13 +504,9 @@ def run_live_cam_minimize_windows_host_runtime_flow(
                 plugin,
             ],
         },
-        run_command=lambda command: runtime._run(
-            command,
-            env=runtime._x11_env(),
-            timeout=8.0,
-        ),
-        sleep=time.sleep,
-        cleanup=os.unlink,
+        run_command=runtime._run_x11_command,
+        sleep=runtime._sleep,
+        cleanup=runtime._cleanup_temp_path,
         plugin_name=plugin_name,
     )
 
@@ -622,7 +599,7 @@ def run_live_cam_start_script_host_runtime_flow(
         spec,
         start_silent_script=runtime.start_silent_script,
         display=runtime._resolve_display(),
-        run_command=lambda command: runtime._run(command, timeout=90.0),
+        run_command=runtime._run_live_cam_start_command,
     )
 
 

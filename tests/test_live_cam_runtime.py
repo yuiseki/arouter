@@ -249,8 +249,7 @@ def test_run_live_cam_start_script_host_runtime_flow_reads_runtime_methods() -> 
         def _resolve_display(self) -> str:
             return ":0"
 
-        def _run(self, command: list[str], *, timeout: float) -> object:
-            assert timeout == 90.0
+        def _run_live_cam_start_command(self, command: list[str]) -> object:
             return type("CP", (), {"stdout": f"CMD={' '.join(command)}\nPID=12345\n"})()
 
     out = run_live_cam_start_script_host_runtime_flow(
@@ -427,75 +426,41 @@ def test_run_live_cam_open_instances_host_runtime_flow_reads_runtime_methods() -
 
 
 def test_run_live_cam_raise_windows_host_runtime_flow_reads_runtime_methods() -> None:
-    calls: list[object] = []
+    calls: list[list[str]] = []
 
     class FakeRuntime:
         def _window_id_for_pid(self, pid: int) -> str | None:
             return {101: "0x1", 102: None}.get(pid)
 
-        def _x11_env(self) -> dict[str, str]:
-            return {"DISPLAY": ":0"}
+        def _run_x11_command(self, command: list[str]) -> object:
+            calls.append(command)
+            return object()
 
-    def _run_command(command: list[str], **kwargs: object) -> object:
-        calls.append((command, kwargs))
-        return object()
+    run_live_cam_raise_windows_host_runtime_flow(runtime=FakeRuntime(), pids=[101, 102])
 
-    with mock.patch("arouter.live_cam_runtime.subprocess.run", side_effect=_run_command):
-        run_live_cam_raise_windows_host_runtime_flow(runtime=FakeRuntime(), pids=[101, 102])
-
-    assert calls == [
-        (
-            ["xdotool", "windowactivate", "--sync", "0x1"],
-            {
-                "check": False,
-                "stdout": mock.ANY,
-                "stderr": mock.ANY,
-                "env": {"DISPLAY": ":0"},
-            },
-        )
-    ]
+    assert calls == [["xdotool", "windowactivate", "--sync", "0x1"]]
 
 
 def test_run_live_cam_close_windows_host_runtime_flow_reads_runtime_methods() -> None:
-    calls: list[object] = []
+    calls: list[list[str]] = []
 
     class FakeRuntime:
         def _window_id_for_pid(self, pid: int) -> str | None:
             return {201: "0x10", 202: None, 203: "0x30"}.get(pid)
 
-        def _x11_env(self) -> dict[str, str]:
-            return {"DISPLAY": ":0"}
+        def _run_x11_command(self, command: list[str]) -> object:
+            calls.append(command)
+            return object()
 
-    def _run_command(command: list[str], **kwargs: object) -> object:
-        calls.append((command, kwargs))
-        return object()
-
-    with mock.patch("arouter.live_cam_runtime.subprocess.run", side_effect=_run_command):
-        closed = run_live_cam_close_windows_host_runtime_flow(
-            runtime=FakeRuntime(),
-            pids=[201, 202, 203],
-        )
+    closed = run_live_cam_close_windows_host_runtime_flow(
+        runtime=FakeRuntime(),
+        pids=[201, 202, 203],
+    )
 
     assert closed == ["0x10", "0x30"]
     assert calls == [
-        (
-            ["wmctrl", "-i", "-c", "0x10"],
-            {
-                "check": False,
-                "stdout": mock.ANY,
-                "stderr": mock.ANY,
-                "env": {"DISPLAY": ":0"},
-            },
-        ),
-        (
-            ["wmctrl", "-i", "-c", "0x30"],
-            {
-                "check": False,
-                "stdout": mock.ANY,
-                "stderr": mock.ANY,
-                "env": {"DISPLAY": ":0"},
-            },
-        ),
+        ["wmctrl", "-i", "-c", "0x10"],
+        ["wmctrl", "-i", "-c", "0x30"],
     ]
 
 
@@ -506,12 +471,15 @@ def test_run_live_cam_minimize_windows_host_runtime_flow_reads_runtime_methods()
         def _window_id_for_pid(self, pid: int) -> str | None:
             return {101: "0x1", 102: None}.get(pid)
 
-        def _x11_env(self) -> dict[str, str]:
-            return {"DISPLAY": ":0"}
-
-        def _run(self, command: list[str], *, env: dict[str, str], timeout: float) -> object:
-            calls.append(("run", command, env, timeout))
+        def _run_x11_command(self, command: list[str]) -> object:
+            calls.append(("run", command))
             return object()
+
+        def _sleep(self, seconds: float) -> None:
+            calls.append(("sleep", seconds))
+
+        def _cleanup_temp_path(self, path: str) -> None:
+            calls.append(("cleanup", path))
 
     with mock.patch("arouter.live_cam_runtime.time.time", return_value=0.0):
         out = run_live_cam_minimize_windows_host_runtime_flow(
@@ -531,15 +499,9 @@ def test_run_live_cam_minimize_windows_host_runtime_flow_reads_runtime_methods()
                 mock.ANY,
                 "codex_live_cam_minimize_0",
             ],
-            {"DISPLAY": ":0"},
-            8.0,
         ),
-        (
-            "run",
-            ["qdbus", "org.kde.KWin", "/Scripting", "org.kde.kwin.Scripting.start"],
-            {"DISPLAY": ":0"},
-            8.0,
-        ),
+        ("run", ["qdbus", "org.kde.KWin", "/Scripting", "org.kde.kwin.Scripting.start"]),
+        ("sleep", 0.4),
         (
             "run",
             [
@@ -549,9 +511,8 @@ def test_run_live_cam_minimize_windows_host_runtime_flow_reads_runtime_methods()
                 "org.kde.kwin.Scripting.unloadScript",
                 "codex_live_cam_minimize_0",
             ],
-            {"DISPLAY": ":0"},
-            8.0,
         ),
+        ("cleanup", mock.ANY),
     ]
 
 
@@ -842,11 +803,10 @@ def test_run_live_cam_hide_host_runtime_flow_reads_runtime_methods() -> None:
             events.append(("close", list(pids)))
             return ["0x1", "0x2"]
 
-    with mock.patch(
-        "arouter.live_cam_runtime.time.sleep",
-        side_effect=lambda seconds: events.append(("sleep", seconds)),
-    ):
-        result = run_live_cam_hide_host_runtime_flow(runtime=FakeRuntime())
+        def _after_window_action_pause(self) -> None:
+            events.append(("sleep", 0.2))
+
+    result = run_live_cam_hide_host_runtime_flow(runtime=FakeRuntime())
 
     assert result == (
         'live camera wall hide {"closed": 2, "windowIds": ["0x1", "0x2"], '
@@ -892,11 +852,10 @@ def test_run_live_cam_minimize_host_runtime_flow_reads_runtime_methods() -> None
             events.append(("minimize", list(pids)))
             return ["0x1"]
 
-    with mock.patch(
-        "arouter.live_cam_runtime.time.sleep",
-        side_effect=lambda seconds: events.append(("sleep", seconds)),
-    ):
-        result = run_live_cam_minimize_host_runtime_flow(runtime=FakeRuntime())
+        def _after_window_action_pause(self) -> None:
+            events.append(("sleep", 0.2))
+
+    result = run_live_cam_minimize_host_runtime_flow(runtime=FakeRuntime())
 
     assert result == (
         'live camera wall minimize {"minimized": 1, "windowIds": ["0x1"], '
