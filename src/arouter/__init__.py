@@ -264,6 +264,7 @@ from .router import (
     TextCommandRouter,
     contextualize_command_with_vacuumtube_state,
     contextualize_command_with_vacuumtube_state_host_runtime,
+    execute_text_command_host_runtime,
 )
 from .segment import process_pcm_segment, process_transcribed_segment
 from .speaker_runtime import (
@@ -678,6 +679,7 @@ __all__ = [
     "resolve_x11_display",
     "contextualize_command_with_vacuumtube_state",
     "contextualize_command_with_vacuumtube_state_host_runtime",
+    "execute_text_command_host_runtime",
     "require_cdp_target_list",
     "run_cdp_target_list_http_query",
     "run_cdp_target_list_query",

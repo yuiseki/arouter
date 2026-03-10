@@ -10,6 +10,7 @@ from arouter import (
     contextualize_command_with_vacuumtube_state,
     contextualize_command_with_vacuumtube_state_host_runtime,
     detect_non_command_reaction,
+    execute_text_command_host_runtime,
 )
 
 
@@ -151,6 +152,28 @@ def test_contextualize_command_host_runtime_uses_runtime_context() -> None:
         max_age_sec=3.0,
         refresh_if_stale=True,
     )
+
+
+def test_execute_text_command_host_runtime_uses_runtime_methods() -> None:
+    runtime = mock.Mock()
+    runtime._execute_command.return_value = "live camera wall ok"
+    runtime._authorize_command.return_value = (True, None)
+    runtime._contextualize_command_with_vacuumtube_state.side_effect = (
+        lambda _text, cmd: cmd
+    )
+
+    payload = execute_text_command_host_runtime(
+        runtime=runtime,
+        text=" システム 街頭カメラを表示 ",
+    )
+
+    assert payload["ok"] is True
+    assert payload["intent"] == "system_live_camera_show"
+    assert payload["normalized"] == "システム街頭カメラを表示"
+    assert payload["result"] == "live camera wall ok"
+    runtime._execute_command.assert_called_once()
+    runtime._record_successful_command_activity.assert_called_once_with()
+    runtime._authorize_command.assert_called_once()
 
 
 @pytest.mark.parametrize(

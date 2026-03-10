@@ -218,3 +218,27 @@ class TextCommandRouter:
         except Exception:
             pass
         return payload
+
+
+def execute_text_command_host_runtime(
+    *,
+    runtime: Any,
+    text: str,
+) -> CommandExecutionPayload:
+    router = TextCommandRouter(
+        executor=runtime._execute_command,
+        authorizer=lambda cmd: runtime._authorize_command(
+            cmd,
+            wav_path=None,
+            source="cli",
+            log_label="cli command",
+        ),
+        contextualizer=runtime._contextualize_command_with_vacuumtube_state,
+        logger=runtime.log if callable(getattr(runtime, "log", None)) else _noop_logger,
+        success_recorder=(
+            runtime._record_successful_command_activity
+            if callable(getattr(runtime, "_record_successful_command_activity", None))
+            else _noop_success_recorder
+        ),
+    )
+    return router.execute_text_command(text)
