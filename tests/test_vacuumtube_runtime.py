@@ -61,6 +61,7 @@ from arouter import (
     run_vacuumtube_play_news_runtime,
     run_vacuumtube_quadrant,
     run_vacuumtube_quadrant_host_runtime,
+    run_vacuumtube_recover_from_unresponsive_host_runtime,
     run_vacuumtube_resume_playback,
     run_vacuumtube_resume_playback_host_runtime,
     run_vacuumtube_resume_playback_runtime,
@@ -1354,6 +1355,38 @@ def test_recover_vacuumtube_unresponsive_state_restarts_then_returns_positioned_
     ]
 
 
+def test_run_vacuumtube_recover_from_unresponsive_host_runtime_reads_runtime_methods() -> None:
+    events: list[str] = []
+
+    class FakeRuntime:
+        tmux_session = "vacuumtube-main"
+        base_url = "http://127.0.0.1:9992"
+
+        def _restart_tmux_session(self) -> None:
+            events.append("restart")
+
+        def wait_cdp_ready(self, timeout: float) -> bool:
+            events.append(f"wait_cdp_ready:{timeout}")
+            return True
+
+        def ensure_started_and_positioned(self) -> dict[str, str]:
+            events.append("ensure_started")
+            return {"window_id": "0x123"}
+
+        def log(self, message: str) -> None:
+            events.append(message)
+
+    out = run_vacuumtube_recover_from_unresponsive_host_runtime(runtime=FakeRuntime())
+
+    assert out == {"window_id": "0x123"}
+    assert events == [
+        "VacuumTube recovery requested; restarting tmux session: vacuumtube-main",
+        "restart",
+        "wait_cdp_ready:35.0",
+        "ensure_started",
+    ]
+
+
 def test_start_vacuumtube_tmux_session_starts_when_session_missing() -> None:
     events: list[object] = []
 
@@ -2576,12 +2609,17 @@ def test_run_vacuumtube_stop_music_host_runtime_uses_runtime_methods() -> None:
         def log(self, message: str) -> None:
             self.events.append(message)
 
+        def _time_now(self) -> float:
+            return next(self._times)
+
+        def _sleep(self, seconds: float) -> None:
+            self.events.append(f"sleep:{seconds}")
+
     runtime = FakeRuntime()
+    runtime._times = iter([100.0, 100.1])
 
     result = run_vacuumtube_stop_music_host_runtime(
         runtime=runtime,
-        time_now=iter([100.0, 100.1]).__next__,
-        sleep=lambda seconds: runtime.events.append(f"sleep:{seconds}"),
     )
 
     assert result == "sent Space toggle to VacuumTube (0x123); pause confirmed"

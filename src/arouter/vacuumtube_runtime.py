@@ -1364,6 +1364,18 @@ def recover_vacuumtube_unresponsive_state(
     return ensure_started_and_positioned()
 
 
+def run_vacuumtube_recover_from_unresponsive_host_runtime(*, runtime: Any) -> dict[str, Any]:
+    log = runtime.log if hasattr(runtime, "log") else None
+    return recover_vacuumtube_unresponsive_state(
+        restart_tmux_session=runtime._restart_tmux_session,
+        wait_cdp_ready=runtime.wait_cdp_ready,
+        ensure_started_and_positioned=runtime.ensure_started_and_positioned,
+        log=log if callable(log) else (lambda _message: None),
+        tmux_session=runtime.tmux_session,
+        base_url=runtime.base_url,
+    )
+
+
 def start_vacuumtube_tmux_session(
     *,
     start_script: str,
@@ -2033,8 +2045,6 @@ def run_vacuumtube_stop_music_runtime(
 def run_vacuumtube_stop_music_host_runtime(
     *,
     runtime: Any,
-    time_now: Callable[[], float],
-    sleep: Callable[[float], None],
 ) -> str:
     log = runtime.log if hasattr(runtime, "log") else None
     return run_vacuumtube_stop_music_runtime(
@@ -2043,8 +2053,8 @@ def run_vacuumtube_stop_music_host_runtime(
         snapshot_state=runtime._snapshot_state,
         is_watch_state=runtime._is_watch_state,
         send_space_key=lambda: runtime.send_key("space"),
-        time_now=time_now,
-        sleep=sleep,
+        time_now=runtime._time_now,
+        sleep=runtime._sleep,
         ensure_top_right_position=runtime.ensure_top_right_position,
         log=log if callable(log) else (lambda _message: None),
     )

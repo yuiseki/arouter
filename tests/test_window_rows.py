@@ -10,6 +10,8 @@ from arouter import (
     find_window_id_by_title,
     find_window_row_by_pid_and_title,
     looks_like_weather_chromium_title,
+    run_detect_new_window_id_host_runtime,
+    run_wait_for_window_id_host_runtime,
     select_weather_candidate_window_ids,
     wait_for_window_id,
     window_rows_for_pids_from_wmctrl_lines,
@@ -275,3 +277,58 @@ def test_wait_for_window_id_raises_on_timeout() -> None:
             now=now,
             sleep=sleep,
         )
+
+
+def test_run_detect_new_window_id_host_runtime_reads_runtime_methods() -> None:
+    events: list[object] = []
+
+    class FakeRuntime:
+        def _chromium_window_ids(self) -> set[str]:
+            events.append("current_ids")
+            return {"0x001", "0x002"}
+
+        def _active_window_id_from_xdotool(self) -> str | None:
+            events.append("active")
+            return "0x002"
+
+        def _window_title_from_wmctrl(self, win_id: str) -> str:
+            events.append(("title", win_id))
+            return "Chromium"
+
+        def _time_now(self) -> float:
+            return 100.0
+
+        def _sleep(self, seconds: float) -> None:
+            events.append(("sleep", seconds))
+
+    out = run_detect_new_window_id_host_runtime(
+        runtime=FakeRuntime(),
+        before_ids={"0x001"},
+        timeout_sec=3.0,
+    )
+
+    assert out == "0x002"
+    assert events == ["current_ids"]
+
+
+def test_run_wait_for_window_id_host_runtime_reads_runtime_methods() -> None:
+    events: list[object] = []
+
+    class FakeRuntime:
+        def find_window_id(self) -> str | None:
+            events.append("find_window")
+            return "0x123"
+
+        def _time_now(self) -> float:
+            return 100.0
+
+        def _sleep(self, seconds: float) -> None:
+            events.append(("sleep", seconds))
+
+    out = run_wait_for_window_id_host_runtime(
+        runtime=FakeRuntime(),
+        timeout_sec=3.0,
+    )
+
+    assert out == "0x123"
+    assert events == ["find_window"]

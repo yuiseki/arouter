@@ -187,6 +187,19 @@ def wait_for_window_id(
     raise RuntimeError("VacuumTube window not found")
 
 
+def run_wait_for_window_id_host_runtime(
+    *,
+    runtime: Any,
+    timeout_sec: float,
+) -> str:
+    return wait_for_window_id(
+        current_window_id=runtime.find_window_id,
+        timeout_sec=timeout_sec,
+        now=runtime._time_now,
+        sleep=runtime._sleep,
+    )
+
+
 def detect_new_window_id(
     *,
     before_ids: set[str],
@@ -213,3 +226,22 @@ def detect_new_window_id(
         if title_hint in title:
             return fallback_id
     raise RuntimeError(f"could not detect newly opened {title_hint} window")
+
+
+def run_detect_new_window_id_host_runtime(
+    *,
+    runtime: Any,
+    before_ids: set[str],
+    timeout_sec: float,
+    title_hint: str = "Chromium",
+) -> str:
+    return detect_new_window_id(
+        before_ids=before_ids,
+        current_ids=runtime._chromium_window_ids,
+        active_window_id=runtime._active_window_id_from_xdotool,
+        title_for_window_id=runtime._window_title_from_wmctrl,
+        title_hint=title_hint,
+        timeout_sec=timeout_sec,
+        now=runtime._time_now,
+        sleep=runtime._sleep,
+    )
