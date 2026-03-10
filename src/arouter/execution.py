@@ -179,11 +179,10 @@ def run_good_night(
 def run_good_night_host_runtime(
     *,
     runtime: Any,
-    lights_off: Callable[[], str],
 ) -> str:
     return run_good_night(
         pause_for_night=runtime.vacuumtube.good_night_pause,
-        lights_off=lights_off,
+        lights_off=runtime._lights_off,
     )
 
 

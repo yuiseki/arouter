@@ -350,16 +350,17 @@ def test_run_good_night_host_runtime_uses_pause_and_lights_off() -> None:
     runtime = SimpleNamespace(
         vacuumtube=SimpleNamespace(
             good_night_pause=mock.Mock(return_value='good_night pause {"ok": true}')
-        )
+        ),
+        _lights_off=mock.Mock(return_value="switchbot lights off: ok"),
     )
 
     out = run_good_night_host_runtime(
         runtime=runtime,
-        lights_off=lambda: "switchbot lights off: ok",
     )
 
     assert out == 'good_night pause {"ok": true} lights=switchbot lights off: ok'
     runtime.vacuumtube.good_night_pause.assert_called_once_with()
+    runtime._lights_off.assert_called_once_with()
 
 
 def test_run_system_live_camera_show_host_runtime_tracks_layout_and_calls_show_full() -> None:

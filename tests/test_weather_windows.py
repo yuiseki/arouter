@@ -173,6 +173,13 @@ def test_run_weather_pages_closed_uses_default_helpers_and_returns_updated_histo
 def test_run_weather_pages_tiled_host_runtime_updates_history_from_runtime_methods() -> None:
     class FakeRuntime:
         _last_weather_window_ids: list[str] = []
+        _weather_desktop_tiles = [
+            {
+                "label": "amesh",
+                "url": "https://example.test/amesh",
+                "geom": {"x": 10, "y": 20, "w": 640, "h": 360},
+            }
+        ]
 
         def _chromium_window_ids(self) -> set[str]:
             return {"0x0bad"}
@@ -191,13 +198,6 @@ def test_run_weather_pages_tiled_host_runtime_updates_history_from_runtime_metho
 
     out = run_weather_pages_tiled_host_runtime(
         runtime=runtime,
-        weather_desktop_tiles=[
-            {
-                "label": "amesh",
-                "url": "https://example.test/amesh",
-                "geom": {"x": 10, "y": 20, "w": 640, "h": 360},
-            }
-        ],
     )
 
     assert out == (

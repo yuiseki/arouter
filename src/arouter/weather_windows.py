@@ -76,10 +76,9 @@ def run_weather_pages_tiled(
 def run_weather_pages_tiled_host_runtime(
     *,
     runtime: Any,
-    weather_desktop_tiles: list[dict[str, Any]],
 ) -> str:
     flow = run_weather_pages_tiled(
-        weather_desktop_tiles=weather_desktop_tiles,
+        weather_desktop_tiles=list(runtime._weather_desktop_tiles),
         current_window_ids=runtime._chromium_window_ids,
         launch_window=runtime._launch_chromium_new_window,
         detect_new_window=runtime._detect_new_chromium_window,
