@@ -69,6 +69,12 @@ class CommandRuntime(Protocol):
 
     def _minimize_other_windows(self) -> str: ...
 
+    def _world_situation_mode_script_path(self) -> str: ...
+
+    def _weather_mode_script_path(self) -> str: ...
+
+    def _god_mode_layout_script_path(self) -> str: ...
+
     def system_status_report(self) -> str: ...
 
     def system_weather_today(self) -> str: ...
@@ -236,12 +242,12 @@ def run_system_normal_mode_host_runtime(*, runtime: Any) -> str:
 
 def run_system_world_situation_mode_host_runtime(
     *,
-    script_path: str,
+    runtime: Any,
 ) -> str:
     env = os.environ.copy()
     env["DISPLAY"] = os.environ.get("DISPLAY") or ":0"
     return run_arrange_script_host_runtime(
-        script_path=script_path,
+        script_path=str(runtime._world_situation_mode_script_path()),
         label="world situation mode",
         env=env,
     )
@@ -249,12 +255,12 @@ def run_system_world_situation_mode_host_runtime(
 
 def run_system_weather_mode_host_runtime(
     *,
-    script_path: str,
+    runtime: Any,
 ) -> str:
     env = os.environ.copy()
     env["DISPLAY"] = os.environ.get("DISPLAY") or ":0"
     return run_arrange_script_host_runtime(
-        script_path=script_path,
+        script_path=str(runtime._weather_mode_script_path()),
         label="weather mode",
         env=env,
     )
@@ -264,10 +270,9 @@ def run_god_mode_layout_host_runtime(
     *,
     runtime: Any,
     mode: str,
-    script_path: str,
 ) -> str:
     result = run_tmp_main_layout_host_runtime(
-        script_path=script_path,
+        script_path=str(runtime._god_mode_layout_script_path()),
         mode=mode,
     )
     runtime._god_mode_last_layout = mode

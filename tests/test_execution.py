@@ -119,6 +119,9 @@ def _make_runtime() -> SimpleNamespace:
     runtime._show_live_camera_compact = mock.Mock(return_value="compact ok")
     runtime._hide_live_camera = mock.Mock(return_value="hide ok")
     runtime._minimize_live_camera = mock.Mock(return_value="street minimized")
+    runtime._world_situation_mode_script_path = mock.Mock(return_value="/tmp/world.sh")
+    runtime._weather_mode_script_path = mock.Mock(return_value="/tmp/weather.sh")
+    runtime._god_mode_layout_script_path = mock.Mock(return_value="/tmp/tmp_main.sh")
     return runtime
 
 
@@ -545,13 +548,18 @@ def test_run_system_normal_mode_host_runtime_reuses_system_mode_helper() -> None
 
 
 def test_run_system_world_situation_mode_host_runtime_uses_arrange_script() -> None:
+    runtime = SimpleNamespace(
+        _world_situation_mode_script_path=mock.Mock(return_value="/tmp/world.sh")
+    )
+
     with mock.patch(
         "arouter.execution.run_arrange_script_host_runtime",
         return_value="world ok",
     ) as helper:
-        out = run_system_world_situation_mode_host_runtime(script_path="/tmp/world.sh")
+        out = run_system_world_situation_mode_host_runtime(runtime=runtime)
 
     assert out == "world ok"
+    runtime._world_situation_mode_script_path.assert_called_once_with()
     helper.assert_called_once_with(
         script_path="/tmp/world.sh",
         label="world situation mode",
@@ -560,13 +568,18 @@ def test_run_system_world_situation_mode_host_runtime_uses_arrange_script() -> N
 
 
 def test_run_system_weather_mode_host_runtime_uses_arrange_script() -> None:
+    runtime = SimpleNamespace(
+        _weather_mode_script_path=mock.Mock(return_value="/tmp/weather.sh")
+    )
+
     with mock.patch(
         "arouter.execution.run_arrange_script_host_runtime",
         return_value="weather mode arranged",
     ) as helper:
-        out = run_system_weather_mode_host_runtime(script_path="/tmp/weather.sh")
+        out = run_system_weather_mode_host_runtime(runtime=runtime)
 
     assert out == "weather mode arranged"
+    runtime._weather_mode_script_path.assert_called_once_with()
     helper.assert_called_once_with(
         script_path="/tmp/weather.sh",
         label="weather mode",
@@ -575,7 +588,10 @@ def test_run_system_weather_mode_host_runtime_uses_arrange_script() -> None:
 
 
 def test_run_god_mode_layout_host_runtime_tracks_layout_state() -> None:
-    runtime = SimpleNamespace(_god_mode_last_layout=None)
+    runtime = SimpleNamespace(
+        _god_mode_last_layout=None,
+        _god_mode_layout_script_path=mock.Mock(return_value="/tmp/tmp_main.sh"),
+    )
 
     with mock.patch(
         "arouter.execution.run_tmp_main_layout_host_runtime",
@@ -584,11 +600,11 @@ def test_run_god_mode_layout_host_runtime_tracks_layout_state() -> None:
         out = run_god_mode_layout_host_runtime(
             runtime=runtime,
             mode="frontmost",
-            script_path="/tmp/tmp_main.sh",
         )
 
     assert out == "god mode ok"
     assert runtime._god_mode_last_layout == "frontmost"
+    runtime._god_mode_layout_script_path.assert_called_once_with()
     helper.assert_called_once_with(
         script_path="/tmp/tmp_main.sh",
         mode="frontmost",
