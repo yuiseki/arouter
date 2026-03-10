@@ -49,13 +49,12 @@ def run_vacuumtube_page_target_query(
 def run_vacuumtube_target_list_host_runtime_query(
     *,
     runtime: Any,
-    fetch_json: Callable[[str, float], Any],
     timeout: float = 2.0,
 ) -> list[dict[str, Any]]:
     return run_cdp_target_list_http_query(
         url=runtime._url("/json/list"),
         timeout=timeout,
-        fetch_json=fetch_json,
+        fetch_json=runtime._http_json,
         validate=require_cdp_target_list,
         error_message="unexpected /json/list response",
     )
@@ -64,12 +63,10 @@ def run_vacuumtube_target_list_host_runtime_query(
 def run_vacuumtube_page_target_host_runtime_query(
     *,
     runtime: Any,
-    fetch_json: Callable[[str, float], Any],
 ) -> dict[str, Any]:
     return run_vacuumtube_page_target_query(
         fetch_targets=lambda: run_vacuumtube_target_list_host_runtime_query(
             runtime=runtime,
-            fetch_json=fetch_json,
         ),
         select_target=select_vacuumtube_page_target,
     )
@@ -128,15 +125,12 @@ def run_vacuumtube_page_cdp_runtime(
 def run_vacuumtube_page_cdp_host_runtime(
     *,
     runtime: Any,
-    fetch_json: Callable[[str, float], Any],
-    create_client: Callable[[str], Any],
 ) -> Any:
     return run_vacuumtube_page_cdp_runtime(
         fetch_targets=lambda: run_vacuumtube_target_list_host_runtime_query(
             runtime=runtime,
-            fetch_json=fetch_json,
         ),
         select_target=select_vacuumtube_page_target,
         select_websocket_url=select_vacuumtube_websocket_url,
-        create_client=create_client,
+        create_client=runtime._create_cdp_client,
     )

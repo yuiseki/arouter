@@ -466,12 +466,12 @@ def test_run_vacuumtube_context_host_runtime_flow_reads_host_runtime_methods() -
         "h": 400,
     }
     host_runtime._is_vacuumtube_quadrant_mode_for_load_check.return_value = True
+    host_runtime._run_command.return_value = mock.Mock(stdout="")
 
     out = run_vacuumtube_context_host_runtime_flow(
         ts=5.0,
         runtime=runtime,
         host_runtime=host_runtime,
-        run_command=lambda *_args, **_kwargs: mock.Mock(stdout=""),
     )
 
     assert out["ts"] == 5.0

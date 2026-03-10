@@ -332,17 +332,18 @@ def test_run_good_morning_host_runtime_uses_news_fullscreen_and_lights() -> None
             play_news=mock.Mock(return_value="news ok"),
             youtube_fullscreen=mock.Mock(return_value="fullscreen ok"),
         ),
+        _lights_on=mock.Mock(return_value="switchbot lights on: ok"),
     )
 
     out = run_good_morning_host_runtime(
         runtime=runtime,
-        lights_on=lambda: "switchbot lights on: ok",
     )
 
     assert out == "good_morning news ok fullscreen=fullscreen ok lights=switchbot lights on: ok"
     assert runtime._run_vacuumtube_action.call_count == 2
     runtime.vacuumtube.play_news.assert_called_once_with(slot="morning")
     runtime.vacuumtube.youtube_fullscreen.assert_called_once_with()
+    runtime._lights_on.assert_called_once_with()
 
 
 def test_run_good_night_host_runtime_uses_pause_and_lights_off() -> None:

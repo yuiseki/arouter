@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from arouter import (
     build_live_cam_page_brief,
     build_live_cam_runtime_url_entry,
@@ -171,19 +173,17 @@ def test_run_live_cam_runtime_state_host_runtime_query_reads_runtime_methods() -
             assert pids == [101, 102]
             return [{"id": "0x1", "pid": 101}]
 
+        def _http_json(self, url: str, *, timeout: float = 2.0) -> Any:
+            fetch_calls.append((url, float(timeout)))
+            if url.endswith(":9993/json"):
+                return [{"type": "page", "url": "https://www.youtube.com/tv#/watch?v=abc123DEF45"}]
+            raise OSError("connection refused")
+
     fetch_calls: list[tuple[str, float]] = []
 
     out = run_live_cam_runtime_state_host_runtime_query(
         runtime=FakeRuntime(),
         pids_by_port={9993: 101, 9994: 102},
-        fetch_json=lambda url, timeout: (
-            fetch_calls.append((url, float(timeout)))
-            or (
-                [{"type": "page", "url": "https://www.youtube.com/tv#/watch?v=abc123DEF45"}]
-                if url.endswith(":9993/json")
-                else (_ for _ in ()).throw(OSError("connection refused"))
-            )
-        ),
     )
 
     assert out == {
@@ -603,9 +603,6 @@ def test_run_live_cam_page_brief_http_query_uses_http_target_query_and_client_fa
 
 
 def test_run_live_cam_page_brief_host_runtime_flow_reads_runtime_methods() -> None:
-    class FakeRuntime:
-        pass
-
     fetch_calls: list[tuple[str, float]] = []
     client_calls: list[tuple[str, float]] = []
 
@@ -620,12 +617,10 @@ def test_run_live_cam_page_brief_host_runtime_flow_reads_runtime_methods() -> No
         def evaluate(self, _expr: str) -> dict[str, str]:
             return {"watchText": f"watch:{self.ws_url}"}
 
-    out = run_live_cam_page_brief_host_runtime_flow(
-        runtime=FakeRuntime(),
-        port=9993,
-        fetch_json=lambda url, timeout: (
+    class FakeRuntime:
+        def _http_json(self, url: str, *, timeout: float = 2.0) -> list[dict[str, str]]:
             fetch_calls.append((url, float(timeout)))
-            or [
+            return [
                 {
                     "type": "page",
                     "url": "https://www.youtube.com/tv#/watch?v=abc9993",
@@ -633,8 +628,13 @@ def test_run_live_cam_page_brief_host_runtime_flow_reads_runtime_methods() -> No
                     "webSocketDebuggerUrl": "ws://127.0.0.1:9993/devtools/page/1",
                 }
             ]
-        ),
-        client_factory=FakeClient,
+
+        def _create_cdp_client(self, ws_url: str, *, timeout_sec: float = 4.0) -> FakeClient:
+            return FakeClient(ws_url, timeout_sec=timeout_sec)
+
+    out = run_live_cam_page_brief_host_runtime_flow(
+        runtime=FakeRuntime(),
+        port=9993,
     )
 
     assert out == {

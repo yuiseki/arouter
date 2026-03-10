@@ -101,9 +101,11 @@ def test_run_vacuumtube_target_list_host_runtime_query_reads_runtime_url() -> No
             assert suffix == "/json/list"
             return "http://127.0.0.1:9992/json/list"
 
+        def _http_json(self, url: str, *, timeout: float = 2.0) -> list[dict[str, object]]:
+            return [{"type": "page", "seen": (url, timeout)}]
+
     out = run_vacuumtube_target_list_host_runtime_query(
         runtime=FakeRuntime(),
-        fetch_json=lambda url, timeout: [{"type": "page", "seen": (url, timeout)}],
     )
 
     assert out == [{"type": "page", "seen": ("http://127.0.0.1:9992/json/list", 2.0)}]
@@ -166,12 +168,15 @@ def test_run_vacuumtube_page_target_host_runtime_query_reads_runtime_methods() -
             assert suffix == "/json/list"
             return "http://127.0.0.1:9992/json/list"
 
+        def _http_json(self, _url: str, *, timeout: float = 2.0) -> list[dict[str, str | float]]:
+            assert timeout == 2.0
+            return [
+                {"type": "page", "url": "https://example.com", "title": "Other"},
+                {"type": "page", "url": "https://www.youtube.com/tv#/", "title": "YouTube TV"},
+            ]
+
     target = run_vacuumtube_page_target_host_runtime_query(
         runtime=FakeRuntime(),
-        fetch_json=lambda _url, _timeout: [
-            {"type": "page", "url": "https://example.com", "title": "Other"},
-            {"type": "page", "url": "https://www.youtube.com/tv#/", "title": "YouTube TV"},
-        ],
     )
 
     assert target == {
@@ -220,6 +225,16 @@ def test_run_vacuumtube_page_cdp_host_runtime_reads_runtime_methods() -> None:
             assert suffix == "/json/list"
             return "http://127.0.0.1:9992/json/list"
 
+        def _http_json(self, _url: str, *, timeout: float = 2.0) -> list[dict[str, str | float]]:
+            assert timeout == 2.0
+            return [
+                {
+                    "type": "page",
+                    "url": "https://www.youtube.com/tv#/",
+                    "webSocketDebuggerUrl": "ws://127.0.0.1:9992/devtools/page/1",
+                }
+            ]
+
     class FakeClient:
         def __init__(self, ws_url: str) -> None:
             events.append(("create", ws_url))
@@ -228,16 +243,12 @@ def test_run_vacuumtube_page_cdp_host_runtime_reads_runtime_methods() -> None:
         def enable_basics(self) -> None:
             events.append(("enable", self.ws_url))
 
+    class FakeRuntimeClient(FakeRuntime):
+        def _create_cdp_client(self, ws_url: str) -> FakeClient:
+            return FakeClient(ws_url)
+
     client = run_vacuumtube_page_cdp_host_runtime(
-        runtime=FakeRuntime(),
-        fetch_json=lambda _url, _timeout: [
-            {
-                "type": "page",
-                "url": "https://www.youtube.com/tv#/",
-                "webSocketDebuggerUrl": "ws://127.0.0.1:9992/devtools/page/1",
-            }
-        ],
-        create_client=FakeClient,
+        runtime=FakeRuntimeClient(),
     )
 
     assert isinstance(client, FakeClient)

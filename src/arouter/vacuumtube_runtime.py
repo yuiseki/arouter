@@ -560,14 +560,13 @@ def run_vacuumtube_context_host_runtime_flow(
     ts: float,
     runtime: Any,
     host_runtime: Any,
-    run_command: Callable[..., Any],
 ) -> dict[str, Any]:
     return run_vacuumtube_context_runtime_flow(
         ts=ts,
         runtime=runtime,
         find_window_row_by_cdp_port=host_runtime._vacuumtube_main_window_row_by_cdp_port,
         quadrant_mode_enabled=host_runtime._is_vacuumtube_quadrant_mode_for_load_check,
-        run_command=run_command,
+        run_command=host_runtime._run_command,
     )
 
 

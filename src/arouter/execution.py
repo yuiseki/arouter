@@ -149,7 +149,6 @@ def run_good_morning(
 def run_good_morning_host_runtime(
     *,
     runtime: Any,
-    lights_on: Callable[[], str],
 ) -> str:
     return run_good_morning(
         play_morning_news=lambda: runtime._run_vacuumtube_action(
@@ -160,7 +159,7 @@ def run_good_morning_host_runtime(
             runtime.vacuumtube.youtube_fullscreen,
             label="good_morning_fullscreen",
         ),
-        lights_on=lights_on,
+        lights_on=runtime._lights_on,
     )
 
 
