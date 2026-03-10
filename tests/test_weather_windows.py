@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from unittest import mock
+
 from arouter import (
     build_weather_pages_closed_response,
     build_weather_pages_tiled_response,
@@ -228,3 +230,27 @@ def test_run_weather_pages_closed_host_runtime_updates_history_from_runtime_meth
 
     assert out == 'weather pages closed {"closed": 1, "ids": ["0x1"]}'
     assert runtime._last_weather_window_ids == ["0x2"]
+
+
+def test_run_weather_pages_closed_host_runtime_uses_default_selector_and_sleep() -> None:
+    class FakeRuntime:
+        _last_weather_window_ids = ["0x1", "0x2"]
+
+        def _wmctrl_lines(self) -> list[str]:
+            return ["0x1 0 host 東京アメッシュ - Chromium"]
+
+        def _wmctrl_close_window(self, _win_id: str) -> None:
+            return None
+
+        def _chromium_window_ids(self) -> set[str]:
+            return {"0x2"}
+
+    runtime = FakeRuntime()
+    sleep_calls: list[float] = []
+
+    with mock.patch("arouter.weather_windows.time.sleep", side_effect=sleep_calls.append):
+        out = run_weather_pages_closed_host_runtime(runtime=runtime)
+
+    assert out == 'weather pages closed {"closed": 1, "ids": ["0x1"]}'
+    assert runtime._last_weather_window_ids == ["0x2"]
+    assert sleep_calls == [0.2]

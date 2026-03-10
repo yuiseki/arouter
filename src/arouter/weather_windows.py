@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import json
+import time
 from collections.abc import Callable
 from typing import Any
+
+from .window_rows import select_weather_candidate_window_ids
 
 WeatherWindowIdsFetcher = Callable[[], set[str]]
 WeatherWindowLauncher = Callable[[str], None]
@@ -115,16 +118,17 @@ def run_weather_pages_closed(
 def run_weather_pages_closed_host_runtime(
     *,
     runtime: Any,
-    select_candidate_window_ids: WeatherCandidateSelector,
+    select_candidate_window_ids: WeatherCandidateSelector | None = None,
     after_close: WeatherAfterClose | None = None,
 ) -> str:
     flow = run_weather_pages_closed(
         lines=runtime._wmctrl_lines(),
         last_weather_window_ids=list(getattr(runtime, "_last_weather_window_ids", [])),
-        select_candidate_window_ids=select_candidate_window_ids,
+        select_candidate_window_ids=select_candidate_window_ids
+        or select_weather_candidate_window_ids,
         close_window=runtime._wmctrl_close_window,
         current_window_ids=runtime._chromium_window_ids,
-        after_close=after_close,
+        after_close=after_close or (lambda: time.sleep(0.2)),
     )
     runtime._last_weather_window_ids = list(flow["history"])
     return str(flow["response"])

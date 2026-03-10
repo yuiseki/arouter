@@ -1464,7 +1464,6 @@ def run_vacuumtube_play_bgm_runtime(
 def run_vacuumtube_play_bgm_host_runtime(
     *,
     runtime: Any,
-    sleep: Callable[[float], None],
 ) -> str:
     log = runtime.log if hasattr(runtime, "log") else None
     return run_vacuumtube_play_bgm_runtime(
@@ -1472,7 +1471,7 @@ def run_vacuumtube_play_bgm_host_runtime(
         get_state=runtime._state,
         send_return_key=lambda: runtime.send_key("Return"),
         send_space_key=lambda: runtime.send_key("space"),
-        sleep=sleep,
+        sleep=time.sleep,
         try_resume_current_video=runtime._try_resume_current_video,
         confirm_watch_playback=runtime._wait_confirmed_watch_playback,
         open_from_home=lambda cdp: run_vacuumtube_open_from_home_host_runtime(
@@ -1881,7 +1880,6 @@ def run_vacuumtube_play_news_host_runtime(
     *,
     runtime: Any,
     slot: str,
-    sleep: Callable[[float], None],
     filter_tile: Callable[[dict[str, Any]], bool],
 ) -> str:
     return run_vacuumtube_play_news_runtime(
@@ -1889,7 +1887,7 @@ def run_vacuumtube_play_news_host_runtime(
         slot=slot,
         get_state=runtime._state,
         send_return_key=lambda: runtime.send_key("Return"),
-        sleep=sleep,
+        sleep=time.sleep,
         open_from_home=lambda cdp, label: run_vacuumtube_open_from_home_host_runtime(
             cdp=cdp,
             runtime=runtime,

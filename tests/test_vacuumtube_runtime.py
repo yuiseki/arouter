@@ -2121,7 +2121,7 @@ def test_run_vacuumtube_play_bgm_host_runtime_uses_runtime_methods() -> None:
 
     runtime = FakeRuntime()
 
-    result = run_vacuumtube_play_bgm_host_runtime(runtime=runtime, sleep=lambda _seconds: None)
+    result = run_vacuumtube_play_bgm_host_runtime(runtime=runtime)
 
     assert result == "opened watch route #/watch?v=bgm"
     assert runtime.events == [
@@ -2745,7 +2745,6 @@ def test_run_vacuumtube_play_news_host_runtime_uses_runtime_methods() -> None:
     result = run_vacuumtube_play_news_host_runtime(
         runtime=runtime,
         slot="morning",
-        sleep=lambda _seconds: None,
         filter_tile=lambda tile: bool(tile.get("visible")),
     )
 
