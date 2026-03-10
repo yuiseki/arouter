@@ -174,13 +174,13 @@ def test_run_live_cam_runtime_state_host_runtime_query_reads_runtime_methods() -
             assert pids == [101, 102]
             return [{"id": "0x1", "pid": 101}]
 
-        def _http_json(self, url: str, *, timeout: float = 2.0) -> Any:
-            fetch_calls.append((url, float(timeout)))
-            if url.endswith(":9993/json"):
+        def _fetch_live_cam_target_list(self, port: int) -> Any:
+            fetch_calls.append(port)
+            if port == 9993:
                 return [{"type": "page", "url": "https://www.youtube.com/tv#/watch?v=abc123DEF45"}]
             raise OSError("connection refused")
 
-    fetch_calls: list[tuple[str, float]] = []
+    fetch_calls: list[int] = []
 
     out = run_live_cam_runtime_state_host_runtime_query(
         runtime=FakeRuntime(),
@@ -194,10 +194,7 @@ def test_run_live_cam_runtime_state_host_runtime_query_reads_runtime_methods() -
             {"port": 9994, "error": "connection refused"},
         ],
     }
-    assert fetch_calls == [
-        ("http://127.0.0.1:9993/json", 2.0),
-        ("http://127.0.0.1:9994/json", 2.0),
-    ]
+    assert fetch_calls == [9993, 9994]
 
 
 def test_build_live_cam_page_brief_extracts_title_and_url() -> None:
@@ -605,12 +602,12 @@ def test_run_live_cam_page_brief_http_query_uses_http_target_query_and_client_fa
 
 
 def test_run_live_cam_page_brief_host_runtime_flow_reads_runtime_methods() -> None:
-    fetch_calls: list[tuple[str, float]] = []
-    client_calls: list[tuple[str, float]] = []
+    fetch_calls: list[int] = []
+    client_calls: list[str] = []
 
     class FakeClient:
-        def __init__(self, ws_url: str, *, timeout_sec: float) -> None:
-            client_calls.append((ws_url, float(timeout_sec)))
+        def __init__(self, ws_url: str) -> None:
+            client_calls.append(ws_url)
             self.ws_url = ws_url
 
         def enable_basics(self) -> None:
@@ -620,19 +617,19 @@ def test_run_live_cam_page_brief_host_runtime_flow_reads_runtime_methods() -> No
             return {"watchText": f"watch:{self.ws_url}"}
 
     class FakeRuntime:
-        def _http_json(self, url: str, *, timeout: float = 2.0) -> list[dict[str, str]]:
-            fetch_calls.append((url, float(timeout)))
+        def _fetch_live_cam_target_list(self, port: int) -> list[dict[str, str]]:
+            fetch_calls.append(port)
             return [
                 {
                     "type": "page",
-                    "url": "https://www.youtube.com/tv#/watch?v=abc9993",
+                    "url": f"https://www.youtube.com/tv#/watch?v=abc{port}",
                     "title": "Shibuya",
                     "webSocketDebuggerUrl": "ws://127.0.0.1:9993/devtools/page/1",
                 }
             ]
 
-        def _create_cdp_client(self, ws_url: str, *, timeout_sec: float = 4.0) -> FakeClient:
-            return FakeClient(ws_url, timeout_sec=timeout_sec)
+        def _open_live_cam_cdp_client(self, ws_url: str) -> FakeClient:
+            return FakeClient(ws_url)
 
     out = run_live_cam_page_brief_host_runtime_flow(
         runtime=FakeRuntime(),
@@ -644,8 +641,8 @@ def test_run_live_cam_page_brief_host_runtime_flow_reads_runtime_methods() -> No
         "title": "Shibuya",
         "watchText": "watch:ws://127.0.0.1:9993/devtools/page/1",
     }
-    assert fetch_calls == [("http://127.0.0.1:9993/json", 2.0)]
-    assert client_calls == [("ws://127.0.0.1:9993/devtools/page/1", 4.0)]
+    assert fetch_calls == [9993]
+    assert client_calls == ["ws://127.0.0.1:9993/devtools/page/1"]
 
 
 def test_run_live_cam_page_brief_runtime_flow_builds_client_with_timeouts() -> None:

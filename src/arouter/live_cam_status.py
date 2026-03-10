@@ -124,11 +124,11 @@ def run_live_cam_runtime_state_host_runtime_query(
     pids_by_port: dict[int, int],
 ) -> dict[str, Any]:
     rows = runtime._window_rows_by_pids(list(pids_by_port.values()))
-    return run_live_cam_runtime_state_http_query(
+    return run_live_cam_runtime_state_cdp_runtime(
         list(runtime._live_camera_instance_specs()),
         rows=rows,
-        fetch_json=runtime._http_json,
-        timeout=2.0,
+        fetch_targets=runtime._fetch_live_cam_target_list,
+        validate_target_list=None,
     )
 
 
@@ -370,12 +370,14 @@ def run_live_cam_page_brief_host_runtime_flow(
     runtime: Any,
     port: int,
 ) -> dict[str, Any]:
-    return run_live_cam_page_brief_runtime_flow(
+    return run_live_cam_page_brief_cdp_runtime(
         port=port,
-        fetch_json=runtime._http_json,
-        client_factory=runtime._create_cdp_client,
-        http_timeout=2.0,
-        client_timeout=4.0,
+        fetch_targets=runtime._fetch_live_cam_target_list,
+        validate_target_list=None,
+        select_target=select_live_cam_page_target,
+        build_brief=build_live_cam_page_brief,
+        create_client=runtime._open_live_cam_cdp_client,
+        merge_snapshot=merge_live_cam_page_snapshot,
     )
 
 
