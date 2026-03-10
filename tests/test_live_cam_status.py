@@ -603,18 +603,7 @@ def test_run_live_cam_page_brief_http_query_uses_http_target_query_and_client_fa
 
 def test_run_live_cam_page_brief_host_runtime_flow_reads_runtime_methods() -> None:
     fetch_calls: list[int] = []
-    client_calls: list[str] = []
-
-    class FakeClient:
-        def __init__(self, ws_url: str) -> None:
-            client_calls.append(ws_url)
-            self.ws_url = ws_url
-
-        def enable_basics(self) -> None:
-            pass
-
-        def evaluate(self, _expr: str) -> dict[str, str]:
-            return {"watchText": f"watch:{self.ws_url}"}
+    inspect_calls: list[str] = []
 
     class FakeRuntime:
         def _fetch_live_cam_target_list(self, port: int) -> list[dict[str, str]]:
@@ -628,8 +617,9 @@ def test_run_live_cam_page_brief_host_runtime_flow_reads_runtime_methods() -> No
                 }
             ]
 
-        def _open_live_cam_cdp_client(self, ws_url: str) -> FakeClient:
-            return FakeClient(ws_url)
+        def _inspect_live_cam_target(self, target: dict[str, str]) -> dict[str, str]:
+            inspect_calls.append(str(target["webSocketDebuggerUrl"]))
+            return {"watchText": f"watch:{target['webSocketDebuggerUrl']}"}
 
     out = run_live_cam_page_brief_host_runtime_flow(
         runtime=FakeRuntime(),
@@ -642,7 +632,7 @@ def test_run_live_cam_page_brief_host_runtime_flow_reads_runtime_methods() -> No
         "watchText": "watch:ws://127.0.0.1:9993/devtools/page/1",
     }
     assert fetch_calls == [9993]
-    assert client_calls == ["ws://127.0.0.1:9993/devtools/page/1"]
+    assert inspect_calls == ["ws://127.0.0.1:9993/devtools/page/1"]
 
 
 def test_run_live_cam_page_brief_runtime_flow_builds_client_with_timeouts() -> None:

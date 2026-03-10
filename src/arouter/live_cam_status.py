@@ -370,13 +370,13 @@ def run_live_cam_page_brief_host_runtime_flow(
     runtime: Any,
     port: int,
 ) -> dict[str, Any]:
-    return run_live_cam_page_brief_cdp_runtime(
+    return run_live_cam_page_brief_flow(
         port=port,
         fetch_targets=runtime._fetch_live_cam_target_list,
         validate_target_list=None,
         select_target=select_live_cam_page_target,
         build_brief=build_live_cam_page_brief,
-        create_client=runtime._open_live_cam_cdp_client,
+        inspect_target=runtime._inspect_live_cam_target,
         merge_snapshot=merge_live_cam_page_snapshot,
     )
 
