@@ -243,6 +243,7 @@ from .load_check import (
     run_system_load_check_host_runtime,
     run_system_load_check_monitor_open_host_runtime,
     run_tmux_client_pid_query,
+    run_tmux_client_pid_query_host_runtime,
     wait_for_new_window_row,
     wait_for_new_window_row_host_runtime,
 )
@@ -776,6 +777,7 @@ __all__ = [
     "run_load_check_wmctrl_commands",
     "run_load_check_konsole_placement_host_runtime",
     "run_tmux_client_pid_query",
+    "run_tmux_client_pid_query_host_runtime",
     "read_password_secret_lines",
     "reassert_lock_screen",
     "request_biometric_lock_payload",

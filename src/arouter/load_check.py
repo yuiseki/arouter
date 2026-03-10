@@ -87,6 +87,23 @@ def run_tmux_client_pid_query(
     )
 
 
+def run_tmux_client_pid_query_host_runtime(*, runtime: Any, session_name: str) -> list[int]:
+    del runtime
+    return run_tmux_client_pid_query(
+        session_name,
+        run_command=lambda command: subprocess.run(
+            command,
+            check=False,
+            text=True,
+            capture_output=True,
+        ),
+        parse_output=lambda stdout, returncode: parse_tmux_client_pids(
+            stdout,
+            returncode=returncode,
+        ),
+    )
+
+
 def pid_ancestor_chain(
     pid: int,
     *,

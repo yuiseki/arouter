@@ -19,6 +19,7 @@ from arouter import (
     run_system_load_check_host_runtime,
     run_system_load_check_monitor_open_host_runtime,
     run_tmux_client_pid_query,
+    run_tmux_client_pid_query_host_runtime,
     wait_for_new_window_row,
     wait_for_new_window_row_host_runtime,
 )
@@ -137,6 +138,22 @@ def test_run_tmux_client_pid_query_runs_tmux_and_parses_output() -> None:
     )
 
     assert result == [100, 200]
+    assert commands == [["tmux", "list-clients", "-t", "sysmon", "-F", "#{client_pid}"]]
+
+
+def test_run_tmux_client_pid_query_host_runtime_runs_tmux_and_parses_output() -> None:
+    runtime = SimpleNamespace()
+    commands: list[list[str]] = []
+
+    with mock.patch("arouter.load_check.subprocess.run") as run:
+        run.side_effect = lambda command, **_: commands.append(command) or SimpleNamespace(
+            stdout="300\n400\n",
+            returncode=0,
+        )
+
+        result = run_tmux_client_pid_query_host_runtime(runtime=runtime, session_name="sysmon")
+
+    assert result == [300, 400]
     assert commands == [["tmux", "list-clients", "-t", "sysmon", "-F", "#{client_pid}"]]
 
 
