@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import time
 from collections.abc import Callable
 from typing import Any
 
@@ -160,6 +161,35 @@ def run_top_right_position_flow(
     return result
 
 
+def run_top_right_position_host_runtime_flow(
+    *,
+    runtime: Any,
+    win_id: str,
+    target: dict[str, Any],
+    before: dict[str, Any] | None,
+    retries: int,
+    main_pid: int | None,
+) -> dict[str, Any]:
+    return run_top_right_position_flow(
+        win_id=win_id,
+        target=target,
+        before=before,
+        tolerance=int(getattr(runtime, "geometry_tolerance", 40) or 40),
+        retries=retries,
+        main_pid=main_pid,
+        clear_fullscreen_if_needed=lambda: runtime._clear_fullscreen_if_needed(win_id),
+        kwin_frame_action=lambda pid, geom: runtime._kwin_set_frame_geometry_for_pid(
+            pid=pid,
+            geom=geom,
+            no_border=True,
+        ),
+        kwin_tile_action=runtime.tile_top_right,
+        wmctrl_move_resize_action=runtime._wmctrl_move_resize,
+        geometry_fetcher=runtime.get_window_geometry,
+        sleep=time.sleep,
+    )
+
+
 def run_window_restore_flow(
     *,
     presentation: dict[str, Any] | None,
@@ -198,6 +228,31 @@ def run_window_restore_flow(
         "window_id": window_id,
         "position": ensure_top_right_position(),
     }
+
+
+def run_window_restore_host_runtime_flow(
+    *,
+    runtime: Any,
+    presentation: dict[str, Any] | None,
+    fallback_window_id: str,
+) -> dict[str, Any]:
+    return run_window_restore_flow(
+        presentation=presentation,
+        fallback_window_id=fallback_window_id,
+        is_fullscreenish=bool(runtime._current_window_is_fullscreenish(fallback_window_id)),
+        activate_window=runtime.activate_window,
+        set_fullscreen=lambda win_id, enabled: runtime._set_fullscreen(
+            win_id,
+            enabled=enabled,
+        ),
+        wait_fullscreen=lambda win_id, enabled, timeout_sec: runtime._wait_fullscreen(
+            win_id,
+            enabled=enabled,
+            timeout_sec=timeout_sec,
+        ),
+        geometry_fetcher=runtime.get_window_geometry,
+        ensure_top_right_position=runtime.ensure_top_right_position,
+    )
 
 
 def resolve_window_restore_plan(

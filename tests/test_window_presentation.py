@@ -17,7 +17,9 @@ from arouter import (
     resolve_expected_top_right_geometry,
     resolve_window_restore_plan,
     run_top_right_position_flow,
+    run_top_right_position_host_runtime_flow,
     run_window_restore_flow,
+    run_window_restore_host_runtime_flow,
     top_right_region_from_screen_and_work_area,
 )
 
@@ -409,3 +411,112 @@ def test_run_window_restore_flow_uses_top_right_branch() -> None:
         "window_id": "0x123",
         "position": {"ok": True, "method": "delegated"},
     }
+
+
+def test_run_window_restore_host_runtime_flow_reads_runtime_methods() -> None:
+    class FakeRuntime:
+        def __init__(self) -> None:
+            self.events: list[str] = []
+
+        def _current_window_is_fullscreenish(self, win_id: str) -> bool:
+            self.events.append(f"fullscreenish:{win_id}")
+            return False
+
+        def activate_window(self, win_id: str) -> None:
+            self.events.append(f"activate:{win_id}")
+
+        def _set_fullscreen(self, win_id: str, *, enabled: bool) -> None:
+            self.events.append(f"set:{win_id}:{enabled}")
+
+        def _wait_fullscreen(
+            self,
+            win_id: str,
+            *,
+            enabled: bool,
+            timeout_sec: float,
+        ) -> bool:
+            self.events.append(f"wait:{win_id}:{enabled}:{timeout_sec}")
+            return True
+
+        def get_window_geometry(self, win_id: str) -> dict[str, Any]:
+            return {"window_id": win_id, "x": 0, "y": 0}
+
+        def ensure_top_right_position(self) -> dict[str, Any]:
+            return {"ok": True, "method": "delegated"}
+
+    runtime = FakeRuntime()
+
+    out = run_window_restore_host_runtime_flow(
+        runtime=runtime,
+        presentation={"window_id": "0x123", "fullscreen": True},
+        fallback_window_id="0x999",
+    )
+
+    assert out == {
+        "action": "fullscreen",
+        "window_id": "0x123",
+        "fullscreen": True,
+        "after": {"window_id": "0x123", "x": 0, "y": 0},
+    }
+    assert runtime.events == [
+        "fullscreenish:0x999",
+        "activate:0x123",
+        "set:0x123:True",
+        "wait:0x123:True:3.0",
+    ]
+
+
+def test_run_top_right_position_host_runtime_flow_reads_runtime_methods() -> None:
+    class FakeRuntime:
+        geometry_tolerance = 40
+
+        def __init__(self) -> None:
+            self.events: list[tuple[str, Any]] = []
+            self._after = {"x": 2048, "y": 0, "w": 2048, "h": 1080}
+
+        def _clear_fullscreen_if_needed(self, win_id: str) -> None:
+            self.events.append(("clear", win_id))
+
+        def _kwin_set_frame_geometry_for_pid(
+            self,
+            *,
+            pid: int,
+            geom: dict[str, Any],
+            no_border: bool,
+        ) -> None:
+            self.events.append(("kwin", pid, dict(geom), no_border))
+
+        def tile_top_right(self) -> None:
+            self.events.append(("tile", None))
+
+        def _wmctrl_move_resize(self, win_id: str, geom: dict[str, Any]) -> None:
+            self.events.append(("wmctrl", win_id, dict(geom)))
+
+        def get_window_geometry(self, win_id: str) -> dict[str, Any] | None:
+            self.events.append(("geom", win_id))
+            return dict(self._after)
+
+    runtime = FakeRuntime()
+
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr(
+            "arouter.window_presentation.time.sleep",
+            lambda sec: runtime.events.append(("sleep", sec)),
+        )
+        out = run_top_right_position_host_runtime_flow(
+            runtime=runtime,
+            win_id="0x123",
+            target={"x": 2048, "y": 0, "w": 2048, "h": 1080},
+            before={"x": 100, "y": 100, "w": 640, "h": 480},
+            retries=1,
+            main_pid=4321,
+        )
+
+    assert out["ok"] is True
+    assert runtime.events[0] == ("clear", "0x123")
+    assert runtime.events[1] == (
+        "kwin",
+        4321,
+        {"x": 2048, "y": 0, "w": 2048, "h": 1080},
+        True,
+    )

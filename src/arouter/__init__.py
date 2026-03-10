@@ -420,7 +420,9 @@ from .window_presentation import (
     resolve_expected_top_right_geometry,
     resolve_window_restore_plan,
     run_top_right_position_flow,
+    run_top_right_position_host_runtime_flow,
     run_window_restore_flow,
+    run_window_restore_host_runtime_flow,
     top_right_region_from_screen_and_work_area,
 )
 from .window_queries import build_wmctrl_list_command
@@ -785,7 +787,9 @@ __all__ = [
     "resolve_live_cam_layout_plan",
     "resolve_window_restore_plan",
     "run_top_right_position_flow",
+    "run_top_right_position_host_runtime_flow",
     "run_window_restore_flow",
+    "run_window_restore_host_runtime_flow",
     "resolve_biometric_poll_interval",
     "resolve_vacuumtube_context_cache",
     "resolve_vacuumtube_context_cache_host_runtime",
