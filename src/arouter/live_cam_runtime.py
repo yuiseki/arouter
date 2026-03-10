@@ -886,12 +886,60 @@ def run_live_cam_layout_controller_flow(
     started: list[dict[str, Any]],
     opened: list[dict[str, Any]],
     open_errors: list[str],
-    build_targets_full: Callable[..., list[dict[str, Any]]],
-    build_targets_compact: Callable[..., list[dict[str, Any]]],
-    kwin_apply_layout: Callable[..., None],
+    build_targets_full: Callable[..., list[dict[str, Any]]] | None,
+    build_targets_compact: Callable[..., list[dict[str, Any]]] | None,
+    kwin_apply_layout: Callable[..., None] | None,
     raise_windows_for_pids: Callable[[list[int]], None],
     collect_runtime_state: Callable[[dict[int, int]], dict[str, Any]],
+    resolve_layout_plan: Callable[
+        [str, int, int, tuple[int, int, int, int] | None, dict[int, int]],
+        dict[str, Any],
+    ]
+    | None = None,
+    apply_layout: Callable[[list[dict[str, Any]], str, bool, bool], None] | None = None,
 ) -> str:
+    if resolve_layout_plan is None:
+        if build_targets_full is None or build_targets_compact is None:
+            raise RuntimeError("live camera layout builders are required")
+
+        def _resolve_layout_plan(
+            mode: str,
+            screen_w: int,
+            screen_h: int,
+            work_area: tuple[int, int, int, int] | None,
+            pids_by_port: dict[int, int],
+        ) -> dict[str, Any]:
+            return resolve_live_cam_layout_plan(
+                mode=mode,
+                screen_w=screen_w,
+                screen_h=screen_h,
+                work_area=work_area,
+                pids_by_port=pids_by_port,
+                full_target_builder=build_targets_full,
+                compact_target_builder=build_targets_compact,
+            )
+
+        resolve_layout_plan = _resolve_layout_plan
+
+    if apply_layout is None:
+        if kwin_apply_layout is None:
+            raise RuntimeError("live camera layout applier is required")
+
+        def _apply_layout(
+            targets: list[dict[str, Any]],
+            plugin_name: str,
+            keep_above: bool,
+            no_border: bool,
+        ) -> None:
+            kwin_apply_layout(
+                targets=targets,
+                plugin_name=plugin_name,
+                keep_above=keep_above,
+                no_border=no_border,
+            )
+
+        apply_layout = _apply_layout
+
     return run_live_cam_layout_flow(
         mode=mode,
         screen_w=screen_w,
@@ -902,23 +950,8 @@ def run_live_cam_layout_controller_flow(
         started=started,
         opened=opened,
         open_errors=open_errors,
-        resolve_layout_plan=lambda mode, screen_w, screen_h, work_area, pids_by_port: (
-            resolve_live_cam_layout_plan(
-                mode=mode,
-                screen_w=screen_w,
-                screen_h=screen_h,
-                work_area=work_area,
-                pids_by_port=pids_by_port,
-                full_target_builder=build_targets_full,
-                compact_target_builder=build_targets_compact,
-            )
-        ),
-        apply_layout=lambda targets, plugin_name, keep_above, no_border: kwin_apply_layout(
-            targets=targets,
-            plugin_name=plugin_name,
-            keep_above=keep_above,
-            no_border=no_border,
-        ),
+        resolve_layout_plan=resolve_layout_plan,
+        apply_layout=apply_layout,
         raise_windows_for_pids=raise_windows_for_pids,
         collect_runtime_state=collect_runtime_state,
     )
@@ -930,31 +963,47 @@ def run_live_cam_layout_runtime_flow(
     instances: list[dict[str, Any]],
     resolve_existing_windowed_pids: Callable[[], dict[int, int] | None],
     find_stuck_specs: Callable[[], list[dict[str, Any]]],
-    assign_live_camera: Callable[[dict[str, Any]], dict[str, Any]],
-    parallel_runner: Callable[..., list[dict[str, Any]]],
+    assign_live_camera: Callable[[dict[str, Any]], dict[str, Any]] | None,
+    parallel_runner: Callable[..., list[dict[str, Any]]] | None,
     ensure_scripts_present: Callable[[], None],
     ensure_instances_started: Callable[[], list[dict[str, Any]]],
     ensure_targets_opened: Callable[[], list[dict[str, Any]]],
     pid_lookup: Callable[[int], int | None],
     detect_screen_size: Callable[[], tuple[int, int]],
     detect_work_area: Callable[[], tuple[int, int, int, int] | None],
-    build_targets_full: Callable[..., list[dict[str, Any]]],
-    build_targets_compact: Callable[..., list[dict[str, Any]]],
-    kwin_apply_layout: Callable[..., None],
+    build_targets_full: Callable[..., list[dict[str, Any]]] | None,
+    build_targets_compact: Callable[..., list[dict[str, Any]]] | None,
+    kwin_apply_layout: Callable[..., None] | None,
     raise_windows_for_pids: Callable[[list[int]], None],
     collect_runtime_state: Callable[[dict[int, int]], dict[str, Any]],
+    reopen_specs: Callable[[list[dict[str, Any]]], list[dict[str, Any]]] | None = None,
+    resolve_layout_plan: Callable[
+        [str, int, int, tuple[int, int, int, int] | None, dict[int, int]],
+        dict[str, Any],
+    ]
+    | None = None,
+    apply_layout: Callable[[list[dict[str, Any]], str, bool, bool], None] | None = None,
     log: Callable[[str], None] | None = None,
 ) -> str:
+    if reopen_specs is None:
+        if assign_live_camera is None or parallel_runner is None:
+            raise RuntimeError("live camera reopen helpers are required")
+
+        def _reopen_specs(stuck_specs: list[dict[str, Any]]) -> list[dict[str, Any]]:
+            return run_live_cam_reopen_specs_flow(
+                stuck_specs,
+                assign_live_camera=assign_live_camera,
+                parallel_runner=parallel_runner,
+            )
+
+        reopen_specs = _reopen_specs
+
     bootstrap = resolve_live_cam_layout_bootstrap(
         mode=mode,
         instances=instances,
         resolve_existing_windowed_pids=resolve_existing_windowed_pids,
         find_stuck_specs=find_stuck_specs,
-        reopen_specs=lambda stuck_specs: run_live_cam_reopen_specs_flow(
-            stuck_specs,
-            assign_live_camera=assign_live_camera,
-            parallel_runner=parallel_runner,
-        ),
+        reopen_specs=reopen_specs,
         ensure_scripts_present=ensure_scripts_present,
         ensure_instances_started=ensure_instances_started,
         ensure_targets_opened=ensure_targets_opened,
@@ -977,6 +1026,8 @@ def run_live_cam_layout_runtime_flow(
         kwin_apply_layout=kwin_apply_layout,
         raise_windows_for_pids=raise_windows_for_pids,
         collect_runtime_state=collect_runtime_state,
+        resolve_layout_plan=resolve_layout_plan,
+        apply_layout=apply_layout,
     )
 
 
@@ -991,18 +1042,21 @@ def run_live_cam_layout_host_runtime_flow(
         instances=list(runtime._live_camera_instance_specs()),
         resolve_existing_windowed_pids=runtime._existing_windowed_pids_by_port,
         find_stuck_specs=runtime._find_stuck_instances,
-        assign_live_camera=runtime._assign_live_camera,
-        parallel_runner=runtime._run_instances_parallel,
+        assign_live_camera=None,
+        parallel_runner=None,
         ensure_scripts_present=runtime._ensure_scripts_present,
         ensure_instances_started=runtime._ensure_instances_started,
         ensure_targets_opened=runtime._ensure_tokyo_targets_opened,
         pid_lookup=runtime._pid_for_port,
         detect_screen_size=runtime._detect_screen_size,
         detect_work_area=runtime._detect_work_area,
-        build_targets_full=runtime._layout_targets_full,
-        build_targets_compact=runtime._layout_targets_compact,
-        kwin_apply_layout=runtime._kwin_apply_layout,
+        build_targets_full=None,
+        build_targets_compact=None,
+        kwin_apply_layout=None,
         raise_windows_for_pids=runtime._raise_windows_for_pids,
         collect_runtime_state=runtime._collect_runtime_state,
+        reopen_specs=runtime._reopen_live_camera_specs,
+        resolve_layout_plan=runtime._resolve_layout_plan,
+        apply_layout=runtime._apply_live_cam_layout,
         log=log if callable(log) else None,
     )

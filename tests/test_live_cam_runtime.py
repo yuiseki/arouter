@@ -1195,12 +1195,6 @@ def test_run_live_cam_layout_host_runtime_flow_reads_runtime_methods() -> None:
         def _find_stuck_instances(self) -> list[dict[str, int]]:
             return []
 
-        def _assign_live_camera(self, spec: dict[str, object]) -> dict[str, object]:
-            raise AssertionError(f"assign_live_camera unused for {spec}")
-
-        def _run_instances_parallel(self, specs, *, worker, label: str):
-            raise AssertionError(f"parallel_runner unused for {specs}/{label}")
-
         def _ensure_scripts_present(self) -> None:
             raise AssertionError("ensure_scripts_present unused")
 
@@ -1219,22 +1213,40 @@ def test_run_live_cam_layout_host_runtime_flow_reads_runtime_methods() -> None:
         def _detect_work_area(self) -> tuple[int, int, int, int] | None:
             return (0, 0, 4096, 2116)
 
-        def _layout_targets_full(self, **kwargs: object) -> list[dict[str, int]]:
-            raise AssertionError(f"full target builder unused: {kwargs}")
-
-        def _layout_targets_compact(self, **kwargs: object) -> list[dict[str, int]]:
-            pids_by_port = kwargs["pids_by_port"]
+        def _resolve_layout_plan(
+            self,
+            mode: str,
+            screen_w: int,
+            screen_h: int,
+            work_area: tuple[int, int, int, int] | None,
+            pids_by_port: dict[int, int],
+        ) -> dict[str, object]:
+            assert mode == "compact"
+            assert screen_w == 4096
+            assert screen_h == 2160
+            assert work_area == (0, 0, 4096, 2116)
             assert isinstance(pids_by_port, dict)
-            return [{"pid": int(pids_by_port[9993]), "x": 1, "y": 2, "w": 3, "h": 4}]
+            return {
+                "work_area": {"x": 0, "y": 0, "w": 4096, "h": 2116},
+                "targets": [{"pid": int(pids_by_port[9993]), "x": 1, "y": 2, "w": 3, "h": 4}],
+                "plugin_name": "codex_live_cam_wall_compact",
+                "keep_above": False,
+            }
 
-        def _kwin_apply_layout(self, **kwargs: object) -> None:
+        def _apply_live_cam_layout(
+            self,
+            targets: list[dict[str, object]],
+            plugin_name: str,
+            keep_above: bool,
+            no_border: bool,
+        ) -> None:
             events.append(
                 (
                     "apply",
-                    kwargs["plugin_name"],
-                    kwargs["keep_above"],
-                    kwargs["no_border"],
-                    kwargs["targets"][0]["pid"],
+                    plugin_name,
+                    keep_above,
+                    no_border,
+                    targets[0]["pid"],
                 )
             )
 
@@ -1243,6 +1255,12 @@ def test_run_live_cam_layout_host_runtime_flow_reads_runtime_methods() -> None:
 
         def _collect_runtime_state(self, pids_by_port: dict[int, int]) -> dict[str, object]:
             return {"windows": [{"pid": pids_by_port[9993]}], "urls": []}
+
+        def _reopen_live_camera_specs(
+            self,
+            specs: list[dict[str, object]],
+        ) -> list[dict[str, object]]:
+            raise AssertionError(f"reopen unused for {specs}")
 
     result = run_live_cam_layout_host_runtime_flow(mode="compact", runtime=FakeRuntime())
 
@@ -1255,4 +1273,90 @@ def test_run_live_cam_layout_host_runtime_flow_reads_runtime_methods() -> None:
         '"screen": {"w": 4096, "h": 2160}, '
         '"workArea": {"x": 0, "y": 0, "w": 4096, "h": 2116}, '
         '"started": [], "opened": [], "windows": [{"pid": 101}], "urls": []}'
+    )
+
+
+def test_run_live_cam_layout_host_runtime_flow_uses_reopen_runtime_method() -> None:
+    events: list[object] = []
+
+    class FakeRuntime:
+        def _live_camera_instance_specs(self) -> list[dict[str, int | str]]:
+            return [{"label": "asakusa", "port": 9996}]
+
+        def log(self, message: str) -> None:
+            events.append(("log", message))
+
+        def _existing_windowed_pids_by_port(self) -> dict[int, int] | None:
+            return {9996: 404}
+
+        def _find_stuck_instances(self) -> list[dict[str, int | str]]:
+            return [{"label": "asakusa", "port": 9996}]
+
+        def _reopen_live_camera_specs(
+            self,
+            specs: list[dict[str, object]],
+        ) -> list[dict[str, object]]:
+            events.append(("reopen", specs))
+            return [{"label": "asakusa", "port": 9996, "videoId": "urE7veQRlrQ"}]
+
+        def _ensure_scripts_present(self) -> None:
+            raise AssertionError("ensure_scripts_present unused")
+
+        def _ensure_instances_started(self) -> list[dict[str, object]]:
+            raise AssertionError("ensure_instances_started unused")
+
+        def _ensure_tokyo_targets_opened(self) -> list[dict[str, object]]:
+            raise AssertionError("ensure_targets_opened unused")
+
+        def _pid_for_port(self, port: int) -> int | None:
+            return 404 if int(port) == 9996 else None
+
+        def _detect_screen_size(self) -> tuple[int, int]:
+            return (4096, 2160)
+
+        def _detect_work_area(self) -> tuple[int, int, int, int] | None:
+            return (0, 0, 4096, 2116)
+
+        def _resolve_layout_plan(
+            self,
+            mode: str,
+            screen_w: int,
+            screen_h: int,
+            work_area: tuple[int, int, int, int] | None,
+            pids_by_port: dict[int, int],
+        ) -> dict[str, object]:
+            assert mode == "compact"
+            assert pids_by_port == {9996: 404}
+            return {
+                "work_area": {"x": 0, "y": 0, "w": 4096, "h": 2116},
+                "targets": [{"pid": 404, "x": 1, "y": 2, "w": 3, "h": 4}],
+                "plugin_name": "codex_live_cam_wall_compact",
+                "keep_above": False,
+            }
+
+        def _apply_live_cam_layout(
+            self,
+            targets: list[dict[str, object]],
+            plugin_name: str,
+            keep_above: bool,
+            no_border: bool,
+        ) -> None:
+            events.append(("apply", plugin_name, keep_above, no_border, targets[0]["pid"]))
+
+        def _raise_windows_for_pids(self, pids: list[int]) -> None:
+            events.append(("raise", pids))
+
+        def _collect_runtime_state(self, pids_by_port: dict[int, int]) -> dict[str, object]:
+            return {"windows": [{"pid": pids_by_port[9996]}], "urls": []}
+
+    result = run_live_cam_layout_host_runtime_flow(mode="compact", runtime=FakeRuntime())
+
+    assert ("reopen", [{"label": "asakusa", "port": 9996}]) in events
+    assert ("apply", "codex_live_cam_wall_compact", False, True, 404) in events
+    assert result == (
+        'live camera wall {"mode": "compact", "fastPath": true, '
+        '"screen": {"w": 4096, "h": 2160}, '
+        '"workArea": {"x": 0, "y": 0, "w": 4096, "h": 2116}, '
+        '"started": [], "opened": [{"label": "asakusa", "port": 9996, "videoId": "urE7veQRlrQ"}], '
+        '"windows": [{"pid": 404}], "urls": []}'
     )
