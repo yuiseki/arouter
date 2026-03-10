@@ -40,6 +40,18 @@ BGM_POSITIVE_KEYWORDS = [
     "cabin",
 ]
 
+BGM_NEGATIVE_KEYWORDS = [
+    "news",
+    "breaking",
+    "速報",
+    "ニュース",
+    "会見",
+    "ann",
+    "nhk",
+    "reuters",
+    "bbc",
+]
+
 NEWS_POSITIVE_KEYWORDS = [
     "news",
     "ニュース",
@@ -145,6 +157,28 @@ def looks_like_vacuumtube_news_blob(
         return news_hits >= 1 and (live_signal + fresh_hits >= 1) and morning_hits == 0
 
     return news_hits >= 1 and (live_signal >= 1 or fresh_hits >= 1)
+
+
+def score_vacuumtube_bgm_tile(tile: dict[str, Any]) -> float:
+    title = str(tile.get("title") or "")
+    text = str(tile.get("text") or "")
+    blob = _norm_blob(title + " " + text)
+    score = 0.0
+    if tile.get("visible"):
+        score += 5.0
+    score += min(len(title), 120) / 40.0
+    for kw in BGM_POSITIVE_KEYWORDS:
+        if kw in blob:
+            score += 3.0
+    for kw in BGM_NEGATIVE_KEYWORDS:
+        if kw in blob:
+            score -= 4.0
+    try:
+        y = float(tile.get("y") or 0)
+        score += max(0.0, 2.0 - min(y, 1600.0) / 800.0)
+    except Exception:
+        pass
+    return score
 
 
 def score_vacuumtube_news_tile(tile: dict[str, Any], *, slot: str = "generic") -> float:
@@ -1654,7 +1688,7 @@ def run_vacuumtube_play_bgm_host_runtime(
             cdp=cdp,
             runtime=runtime,
             label="BGM",
-            scorer=runtime._score_bgm_tile,
+            scorer=score_vacuumtube_bgm_tile,
             filter_fn=None,
             allow_soft_playback_confirm=True,
         ),

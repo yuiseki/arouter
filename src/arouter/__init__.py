@@ -371,6 +371,7 @@ from .vacuumtube_runtime import (
     run_vacuumtube_try_resume_current_video_host_runtime,
     run_vacuumtube_wait_watch_route,
     run_vacuumtube_wait_watch_route_host_runtime,
+    score_vacuumtube_bgm_tile,
     score_vacuumtube_news_tile,
     start_vacuumtube_tmux_session,
 )
@@ -652,6 +653,7 @@ __all__ = [
     "run_vacuumtube_runtime_ready_host_runtime",
     "run_vacuumtube_resume_playback_host_runtime",
     "run_vacuumtube_resume_playback_runtime",
+    "score_vacuumtube_bgm_tile",
     "run_vacuumtube_stop_music_host_runtime",
     "run_vacuumtube_stop_music",
     "run_vacuumtube_stop_music_runtime",

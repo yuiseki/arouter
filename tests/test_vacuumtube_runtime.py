@@ -82,6 +82,7 @@ from arouter import (
     run_vacuumtube_try_resume_current_video_host_runtime,
     run_vacuumtube_wait_watch_route,
     run_vacuumtube_wait_watch_route_host_runtime,
+    score_vacuumtube_bgm_tile,
     score_vacuumtube_news_tile,
     start_vacuumtube_tmux_session,
 )
@@ -2133,7 +2134,7 @@ def test_run_vacuumtube_play_bgm_host_runtime_uses_runtime_methods() -> None:
         "home:cdp",
         "BGM precondition home verified: hash=#/ tiles=1",
         "tiles:cdp",
-        "BGM tile candidates: 1.0:tile",
+        "BGM tile candidates: 2.1:tile",
         "BGM tile selected attempt=1: tile",
         "click:cdp:tile",
         "wait:cdp:2.5",
@@ -2793,6 +2794,19 @@ def test_score_vacuumtube_news_tile_prefers_morning_live_tile() -> None:
     )
 
     assert score > 10.0
+
+
+def test_score_vacuumtube_bgm_tile_penalizes_news_keywords() -> None:
+    score = score_vacuumtube_bgm_tile(
+        {
+            "title": "breaking news mix",
+            "text": "music bgm",
+            "visible": True,
+            "y": 200,
+        }
+    )
+
+    assert score < 10.0
 
 
 def test_run_vacuumtube_minimize_is_noop_when_window_is_missing() -> None:
