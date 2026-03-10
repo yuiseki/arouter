@@ -52,6 +52,20 @@ class CommandRuntime(Protocol):
 
     def _set_system_locked(self, locked: bool, *, reason: str) -> bool: ...
 
+    def _play_news_slot(self, *, slot: str, label: str | None = None) -> str: ...
+
+    def _fullscreen_vacuumtube(self, *, label: str) -> str: ...
+
+    def _open_weather_pages_tiled(self) -> str: ...
+
+    def _close_weather_pages_tiled(self) -> str: ...
+
+    def _pause_for_night(self) -> str: ...
+
+    def _lights_on(self) -> str: ...
+
+    def _lights_off(self) -> str: ...
+
     def system_status_report(self) -> str: ...
 
     def system_weather_today(self) -> str: ...
@@ -93,17 +107,11 @@ def command_has_system_prefix(cmd: VoiceCommand) -> bool:
 
 
 def execute_news_command(runtime: CommandRuntime, cmd: VoiceCommand, *, slot: str) -> str:
-    result = runtime._run_vacuumtube_action(
-        lambda: runtime.vacuumtube.play_news(slot=slot),
-        label=f"news_{slot}",
-    )
+    result = runtime._play_news_slot(slot=slot, label=f"news_{slot}")
     if not command_has_system_prefix(cmd):
         return result
     try:
-        fullscreen = runtime._run_vacuumtube_action(
-            runtime.vacuumtube.youtube_fullscreen,
-            label=f"news_{slot}_fullscreen",
-        )
+        fullscreen = runtime._fullscreen_vacuumtube(label=f"news_{slot}_fullscreen")
     except Exception as exc:
         runtime.log(f"news fullscreen skipped after successful playback: {exc}")
         return result
@@ -123,12 +131,12 @@ def run_system_status_report(
 
 def run_system_status_report_host_runtime(*, runtime: Any) -> str:
     return run_system_status_report(
-        close_weather_pages_tiled=runtime.vacuumtube.close_weather_pages_tiled,
+        close_weather_pages_tiled=runtime._close_weather_pages_tiled,
     )
 
 
 def run_show_weather_pages_today_host_runtime(*, runtime: Any) -> str:
-    return str(runtime.vacuumtube.open_weather_pages_tiled())
+    return str(runtime._open_weather_pages_tiled())
 
 
 def run_good_morning(
@@ -151,13 +159,12 @@ def run_good_morning_host_runtime(
     runtime: Any,
 ) -> str:
     return run_good_morning(
-        play_morning_news=lambda: runtime._run_vacuumtube_action(
-            lambda: runtime.vacuumtube.play_news(slot="morning"),
+        play_morning_news=lambda: runtime._play_news_slot(
+            slot="morning",
             label="good_morning_news",
         ),
-        fullscreen_news=lambda: runtime._run_vacuumtube_action(
-            runtime.vacuumtube.youtube_fullscreen,
-            label="good_morning_fullscreen",
+        fullscreen_news=lambda: runtime._fullscreen_vacuumtube(
+            label="good_morning_fullscreen"
         ),
         lights_on=runtime._lights_on,
     )
@@ -181,7 +188,7 @@ def run_good_night_host_runtime(
     runtime: Any,
 ) -> str:
     return run_good_night(
-        pause_for_night=runtime.vacuumtube.good_night_pause,
+        pause_for_night=runtime._pause_for_night,
         lights_off=runtime._lights_off,
     )
 

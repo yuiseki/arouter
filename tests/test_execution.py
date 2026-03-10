@@ -56,7 +56,29 @@ def _make_runtime() -> SimpleNamespace:
         youtube_minimize=mock.Mock(return_value="ok"),
         go_youtube_home=mock.Mock(return_value="ok"),
         play_news=mock.Mock(return_value="opened watch route #/watch?v=abc"),
+        good_night_pause=mock.Mock(return_value='good_night pause {"ok": true}'),
+        open_weather_pages_tiled=mock.Mock(return_value="weather pages tiled []"),
+        close_weather_pages_tiled=mock.Mock(return_value='weather pages closed {"closed":2}'),
     )
+    runtime._play_news_slot = mock.Mock(
+        side_effect=lambda *, slot, label=None: runtime._run_vacuumtube_action(
+            lambda: runtime.vacuumtube.play_news(slot=slot),
+            label=label or f"news_{slot}",
+        )
+    )
+    runtime._fullscreen_vacuumtube = mock.Mock(
+        side_effect=lambda *, label: runtime._run_vacuumtube_action(
+            runtime.vacuumtube.youtube_fullscreen,
+            label=label,
+        )
+    )
+    runtime._open_weather_pages_tiled = mock.Mock(
+        side_effect=runtime.vacuumtube.open_weather_pages_tiled
+    )
+    runtime._close_weather_pages_tiled = mock.Mock(
+        side_effect=runtime.vacuumtube.close_weather_pages_tiled
+    )
+    runtime._pause_for_night = mock.Mock(side_effect=runtime.vacuumtube.good_night_pause)
     return runtime
 
 
@@ -289,22 +311,18 @@ def test_execute_command_dispatches_system_biometric_auth() -> None:
 
 def test_run_system_status_report_host_runtime_closes_weather_pages() -> None:
     runtime = SimpleNamespace(
-        vacuumtube=SimpleNamespace(
-            close_weather_pages_tiled=mock.Mock(return_value='weather pages closed {"closed":2}')
-        )
+        _close_weather_pages_tiled=mock.Mock(return_value='weather pages closed {"closed":2}')
     )
 
     out = run_system_status_report_host_runtime(runtime=runtime)
 
     assert out == 'system running; normal mode; weather pages closed {"closed":2}'
-    runtime.vacuumtube.close_weather_pages_tiled.assert_called_once_with()
+    runtime._close_weather_pages_tiled.assert_called_once_with()
 
 
 def test_run_system_status_report_host_runtime_formats_close_error() -> None:
     runtime = SimpleNamespace(
-        vacuumtube=SimpleNamespace(
-            close_weather_pages_tiled=mock.Mock(side_effect=RuntimeError("boom"))
-        )
+        _close_weather_pages_tiled=mock.Mock(side_effect=RuntimeError("boom"))
     )
 
     out = run_system_status_report_host_runtime(runtime=runtime)
@@ -314,24 +332,19 @@ def test_run_system_status_report_host_runtime_formats_close_error() -> None:
 
 def test_run_show_weather_pages_today_host_runtime_delegates_to_vacuumtube() -> None:
     runtime = SimpleNamespace(
-        vacuumtube=SimpleNamespace(
-            open_weather_pages_tiled=mock.Mock(return_value="weather pages tiled []")
-        )
+        _open_weather_pages_tiled=mock.Mock(return_value="weather pages tiled []")
     )
 
     out = run_show_weather_pages_today_host_runtime(runtime=runtime)
 
     assert out == "weather pages tiled []"
-    runtime.vacuumtube.open_weather_pages_tiled.assert_called_once_with()
+    runtime._open_weather_pages_tiled.assert_called_once_with()
 
 
 def test_run_good_morning_host_runtime_uses_news_fullscreen_and_lights() -> None:
     runtime = SimpleNamespace(
-        _run_vacuumtube_action=mock.Mock(side_effect=lambda action, **_kwargs: action()),
-        vacuumtube=SimpleNamespace(
-            play_news=mock.Mock(return_value="news ok"),
-            youtube_fullscreen=mock.Mock(return_value="fullscreen ok"),
-        ),
+        _play_news_slot=mock.Mock(return_value="news ok"),
+        _fullscreen_vacuumtube=mock.Mock(return_value="fullscreen ok"),
         _lights_on=mock.Mock(return_value="switchbot lights on: ok"),
     )
 
@@ -340,17 +353,14 @@ def test_run_good_morning_host_runtime_uses_news_fullscreen_and_lights() -> None
     )
 
     assert out == "good_morning news ok fullscreen=fullscreen ok lights=switchbot lights on: ok"
-    assert runtime._run_vacuumtube_action.call_count == 2
-    runtime.vacuumtube.play_news.assert_called_once_with(slot="morning")
-    runtime.vacuumtube.youtube_fullscreen.assert_called_once_with()
+    runtime._play_news_slot.assert_called_once_with(slot="morning", label="good_morning_news")
+    runtime._fullscreen_vacuumtube.assert_called_once_with(label="good_morning_fullscreen")
     runtime._lights_on.assert_called_once_with()
 
 
 def test_run_good_night_host_runtime_uses_pause_and_lights_off() -> None:
     runtime = SimpleNamespace(
-        vacuumtube=SimpleNamespace(
-            good_night_pause=mock.Mock(return_value='good_night pause {"ok": true}')
-        ),
+        _pause_for_night=mock.Mock(return_value='good_night pause {"ok": true}'),
         _lights_off=mock.Mock(return_value="switchbot lights off: ok"),
     )
 
@@ -359,7 +369,7 @@ def test_run_good_night_host_runtime_uses_pause_and_lights_off() -> None:
     )
 
     assert out == 'good_night pause {"ok": true} lights=switchbot lights off: ok'
-    runtime.vacuumtube.good_night_pause.assert_called_once_with()
+    runtime._pause_for_night.assert_called_once_with()
     runtime._lights_off.assert_called_once_with()
 
 
