@@ -167,7 +167,8 @@ def test_run_live_cam_runtime_state_http_query_uses_http_target_query() -> None:
 
 def test_run_live_cam_runtime_state_host_runtime_query_reads_runtime_methods() -> None:
     class FakeRuntime:
-        instances = [{"port": 9993}, {"port": 9994}]
+        def _live_camera_instance_specs(self) -> list[dict[str, int]]:
+            return [{"port": 9993}, {"port": 9994}]
 
         def _window_rows_by_pids(self, pids: list[int]) -> list[dict[str, int | str]]:
             assert pids == [101, 102]
@@ -406,10 +407,11 @@ def test_run_live_cam_stuck_specs_query_collects_pages_and_returns_stuck_specs()
 
 def test_run_live_cam_stuck_specs_host_runtime_query_reads_runtime_methods() -> None:
     class FakeRuntime:
-        instances = [
-            {"label": "shibuya", "port": 9993, "verify_regex": "渋谷|Shibuya"},
-            {"label": "akihabara", "port": 9996, "verify_regex": "秋葉原|Akihabara"},
-        ]
+        def _live_camera_instance_specs(self) -> list[dict[str, int | str]]:
+            return [
+                {"label": "shibuya", "port": 9993, "verify_regex": "渋谷|Shibuya"},
+                {"label": "akihabara", "port": 9996, "verify_regex": "秋葉原|Akihabara"},
+            ]
 
         def _page_brief_for_port(self, port: int) -> dict[str, str]:
             if port == 9993:
@@ -426,7 +428,7 @@ def test_run_live_cam_stuck_specs_host_runtime_query_reads_runtime_methods() -> 
 
     out = run_live_cam_stuck_specs_host_runtime_query(runtime=FakeRuntime())
 
-    assert out == [FakeRuntime.instances[0]]
+    assert out == [FakeRuntime()._live_camera_instance_specs()[0]]
 
 
 def test_run_live_cam_page_brief_flow_merges_snapshot_from_inspector() -> None:

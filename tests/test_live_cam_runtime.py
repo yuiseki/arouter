@@ -303,7 +303,8 @@ def test_run_live_cam_start_instances_host_runtime_flow_reads_runtime_methods() 
     events: list[str] = []
 
     class FakeRuntime:
-        instances = [{"port": 9993}, {"port": 9994}]
+        def _live_camera_instance_specs(self) -> list[dict[str, int]]:
+            return [{"port": 9993}, {"port": 9994}]
 
         def _ensure_scripts_present(self) -> None:
             events.append("ensure_scripts")
@@ -397,7 +398,8 @@ def test_run_live_cam_open_instances_host_runtime_flow_reads_runtime_methods() -
     calls: list[dict[str, object]] = []
 
     class FakeRuntime:
-        instances = [{"label": "akihabara", "port": 9994}]
+        def _live_camera_instance_specs(self) -> list[dict[str, int | str]]:
+            return [{"label": "akihabara", "port": 9994}]
 
         def _assign_live_camera(self, spec: dict[str, object]) -> dict[str, object]:
             return {
@@ -666,7 +668,8 @@ def test_run_live_cam_existing_windowed_pids_query_returns_pid_map_when_all_wind
 
 def test_run_live_cam_existing_windowed_pids_host_runtime_query_reads_runtime_methods() -> None:
     class FakeRuntime:
-        instances = [{"port": 9993}, {"port": 9994}]
+        def _live_camera_instance_specs(self) -> list[dict[str, int]]:
+            return [{"port": 9993}, {"port": 9994}]
 
         def _pid_for_port(self, port: int) -> int | None:
             return {9993: 101, 9994: 102}.get(int(port))
@@ -825,7 +828,8 @@ def test_run_live_cam_hide_host_runtime_flow_reads_runtime_methods() -> None:
     events: list[object] = []
 
     class FakeRuntime:
-        instances = [{"port": 9993}, {"port": 9994}]
+        def _live_camera_instance_specs(self) -> list[dict[str, int]]:
+            return [{"port": 9993}, {"port": 9994}]
 
         def _pid_for_port(self, port: int) -> int | None:
             return {9993: 101, 9994: 102}.get(int(port))
@@ -874,7 +878,8 @@ def test_run_live_cam_minimize_host_runtime_flow_reads_runtime_methods() -> None
     events: list[object] = []
 
     class FakeRuntime:
-        instances = [{"port": 9993}]
+        def _live_camera_instance_specs(self) -> list[dict[str, int]]:
+            return [{"port": 9993}]
 
         def _pid_for_port(self, port: int) -> int | None:
             return 101 if int(port) == 9993 else None
@@ -1219,7 +1224,8 @@ def test_run_live_cam_layout_host_runtime_flow_reads_runtime_methods() -> None:
     events: list[object] = []
 
     class FakeRuntime:
-        instances = [{"label": "shibuya", "port": 9993}]
+        def _live_camera_instance_specs(self) -> list[dict[str, int | str]]:
+            return [{"label": "shibuya", "port": 9993}]
 
         def log(self, message: str) -> None:
             events.append(("log", message))

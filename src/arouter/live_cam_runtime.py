@@ -191,7 +191,7 @@ def run_live_cam_existing_windowed_pids_host_runtime_query(
 ) -> dict[int, int] | None:
     log = runtime.log
     return run_live_cam_existing_windowed_pids_query(
-        instances=list(runtime.instances),
+        instances=list(runtime._live_camera_instance_specs()),
         pid_lookup=runtime._pid_for_port,
         row_provider=runtime._window_rows_by_pids,
         log=log if callable(log) else None,
@@ -354,7 +354,7 @@ def run_live_cam_minimize_flow(
 
 def run_live_cam_hide_host_runtime_flow(*, runtime: Any) -> str:
     return run_live_cam_hide_flow(
-        list(runtime.instances),
+        list(runtime._live_camera_instance_specs()),
         pid_lookup=runtime._pid_for_port,
         state_fetcher=runtime._collect_runtime_state,
         close_windows=runtime._close_windows_for_pids,
@@ -364,7 +364,7 @@ def run_live_cam_hide_host_runtime_flow(*, runtime: Any) -> str:
 
 def run_live_cam_minimize_host_runtime_flow(*, runtime: Any) -> str:
     return run_live_cam_minimize_flow(
-        list(runtime.instances),
+        list(runtime._live_camera_instance_specs()),
         pid_lookup=runtime._pid_for_port,
         state_fetcher=runtime._collect_runtime_state,
         minimize_windows=runtime._minimize_windows_for_pids,
@@ -643,7 +643,7 @@ def run_live_cam_start_instances_flow(
 
 def run_live_cam_start_instances_host_runtime_flow(*, runtime: Any) -> list[dict[str, Any]]:
     return run_live_cam_start_instances_flow(
-        list(runtime.instances),
+        list(runtime._live_camera_instance_specs()),
         ensure_scripts_present=runtime._ensure_scripts_present,
         start_instance=runtime._start_instance,
         parallel_runner=runtime._run_instances_parallel,
@@ -682,7 +682,7 @@ def run_live_cam_open_instances_flow(
 
 def run_live_cam_open_instances_host_runtime_flow(*, runtime: Any) -> list[dict[str, Any]]:
     return run_live_cam_open_instances_flow(
-        list(runtime.instances),
+        list(runtime._live_camera_instance_specs()),
         assign_live_camera=runtime._assign_live_camera,
         parallel_runner=runtime._run_instances_parallel,
     )
@@ -1011,7 +1011,7 @@ def run_live_cam_layout_host_runtime_flow(
     log = runtime.log
     return run_live_cam_layout_runtime_flow(
         mode=mode,
-        instances=list(runtime.instances),
+        instances=list(runtime._live_camera_instance_specs()),
         resolve_existing_windowed_pids=runtime._existing_windowed_pids_by_port,
         find_stuck_specs=runtime._find_stuck_instances,
         assign_live_camera=runtime._assign_live_camera,

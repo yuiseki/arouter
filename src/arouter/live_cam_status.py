@@ -125,7 +125,7 @@ def run_live_cam_runtime_state_host_runtime_query(
 ) -> dict[str, Any]:
     rows = runtime._window_rows_by_pids(list(pids_by_port.values()))
     return run_live_cam_runtime_state_http_query(
-        list(runtime.instances),
+        list(runtime._live_camera_instance_specs()),
         rows=rows,
         fetch_json=runtime._http_json,
         timeout=2.0,
@@ -454,6 +454,6 @@ def run_live_cam_stuck_specs_query(
 
 def run_live_cam_stuck_specs_host_runtime_query(*, runtime: Any) -> list[dict[str, Any]]:
     return run_live_cam_stuck_specs_query(
-        list(runtime.instances),
+        list(runtime._live_camera_instance_specs()),
         fetch_page_brief=runtime._page_brief_for_port,
     )
