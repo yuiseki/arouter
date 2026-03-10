@@ -827,15 +827,15 @@ def run_minimize_other_windows_host_runtime_flow(*, runtime: Any) -> str:
     def _run_command(command: list[str]) -> None:
         subprocess.run(
             command,
-            env=runtime.vacuumtube._x11_env(),
+            env=runtime._vacuumtube_x11_env(),
             check=False,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
 
     return run_minimize_other_windows_flow(
-        instances=list(runtime.live_cam_wall.instances),
-        pid_lookup=runtime.live_cam_wall._pid_for_port,
+        instances=list(runtime._live_camera_instance_specs()),
+        pid_lookup=runtime._live_camera_pid_for_port,
         build_script=build_minimize_other_windows_script,
         write_temp_script=_write_temp_js_script,
         command_plan_builder=cast(
