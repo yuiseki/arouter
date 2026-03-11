@@ -720,7 +720,7 @@ class BiometricRuntimeAdapter:
         if override is not None:
             return bool(override())
         args = self._args()
-        threshold_sec = max(0, int(getattr(args, "biometric_face_absent_lock_sec", 120)))
+        threshold_sec = max(0, int(getattr(args, "biometric_face_absent_lock_sec", 900)))
         logger = getattr(self.runtime, "debug", None)
         if not callable(logger):
             logger = None

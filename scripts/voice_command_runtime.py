@@ -3833,7 +3833,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--biometric-lock", action="store_true", help="Require face + speaker auth to unlock commands after idle lock")
     p.add_argument("--biometric-start-locked", action="store_true", help="Start in locked state when biometric lock is enabled")
     p.add_argument("--biometric-command-idle-lock-sec", type=int, default=1800, help="Lock after this many idle seconds")
-    p.add_argument("--biometric-face-absent-lock-sec", type=int, default=120, help="Require owner face absence for at least this many seconds before auto-lock")
+    p.add_argument("--biometric-face-absent-lock-sec", type=int, default=900, help="Require owner face absence for at least this many seconds before auto-lock")
     p.add_argument("--biometric-unlock-face-fresh-ms", type=int, default=2000, help="Maximum owner face age to accept during unlock")
     p.add_argument("--biometric-poll-sec", type=float, default=1.0, help="Polling interval for biometric auto-lock checks")
     p.add_argument("--god-mode-status-url", default="http://127.0.0.1:8765/biometric_status", help="GOD_MODE biometric status endpoint")

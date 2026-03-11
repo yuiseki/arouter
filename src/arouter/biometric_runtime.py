@@ -262,7 +262,7 @@ def run_biometric_owner_face_absent_runtime_check(
 ) -> tuple[Any | None, bool]:
     threshold_sec = max(
         0,
-        int(getattr(args, "biometric_face_absent_lock_sec", 120)),
+        int(getattr(args, "biometric_face_absent_lock_sec", 900)),
     )
     return run_biometric_owner_face_absent_check(
         current_client=current_client,
