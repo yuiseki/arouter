@@ -54,7 +54,7 @@ Current migrated slice:
 - transcript parse/contextualize/suppress/authorize resolution
 - transcribed-segment orchestration after STT
 - raw-PCM segment capture/transcription orchestration before STT handoff
-- `yuiclaw voice-command` runtime entrypoint via `src/arouter/voice_command_entrypoint.py`
+- `yuiclaw voice-command` / `yuiclaw voice-command operator start-agent` runtime via `scripts/voice_command_runtime.py`
 
 ## Development
 

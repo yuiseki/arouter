@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-import importlib
+import importlib.util
 import json
 import os
 import signal
-import sys
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -19,27 +18,31 @@ def resolve_workspaces_root() -> Path:
     return Path(__file__).resolve().parents[4]
 
 
-def resolve_legacy_voice_command_module_dir(workspaces_root: Path | None = None) -> Path:
+def resolve_voice_command_runtime_script_path(workspaces_root: Path | None = None) -> Path:
     root = workspaces_root or resolve_workspaces_root()
-    return root / "tmp/whispercpp-listen"
+    return root / "repos/arouter/scripts/voice_command_runtime.py"
 
 
-def load_legacy_voice_command_module(
+def load_voice_command_runtime_module(
     *,
-    module_dir: Path | None = None,
-    import_module: Callable[[str], Any] = importlib.import_module,
+    script_path: Path | None = None,
+    module_name: str = "arouter_voice_command_runtime",
+    module_from_spec: Callable[[Any], Any] = importlib.util.module_from_spec,
+    spec_from_file_location: Callable[..., Any] = importlib.util.spec_from_file_location,
 ) -> Any:
-    legacy_dir = module_dir or resolve_legacy_voice_command_module_dir()
-    legacy_dir_str = str(legacy_dir)
-    if legacy_dir_str not in sys.path:
-        sys.path.insert(0, legacy_dir_str)
-    return import_module("voice_command_loop")
+    runtime_script_path = script_path or resolve_voice_command_runtime_script_path()
+    spec = spec_from_file_location(module_name, runtime_script_path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"Failed to load voice command runtime from {runtime_script_path}")
+    module = module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 def run_voice_command_entrypoint_main(
     argv: list[str] | None = None,
     *,
-    load_module: Callable[[], Any] = load_legacy_voice_command_module,
+    load_module: Callable[[], Any] = load_voice_command_runtime_module,
     host_runtime: Callable[..., int] = run_voice_command_entrypoint_host_runtime,
 ) -> int:
     module = load_module()

@@ -4,30 +4,39 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from arouter.voice_command_entrypoint import (
-    load_legacy_voice_command_module,
+    load_voice_command_runtime_module,
     run_voice_command_entrypoint_main,
 )
 
 
-def test_load_legacy_voice_command_module_inserts_tmp_path(monkeypatch) -> None:
-    imported: list[str] = []
-    module_dir = Path("/workspaces/tmp/whispercpp-listen")
-    fake_module = object()
+def test_load_voice_command_runtime_module_uses_runtime_script_path() -> None:
+    runtime_script_path = Path("/workspaces/repos/arouter/scripts/voice_command_runtime.py")
+    fake_module = SimpleNamespace()
+    fake_loader = SimpleNamespace(exec_module=lambda module: setattr(module, "_loaded", True))
+    calls: list[tuple[str, object]] = []
+    fake_spec = SimpleNamespace(loader=fake_loader)
 
-    def fake_import_module(name: str) -> object:
-        imported.append(name)
+    def fake_spec_from_file_location(name: str, path: Path) -> object:
+        calls.append(("spec", (name, path)))
+        return fake_spec
+
+    def fake_module_from_spec(spec: object) -> object:
+        calls.append(("module", spec))
         return fake_module
 
-    monkeypatch.setattr("sys.path", ["/already-present"])
-
-    loaded = load_legacy_voice_command_module(
-        module_dir=module_dir,
-        import_module=fake_import_module,
+    loaded = load_voice_command_runtime_module(
+        script_path=runtime_script_path,
+        module_name="runtime_test",
+        module_from_spec=fake_module_from_spec,
+        spec_from_file_location=fake_spec_from_file_location,
     )
 
     assert loaded is fake_module
-    assert imported == ["voice_command_loop"]
-    assert str(module_dir) == __import__("sys").path[0]
+    assert calls == [
+        ("spec", ("runtime_test", runtime_script_path)),
+        ("module", fake_spec),
+    ]
+    assert fake_module._loaded is True
 
 
 def test_run_voice_command_entrypoint_main_delegates_to_host_runtime() -> None:
