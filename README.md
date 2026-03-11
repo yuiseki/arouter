@@ -33,7 +33,7 @@ Current migrated slice:
 
 ## Current Integration
 
-`tmp/whispercpp-listen/voice_command_loop.py` now delegates:
+`repos/arouter/scripts/voice_command_runtime.py` now delegates:
 
 - transcript normalization
 - password secret extraction
