@@ -875,7 +875,7 @@ class BiometricRuntimeAdapter:
         )
         idle_threshold = max(
             0,
-            int(getattr(self._args(), "biometric_command_idle_lock_sec", 900)),
+            int(getattr(self._args(), "biometric_command_idle_lock_sec", 1800)),
         )
         if idle_sec < idle_threshold:
             return

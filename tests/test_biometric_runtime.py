@@ -155,6 +155,18 @@ def test_maybe_auto_lock_is_noop_when_face_not_absent() -> None:
     runtime.overlay.show_lock_screen.assert_not_called()
 
 
+def test_maybe_auto_lock_defaults_to_30_minutes_when_arg_missing() -> None:
+    runtime = _make_runtime()
+    runtime._last_successful_command_at = time.time() - 1700
+    runtime._owner_face_absent_for_lock.return_value = True
+    runtime.args = SimpleNamespace()
+
+    maybe_auto_lock(runtime, set_locked=set_system_locked)
+
+    assert runtime._system_locked is False
+    runtime.overlay.show_lock_screen.assert_not_called()
+
+
 def test_reassert_lock_screen_shows_overlay_when_locked() -> None:
     runtime = _make_runtime()
     runtime._system_locked = True

@@ -479,7 +479,7 @@ def maybe_auto_lock(
     idle_sec = time.time() - float(getattr(runtime, "_last_successful_command_at", time.time()))
     idle_threshold = max(
         0,
-        int(getattr(getattr(runtime, "args", None), "biometric_command_idle_lock_sec", 900)),
+        int(getattr(getattr(runtime, "args", None), "biometric_command_idle_lock_sec", 1800)),
     )
     if idle_sec < idle_threshold:
         return
