@@ -53,6 +53,16 @@ _ACAPTION_PY_SRC = _WORKSPACES_ROOT / "repos" / "acaption" / "python" / "src"
 _ASEC_PY_SRC = _WORKSPACES_ROOT / "repos" / "asec" / "python" / "src"
 _ASEE_PY_SRC = _WORKSPACES_ROOT / "repos" / "asee" / "python" / "src"
 _ASAY_PY_SRC = _WORKSPACES_ROOT / "repos" / "asay" / "python" / "src"
+_DEFAULT_SPEAKER_MASTER = (
+    _WORKSPACES_ROOT
+    / "repos"
+    / "ahear"
+    / "python"
+    / "src"
+    / "ahear"
+    / "models"
+    / "master_voiceprint.npy"
+)
 if _AHEAR_PY_SRC.is_dir():
     ahear_src_str = str(_AHEAR_PY_SRC)
     if ahear_src_str not in sys.path:
@@ -3813,7 +3823,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
     # Speaker Identification (ECAPA-TDNN)
     p.add_argument("--speaker-id", action="store_true", help="Enable speaker authentication")
-    p.add_argument("--speaker-master", default="tests/fixtures/master_voiceprint.npy", help="Path to master voiceprint .npy file")
+    p.add_argument("--speaker-master", default=str(_DEFAULT_SPEAKER_MASTER), help="Path to master voiceprint .npy file")
     p.add_argument("--speaker-threshold", type=float, default=0.5, help="Cosine similarity threshold for authentication")
     p.add_argument("--speaker-topk", type=int, default=5,
                    help="Number of top similarities to average when using multi-center (2D) voiceprint (default: 5)")

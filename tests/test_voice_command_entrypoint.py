@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import importlib.util
+import sys
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -79,3 +81,19 @@ def test_run_voice_command_entrypoint_main_delegates_to_host_runtime() -> None:
         ("parse_args", ["--run-command", "システムおはよう"]),
         ("host_runtime", SimpleNamespace(run_command="システムおはよう")),
     ]
+
+
+def test_runtime_script_defaults_speaker_master_to_ahear_models() -> None:
+    script_path = Path("/home/yuiseki/Workspaces/repos/arouter/scripts/voice_command_runtime.py")
+    spec = importlib.util.spec_from_file_location("runtime_speaker_master_test", script_path)
+    assert spec is not None
+    assert spec.loader is not None
+    runtime_module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = runtime_module
+    spec.loader.exec_module(runtime_module)
+
+    args = runtime_module.parse_args([])
+
+    assert args.speaker_master == str(
+        Path("/home/yuiseki/Workspaces/repos/ahear/python/src/ahear/models/master_voiceprint.npy")
+    )
