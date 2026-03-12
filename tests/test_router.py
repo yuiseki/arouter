@@ -10,6 +10,7 @@ from arouter import (
     contextualize_command_with_vacuumtube_state,
     contextualize_command_with_vacuumtube_state_host_runtime,
     detect_non_command_reaction,
+    execute_simulated_mic_command_host_runtime,
     execute_text_command_host_runtime,
 )
 
@@ -174,6 +175,28 @@ def test_execute_text_command_host_runtime_uses_runtime_methods() -> None:
     runtime._execute_command.assert_called_once()
     runtime._record_successful_command_activity.assert_called_once_with()
     runtime._authorize_command.assert_called_once()
+
+
+def test_execute_simulated_mic_command_host_runtime_bypasses_authorization() -> None:
+    runtime = mock.Mock()
+    runtime._execute_command.return_value = "unlock ok"
+    runtime._authorize_command.return_value = (False, "should not be called")
+    runtime._contextualize_command_with_vacuumtube_state.side_effect = (
+        lambda _text, cmd: cmd
+    )
+
+    payload = execute_simulated_mic_command_host_runtime(
+        runtime=runtime,
+        text=" システム バイオメトリクス認証 ",
+    )
+
+    assert payload["ok"] is True
+    assert payload["intent"] == "system_biometric_auth"
+    assert payload["normalized"] == "システムバイオメトリクス認証"
+    assert payload["result"] == "unlock ok"
+    runtime._execute_command.assert_called_once()
+    runtime._record_successful_command_activity.assert_called_once_with()
+    runtime._authorize_command.assert_not_called()
 
 
 @pytest.mark.parametrize(

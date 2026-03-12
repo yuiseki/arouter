@@ -32,6 +32,7 @@ def test_run_voice_command_entrypoint_host_runtime_runs_run_command_flow() -> No
     args = SimpleNamespace(
         request_biometric_lock=False,
         encrypt_biometric_password_stdin=False,
+        simulate_mic_command=None,
         run_command="システム 街頭カメラを表示",
     )
     emitted: list[dict[str, object]] = []
@@ -58,6 +59,7 @@ def test_run_voice_command_entrypoint_host_runtime_reports_run_command_error() -
     args = SimpleNamespace(
         request_biometric_lock=False,
         encrypt_biometric_password_stdin=False,
+        simulate_mic_command=None,
         run_command="システム 街頭カメラを表示",
     )
     emitted: list[dict[str, object]] = []
@@ -82,6 +84,7 @@ def test_run_voice_command_entrypoint_host_runtime_runs_long_lived_loop() -> Non
     args = SimpleNamespace(
         request_biometric_lock=False,
         encrypt_biometric_password_stdin=False,
+        simulate_mic_command=None,
         run_command=None,
     )
     emitted: list[dict[str, object]] = []
@@ -100,3 +103,40 @@ def test_run_voice_command_entrypoint_host_runtime_runs_long_lived_loop() -> Non
     assert exit_code == 42
     assert installed == [loop]
     assert emitted == []
+
+
+def test_run_voice_command_entrypoint_host_runtime_runs_simulated_mic_flow() -> None:
+    args = SimpleNamespace(
+        request_biometric_lock=False,
+        encrypt_biometric_password_stdin=False,
+        simulate_mic_command="システム バイオメトリクス認証",
+        run_command=None,
+    )
+    emitted: list[dict[str, object]] = []
+    installed: list[object] = []
+    loop = SimpleNamespace(
+        execute_simulated_mic_command=lambda text: {
+            "ok": True,
+            "text": text,
+            "result": "unlock ok",
+        }
+    )
+
+    exit_code = run_voice_command_entrypoint_host_runtime(
+        args=args,
+        build_loop=lambda _args: loop,
+        emit_json=emitted.append,
+        request_biometric_lock_cli_flow=lambda: {"ok": True},
+        encrypt_biometric_password_stdin_cli_flow=lambda: {"ok": True},
+        install_signal_handlers=installed.append,
+    )
+
+    assert exit_code == 0
+    assert installed == []
+    assert emitted == [
+        {
+            "ok": True,
+            "text": "システム バイオメトリクス認証",
+            "result": "unlock ok",
+        }
+    ]

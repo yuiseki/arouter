@@ -178,7 +178,14 @@ class TextCommandRouter:
         self._logger = logger
         self._success_recorder = success_recorder
 
-    def execute_text_command(self, text: str) -> CommandExecutionPayload:
+    def execute_text_command(
+        self,
+        text: str,
+        *,
+        source: str = "cli",
+        seg_label: str = "cli command",
+        authorizer: Authorizer | None = None,
+    ) -> CommandExecutionPayload:
         raw = " ".join(str(text or "").split())
         if not raw:
             raise RuntimeError("command text is empty")
@@ -187,11 +194,13 @@ class TextCommandRouter:
             raw,
             wav_path=None,
             dur_sec=0.0,
-            source="cli",
-            seg_label="cli command",
+            source=source,
+            seg_label=seg_label,
             contextualizer=self._contextualizer,
             suppressor=lambda _cmd, _dur_sec: None,
-            authorizer=lambda cmd, _wav_path, _source, _seg_label: self._authorizer(cmd),
+            authorizer=lambda cmd, _wav_path, _source, _seg_label: (
+                authorizer or self._authorizer
+            )(cmd),
         )
         cmd = resolution.cmd
         if resolution.outcome == "reaction":
@@ -242,3 +251,26 @@ def execute_text_command_host_runtime(
         ),
     )
     return router.execute_text_command(text)
+
+
+def execute_simulated_mic_command_host_runtime(
+    *,
+    runtime: Any,
+    text: str,
+) -> CommandExecutionPayload:
+    router = TextCommandRouter(
+        executor=runtime._execute_command,
+        contextualizer=runtime._contextualize_command_with_vacuumtube_state,
+        logger=runtime.log if callable(getattr(runtime, "log", None)) else _noop_logger,
+        success_recorder=(
+            runtime._record_successful_command_activity
+            if callable(getattr(runtime, "_record_successful_command_activity", None))
+            else _noop_success_recorder
+        ),
+    )
+    return router.execute_text_command(
+        text,
+        source="mic",
+        seg_label="simulated mic command",
+        authorizer=lambda _cmd: (True, None),
+    )

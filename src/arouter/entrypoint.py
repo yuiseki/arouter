@@ -30,6 +30,15 @@ def run_voice_command_entrypoint_host_runtime(
             return 1
 
     loop = build_loop(args)
+    simulate_mic_command = getattr(args, "simulate_mic_command", None)
+    if simulate_mic_command:
+        try:
+            emit_json(loop.execute_simulated_mic_command(simulate_mic_command))
+            return 0
+        except Exception as exc:
+            emit_json({"ok": False, "text": simulate_mic_command, "error": str(exc)})
+            return 1
+
     run_command = getattr(args, "run_command", None)
     if run_command:
         try:

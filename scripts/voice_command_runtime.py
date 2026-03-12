@@ -113,6 +113,7 @@ try:
         compose_overlay_notify_text as arouter_compose_overlay_notify_text,
         contextualize_command_with_vacuumtube_state_host_runtime as arouter_contextualize_command_with_vacuumtube_state_host_runtime,
         execute_text_command_host_runtime as arouter_execute_text_command_host_runtime,
+        execute_simulated_mic_command_host_runtime as arouter_execute_simulated_mic_command_host_runtime,
         run_detect_new_window_id_host_runtime as arouter_run_detect_new_window_id_host_runtime,
         BiometricRuntimeAdapter as ExtractedBiometricRuntimeAdapter,
         DesktopNotifier as ExtractedDesktopNotifier,
@@ -3654,6 +3655,9 @@ class VoiceCommandLoop(base.ListenLoop):
     def execute_text_command(self, text: str) -> dict[str, Any]:
         return arouter_execute_text_command_host_runtime(runtime=self, text=text)
 
+    def execute_simulated_mic_command(self, text: str) -> dict[str, Any]:
+        return arouter_execute_simulated_mic_command_host_runtime(runtime=self, text=text)
+
     def _handle_segment(self, raw_pcm: bytes, *, reason: str) -> None:  # override
         self.segments_seen += 1
         arouter_process_pcm_segment(
@@ -3791,6 +3795,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--max-run-sec", type=int, default=0, help="0 means run forever")
     p.add_argument("--max-segments", type=int, default=0, help="0 means unlimited")
     p.add_argument("--run-command", default=None, help="Parse and execute a single command text, then exit")
+    p.add_argument(
+        "--simulate-mic-command",
+        default=None,
+        help="Execute a recognized+authorized mic command text, then exit",
+    )
     p.add_argument("--debug", action="store_true")
 
     # VOICEVOX output options.

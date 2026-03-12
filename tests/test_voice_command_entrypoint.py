@@ -129,3 +129,13 @@ def test_runtime_script_defaults_moonshine_vad_for_quiet_input() -> None:
     assert args.start_rms_max == 0.008
     assert args.stop_rms_min == 0.0015
     assert args.stop_rms_max == 0.0035
+
+
+def test_runtime_script_accepts_simulated_mic_command_flag() -> None:
+    runtime_module = _load_runtime_script_module("runtime_simulated_mic_command_test")
+
+    args = runtime_module.parse_args(
+        ["--simulate-mic-command", "システム バイオメトリクス認証"]
+    )
+
+    assert args.simulate_mic_command == "システム バイオメトリクス認証"
