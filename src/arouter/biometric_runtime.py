@@ -413,11 +413,10 @@ def set_system_locked(runtime: LockRuntime, locked: bool, *, reason: str) -> boo
                     show(text=runtime._lock_screen_text())
                 runtime._lock_screen_visible = True
         else:
-            if changed or bool(getattr(runtime, "_lock_screen_visible", False)):
-                hide = getattr(lock_client, "hide_lock_screen", None)
-                if callable(hide):
-                    hide()
-                runtime._lock_screen_visible = False
+            hide = getattr(lock_client, "hide_lock_screen", None)
+            if callable(hide):
+                hide()
+            runtime._lock_screen_visible = False
     except Exception as exc:
         runtime.log(f"biometric lock overlay update failed ({reason}): {exc}")
     if changed:

@@ -108,6 +108,18 @@ def test_set_system_locked_hides_overlay_when_unlocking() -> None:
     runtime.overlay.hide_lock_screen.assert_called_once_with()
 
 
+def test_set_system_locked_still_hides_overlay_when_unlock_state_flags_are_stale() -> None:
+    runtime = _make_runtime()
+    runtime._system_locked = False
+    runtime._lock_screen_visible = False
+
+    changed = set_system_locked(runtime, False, reason="unlock")
+
+    assert changed is False
+    assert runtime._system_locked is False
+    runtime.overlay.hide_lock_screen.assert_called_once_with()
+
+
 def test_maybe_unlock_from_signal_clears_lock_and_records_activity() -> None:
     runtime = _make_runtime()
     runtime._system_locked = True
