@@ -3538,6 +3538,16 @@ class VoiceCommandLoop(base.ListenLoop):
             row_by_cdp_port=self._vacuumtube_main_window_row_by_cdp_port,
         )
 
+    def _x11_env(self) -> dict[str, str]:
+        return self.vacuumtube._x11_env()
+
+    def _wmctrl_rows(self, *, geometry: bool = False, with_pid: bool = False) -> list[str]:
+        return arouter_run_wmctrl_list_host_runtime_query(
+            runtime=self,
+            geometry=geometry,
+            with_pid=with_pid,
+        )
+
     def _konsole_window_rows(self) -> list[dict[str, Any]]:
         lines = self._wmctrl_rows(geometry=True, with_pid=True)
         return arouter_parse_konsole_window_rows("\n".join(lines))

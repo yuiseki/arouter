@@ -139,3 +139,10 @@ def test_runtime_script_accepts_simulated_mic_command_flag() -> None:
     )
 
     assert args.simulate_mic_command == "システム バイオメトリクス認証"
+
+
+def test_runtime_script_voice_command_loop_exposes_wmctrl_rows_for_load_check() -> None:
+    runtime_module = _load_runtime_script_module("runtime_load_check_wmctrl_rows_test")
+
+    assert hasattr(runtime_module.VoiceCommandLoop, "_wmctrl_rows")
+    assert hasattr(runtime_module.VoiceCommandLoop, "_x11_env")
