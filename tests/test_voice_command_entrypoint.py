@@ -146,3 +146,9 @@ def test_runtime_script_voice_command_loop_exposes_wmctrl_rows_for_load_check() 
 
     assert hasattr(runtime_module.VoiceCommandLoop, "_wmctrl_rows")
     assert hasattr(runtime_module.VoiceCommandLoop, "_x11_env")
+
+
+def test_runtime_script_exports_bgm_tile_scorer_for_vacuumtube_host_runtime() -> None:
+    runtime_module = _load_runtime_script_module("runtime_bgm_scorer_test")
+
+    assert callable(runtime_module.score_vacuumtube_bgm_tile)

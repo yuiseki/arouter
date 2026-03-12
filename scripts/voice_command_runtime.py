@@ -329,6 +329,7 @@ try:
         run_vacuumtube_try_resume_current_video_host_runtime as arouter_run_vacuumtube_try_resume_current_video_host_runtime,
         run_vacuumtube_wait_watch_route as arouter_run_vacuumtube_wait_watch_route,
         run_vacuumtube_wait_watch_route_host_runtime as arouter_run_vacuumtube_wait_watch_route_host_runtime,
+        score_vacuumtube_bgm_tile,
         run_weather_pages_closed_host_runtime as arouter_run_weather_pages_closed_host_runtime,
         run_weather_pages_tiled_host_runtime as arouter_run_weather_pages_tiled_host_runtime,
         start_vacuumtube_tmux_session as arouter_start_vacuumtube_tmux_session,
