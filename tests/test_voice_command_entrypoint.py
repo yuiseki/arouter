@@ -3,12 +3,33 @@ from __future__ import annotations
 import importlib.util
 import sys
 from pathlib import Path
-from types import SimpleNamespace
+from types import ModuleType, SimpleNamespace
+from typing import Any
 
 from arouter.voice_command_entrypoint import (
     load_voice_command_runtime_module,
     run_voice_command_entrypoint_main,
 )
+
+
+def _load_runtime_script_module(module_name: str) -> Any:
+    script_path = Path("/home/yuiseki/Workspaces/repos/arouter/scripts/voice_command_runtime.py")
+    spec = importlib.util.spec_from_file_location(module_name, script_path)
+    assert spec is not None
+    assert spec.loader is not None
+    runtime_module: Any = importlib.util.module_from_spec(spec)
+    fake_websocket = ModuleType("websocket")
+    original_websocket = sys.modules.get("websocket")
+    sys.modules[spec.name] = runtime_module
+    sys.modules["websocket"] = fake_websocket
+    try:
+        spec.loader.exec_module(runtime_module)
+    finally:
+        if original_websocket is None:
+            sys.modules.pop("websocket", None)
+        else:
+            sys.modules["websocket"] = original_websocket
+    return runtime_module
 
 
 def test_load_voice_command_runtime_module_uses_runtime_script_path() -> None:
@@ -45,8 +66,7 @@ def test_run_voice_command_entrypoint_main_delegates_to_host_runtime() -> None:
     events: list[tuple[str, object]] = []
 
     fake_module = SimpleNamespace(
-        parse_args=lambda argv: events.append(("parse_args", argv))
-        or SimpleNamespace(run_command="システムおはよう"),
+        parse_args=lambda argv: _record_parse_args(events, argv),
         VoiceCommandLoop=object(),
         arouter_run_request_biometric_lock_cli_flow=lambda **kwargs: {"ok": True, "kind": "lock"},
         arouter_run_encrypt_biometric_password_stdin_cli_flow=lambda **kwargs: {
@@ -83,17 +103,29 @@ def test_run_voice_command_entrypoint_main_delegates_to_host_runtime() -> None:
     ]
 
 
+def _record_parse_args(events: list[tuple[str, object]], argv: object) -> SimpleNamespace:
+    events.append(("parse_args", argv))
+    return SimpleNamespace(run_command="システムおはよう")
+
+
 def test_runtime_script_defaults_speaker_master_to_ahear_models() -> None:
-    script_path = Path("/home/yuiseki/Workspaces/repos/arouter/scripts/voice_command_runtime.py")
-    spec = importlib.util.spec_from_file_location("runtime_speaker_master_test", script_path)
-    assert spec is not None
-    assert spec.loader is not None
-    runtime_module = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = runtime_module
-    spec.loader.exec_module(runtime_module)
+    runtime_module = _load_runtime_script_module("runtime_speaker_master_test")
 
     args = runtime_module.parse_args([])
 
     assert args.speaker_master == str(
         Path("/home/yuiseki/Workspaces/repos/ahear/python/src/ahear/models/master_voiceprint.npy")
     )
+
+
+def test_runtime_script_defaults_moonshine_vad_for_quiet_input() -> None:
+    runtime_module = _load_runtime_script_module("runtime_moonshine_vad_test")
+
+    args = runtime_module.parse_args([])
+
+    assert args.start_rms == 0.004
+    assert args.stop_rms == 0.0015
+    assert args.start_rms_min == 0.004
+    assert args.start_rms_max == 0.008
+    assert args.stop_rms_min == 0.0015
+    assert args.stop_rms_max == 0.0035

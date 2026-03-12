@@ -3769,17 +3769,24 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--min-speech-ms", type=int, default=250)
     p.add_argument("--max-speech-ms", type=int, default=10000)
     p.add_argument("--calibration-ms", type=int, default=600)
-    p.add_argument("--start-rms", type=float, default=0.020)
-    p.add_argument("--stop-rms", type=float, default=0.010)
-    p.add_argument("--start-rms-min", type=float, default=0.010)
+    # Moonshine runs on a quieter input path in production; keep the wake threshold
+    # low enough that normal speech still crosses VAD after calibration.
+    _start_rms_default = 0.004 if _STT_BACKEND == "moonshine" else 0.020
+    _stop_rms_default = 0.0015 if _STT_BACKEND == "moonshine" else 0.010
+    _start_rms_min_default = 0.004 if _STT_BACKEND == "moonshine" else 0.010
     # Keep interactive agent VAD conservative so a noisy calibration burst does not
     # make the wake threshold too high and effectively disable voice commands.
-    p.add_argument("--start-rms-max", type=float, default=0.020)
-    # [B] moonshine backend: Japanese word-endings (て, ね, よ) dip to ~0.003 RMS;
-    # lower stop_rms_min so they survive the energy VAD before Silero VAD refines.
-    _stop_rms_min_default = 0.002 if _STT_BACKEND == "moonshine" else 0.006
+    _start_rms_max_default = 0.008 if _STT_BACKEND == "moonshine" else 0.020
+    # Moonshine backend: Japanese word-endings (て, ね, よ) and lock-screen speech
+    # can dip below 0.002 RMS; keep the stop thresholds low enough to avoid clipping.
+    _stop_rms_min_default = 0.0015 if _STT_BACKEND == "moonshine" else 0.006
+    _stop_rms_max_default = 0.0035 if _STT_BACKEND == "moonshine" else 0.014
+    p.add_argument("--start-rms", type=float, default=_start_rms_default)
+    p.add_argument("--stop-rms", type=float, default=_stop_rms_default)
+    p.add_argument("--start-rms-min", type=float, default=_start_rms_min_default)
+    p.add_argument("--start-rms-max", type=float, default=_start_rms_max_default)
     p.add_argument("--stop-rms-min", type=float, default=_stop_rms_min_default)
-    p.add_argument("--stop-rms-max", type=float, default=0.014)
+    p.add_argument("--stop-rms-max", type=float, default=_stop_rms_max_default)
     p.add_argument("--server-ready-timeout-sec", type=float, default=10.0)
     p.add_argument("--max-run-sec", type=int, default=0, help="0 means run forever")
     p.add_argument("--max-segments", type=int, default=0, help="0 means unlimited")

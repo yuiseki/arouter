@@ -6,7 +6,7 @@ import os
 import signal
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from arouter.entrypoint import run_voice_command_entrypoint_host_runtime
 
@@ -60,19 +60,25 @@ def run_voice_command_entrypoint_main(
         signal.signal(signal.SIGTERM, _sig_handler)
 
     def _request_biometric_lock_cli_flow() -> dict[str, Any]:
-        return module.arouter_run_request_biometric_lock_cli_flow(
-            args=args,
-            default_path=module.DEFAULT_BIOMETRIC_LOCK_SIGNAL_FILE,
-            write_signal=module.write_biometric_signal_file,
+        return cast(
+            dict[str, Any],
+            module.arouter_run_request_biometric_lock_cli_flow(
+                args=args,
+                default_path=module.DEFAULT_BIOMETRIC_LOCK_SIGNAL_FILE,
+                write_signal=module.write_biometric_signal_file,
+            ),
         )
 
     def _encrypt_biometric_password_stdin_cli_flow() -> dict[str, Any]:
-        return module.arouter_run_encrypt_biometric_password_stdin_cli_flow(
-            args=args,
-            default_public_key_path=module.DEFAULT_BIOMETRIC_PASSWORD_PUBLIC_KEY,
-            default_output_path=module.DEFAULT_BIOMETRIC_PASSWORD_FILE,
-            read_passwords=module._read_password_secret_lines_from_stdin,
-            encrypt_password=module.encrypt_biometric_password_file,
+        return cast(
+            dict[str, Any],
+            module.arouter_run_encrypt_biometric_password_stdin_cli_flow(
+                args=args,
+                default_public_key_path=module.DEFAULT_BIOMETRIC_PASSWORD_PUBLIC_KEY,
+                default_output_path=module.DEFAULT_BIOMETRIC_PASSWORD_FILE,
+                read_passwords=module._read_password_secret_lines_from_stdin,
+                encrypt_password=module.encrypt_biometric_password_file,
+            ),
         )
 
     return host_runtime(

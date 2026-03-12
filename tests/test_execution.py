@@ -411,6 +411,7 @@ def test_execute_command_dispatches_good_night() -> None:
 
 def test_execute_command_dispatches_system_biometric_auth() -> None:
     runtime = _make_runtime()
+    runtime._lock_screen_visible = True
     runtime.system_normal_mode = mock.Mock(return_value="normal mode ok")
     cmd = VoiceCommand(
         "system_biometric_auth",
@@ -420,8 +421,31 @@ def test_execute_command_dispatches_system_biometric_auth() -> None:
 
     out = execute_command(runtime, cmd)
 
-    assert out == "system unlocked by biometric authentication; normal mode ok"
-    runtime.system_normal_mode.assert_called_once()
+    assert out == "system unlocked by biometric authentication"
+    runtime._set_system_locked.assert_called_once_with(
+        False,
+        reason="command:system_biometric_auth",
+    )
+    runtime.system_normal_mode.assert_not_called()
+
+
+def test_execute_command_dispatches_system_password_unlock() -> None:
+    runtime = _make_runtime()
+    runtime._lock_screen_visible = True
+    cmd = VoiceCommand(
+        "system_password_unlock",
+        "システムパスワードパスワード",
+        "システム パスワード パスワード",
+        secret_text="パスワード",
+    )
+
+    out = execute_command(runtime, cmd)
+
+    assert out == "system unlocked by password fallback"
+    runtime._set_system_locked.assert_called_once_with(
+        False,
+        reason="command:system_password_unlock",
+    )
 
 
 def test_run_system_status_report_host_runtime_closes_weather_pages() -> None:

@@ -371,9 +371,10 @@ def execute_command(runtime: CommandRuntime, cmd: VoiceCommand) -> str:
     if cmd.intent == "system_load_check":
         return runtime.system_load_check()
     if cmd.intent == "system_biometric_auth":
-        normal_mode_result = runtime.system_normal_mode()
-        return f"system unlocked by biometric authentication; {normal_mode_result}"
+        runtime._set_system_locked(False, reason="command:system_biometric_auth")
+        return "system unlocked by biometric authentication"
     if cmd.intent == "system_password_unlock":
+        runtime._set_system_locked(False, reason="command:system_password_unlock")
         return "system unlocked by password fallback"
     if cmd.intent == "good_morning":
         return runtime.good_morning()
