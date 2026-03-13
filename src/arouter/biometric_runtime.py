@@ -164,7 +164,8 @@ def _default_owner_face_absent_from_status(
         return False
     age_ms = status.get("ownerSeenAgoMs")
     if age_ms is None:
-        return True
+        # Treat startup/warmup responses as inconclusive instead of immediately auto-locking.
+        return False
     try:
         return int(age_ms) >= max(0, int(absent_lock_sec) * 1000)
     except Exception:

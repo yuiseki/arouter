@@ -405,6 +405,28 @@ def test_run_biometric_owner_face_absent_runtime_check_uses_default_status_helpe
     fetch_status_from_url.assert_called_once_with("http://127.0.0.1:8765/biometric_status")
 
 
+def test_run_biometric_owner_face_absent_runtime_check_ignores_status_warmup() -> None:
+    fetch_status_from_url = mock.Mock(return_value={"ownerPresent": False})
+
+    next_client, ok = run_biometric_owner_face_absent_runtime_check(
+        current_client=None,
+        args=SimpleNamespace(
+            biometric_face_absent_lock_sec=120,
+            god_mode_status_url=" http://127.0.0.1:8765/biometric_status ",
+        ),
+        logger=None,
+        client_available=False,
+        resolve_client=None,
+        fetch_remote_status=None,
+        fetch_status_from_url=fetch_status_from_url,
+        status_helper=None,
+    )
+
+    assert next_client is None
+    assert ok is False
+    fetch_status_from_url.assert_called_once_with("http://127.0.0.1:8765/biometric_status")
+
+
 def test_run_biometric_owner_face_recent_check_falls_back_to_status_helper() -> None:
     resolve_client = mock.Mock(return_value=None)
     fetch_remote_status = mock.Mock(return_value=("client", {"ownerPresent": False}))
