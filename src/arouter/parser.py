@@ -69,6 +69,8 @@ def _apply_command_aliases(text: str) -> str:
     aliased = aliased.replace("バイオメテルクセ", "バイオメトリクス")
     aliased = aliased.replace("バイオミテリクス", "バイオメトリクス")
     aliased = aliased.replace("バイオミテリックス", "バイオメトリクス")
+    aliased = aliased.replace("バイオミテルクス", "バイオメトリクス")
+    aliased = aliased.replace("バイオミテレクスニーショー", "バイオメトリクス認証")
     aliased = aliased.replace("バヤメテリクス", "バイオメトリクス")
     aliased = aliased.replace("バイラメテリクス", "バイオメトリクス")
     aliased = aliased.replace("バイアメテルクス", "バイオメトリクス")
