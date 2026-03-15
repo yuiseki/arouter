@@ -6,6 +6,8 @@ from pathlib import Path
 from types import ModuleType, SimpleNamespace
 from typing import Any
 
+import pytest
+
 from arouter.voice_command_entrypoint import (
     load_voice_command_runtime_module,
     run_voice_command_entrypoint_main,
@@ -164,3 +166,54 @@ def test_runtime_script_exports_news_tile_scorer_for_vacuumtube_host_runtime() -
     runtime_module = _load_runtime_script_module("runtime_news_tile_scorer_test")
 
     assert callable(runtime_module.score_vacuumtube_news_tile)
+
+
+@pytest.mark.parametrize(
+    ("text", "required_symbols", "required_attrs"),
+    [
+        (
+            "システム バイオメトリクス認証",
+            (),
+            (),
+        ),
+        (
+            "システム 負荷を確認して",
+            (),
+            ("_wmctrl_rows", "_x11_env"),
+        ),
+        (
+            "システム 音楽を流して",
+            ("score_vacuumtube_bgm_tile",),
+            (),
+        ),
+        (
+            "システム おはよう",
+            (
+                "looks_like_vacuumtube_news_blob",
+                "score_vacuumtube_news_tile",
+            ),
+            (),
+        ),
+        (
+            "システム おやすみ",
+            (),
+            (),
+        ),
+    ],
+)
+def test_runtime_script_exposes_acceptance_contract(
+    text: str,
+    required_symbols: tuple[str, ...],
+    required_attrs: tuple[str, ...],
+) -> None:
+    runtime_module = _load_runtime_script_module(
+        "runtime_acceptance_contract_" + str(abs(hash(text)))
+    )
+
+    args = runtime_module.parse_args(["--simulate-mic-command", text])
+
+    assert args.simulate_mic_command == text
+    for symbol in required_symbols:
+        assert callable(getattr(runtime_module, symbol))
+    for attr in required_attrs:
+        assert hasattr(runtime_module.VoiceCommandLoop, attr)
