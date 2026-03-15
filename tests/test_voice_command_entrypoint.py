@@ -152,3 +152,15 @@ def test_runtime_script_exports_bgm_tile_scorer_for_vacuumtube_host_runtime() ->
     runtime_module = _load_runtime_script_module("runtime_bgm_scorer_test")
 
     assert callable(runtime_module.score_vacuumtube_bgm_tile)
+
+
+def test_runtime_script_exports_news_blob_filter_for_vacuumtube_host_runtime() -> None:
+    runtime_module = _load_runtime_script_module("runtime_news_blob_filter_test")
+
+    assert callable(runtime_module.looks_like_vacuumtube_news_blob)
+
+
+def test_runtime_script_exports_news_tile_scorer_for_vacuumtube_host_runtime() -> None:
+    runtime_module = _load_runtime_script_module("runtime_news_tile_scorer_test")
+
+    assert callable(runtime_module.score_vacuumtube_news_tile)
