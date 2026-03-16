@@ -162,12 +162,12 @@ def run_good_morning(
     fullscreen_news: Callable[[], str],
     lights_on: Callable[[], str],
 ) -> str:
-    news_result = play_morning_news()
-    fullscreen_result = fullscreen_news()
     try:
         lights_result = lights_on()
     except Exception as exc:
         lights_result = f"switchbot error: {exc}"
+    news_result = play_morning_news()
+    fullscreen_result = fullscreen_news()
     return f"good_morning {news_result} fullscreen={fullscreen_result} lights={lights_result}"
 
 

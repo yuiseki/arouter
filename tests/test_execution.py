@@ -481,10 +481,15 @@ def test_run_show_weather_pages_today_host_runtime_delegates_to_vacuumtube() -> 
 
 
 def test_run_good_morning_host_runtime_uses_news_fullscreen_and_lights() -> None:
+    events: list[str] = []
     runtime = SimpleNamespace(
-        _play_morning_news=mock.Mock(return_value="news ok"),
-        _fullscreen_morning_news=mock.Mock(return_value="fullscreen ok"),
-        _lights_on=mock.Mock(return_value="switchbot lights on: ok"),
+        _play_morning_news=mock.Mock(side_effect=lambda: events.append("news") or "news ok"),
+        _fullscreen_morning_news=mock.Mock(
+            side_effect=lambda: events.append("fullscreen") or "fullscreen ok"
+        ),
+        _lights_on=mock.Mock(
+            side_effect=lambda: events.append("lights") or "switchbot lights on: ok"
+        ),
     )
 
     out = run_good_morning_host_runtime(
@@ -492,6 +497,7 @@ def test_run_good_morning_host_runtime_uses_news_fullscreen_and_lights() -> None
     )
 
     assert out == "good_morning news ok fullscreen=fullscreen ok lights=switchbot lights on: ok"
+    assert events == ["lights", "news", "fullscreen"]
     runtime._play_morning_news.assert_called_once_with()
     runtime._fullscreen_morning_news.assert_called_once_with()
     runtime._lights_on.assert_called_once_with()
