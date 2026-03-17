@@ -10,6 +10,10 @@ from arouter import VoiceCommand, authorize_command
 def _make_runtime() -> SimpleNamespace:
     runtime = SimpleNamespace()
     runtime._system_locked = False
+    runtime.args = SimpleNamespace(
+        biometric_unlock_face_retry_ms=0,
+        biometric_unlock_face_retry_poll_ms=0,
+    )
     runtime._ensure_biometric_runtime_attrs = mock.Mock()
     runtime._maybe_unlock_from_signal = mock.Mock(return_value=False)
     runtime._maybe_lock_from_signal = mock.Mock(return_value=False)
@@ -135,6 +139,38 @@ def test_authorize_command_rejects_unlock_when_owner_face_is_missing() -> None:
     assert err == "顔認証を確認してください。"
     assert runtime._system_locked is True
     runtime._unlock_requires_face_auth_text.assert_called_once()
+
+
+def test_authorize_command_retries_face_check_before_unlock_denial() -> None:
+    runtime = _make_runtime()
+    runtime._system_locked = True
+    runtime._speaker_auth_enabled.return_value = True
+    runtime.args.biometric_unlock_face_retry_ms = 500
+    runtime.args.biometric_unlock_face_retry_poll_ms = 0
+    runtime._owner_face_recent_for_unlock.side_effect = [False, False, True]
+    cmd = VoiceCommand(
+        intent="system_biometric_auth",
+        normalized_text="システムバイオメトリクス認証",
+        raw_text="システム バイオメトリクス認証",
+    )
+
+    with mock.patch("arouter.authorization.time.monotonic") as mocked_monotonic:
+        mocked_monotonic.side_effect = [0.0, 0.0, 0.1, 0.2]
+        ok, err = authorize_command(
+            runtime,
+            cmd,
+            wav_path=Path("/tmp/biometric-test.wav"),
+            source="mic",
+            log_label="test unlock",
+        )
+
+    assert ok
+    assert err is None
+    assert runtime._owner_face_recent_for_unlock.call_count == 3
+    runtime._set_system_locked.assert_called_once_with(
+        False,
+        reason="unlock:system_biometric_auth:mic",
+    )
 
 
 def test_authorize_command_unlocks_with_password_fallback() -> None:

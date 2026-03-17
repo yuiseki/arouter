@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import time
 from pathlib import Path
 from typing import Protocol
 
@@ -55,6 +56,23 @@ class AuthorizationRuntime(Protocol):
     def _owner_face_recent_for_unlock(self) -> bool: ...
 
     def _unlock_requires_face_auth_text(self) -> str: ...
+
+
+def _owner_face_recent_for_unlock_with_retry(runtime: AuthorizationRuntime) -> bool:
+    if runtime._owner_face_recent_for_unlock():
+        return True
+    args = getattr(runtime, "args", None)
+    retry_ms = max(0, int(getattr(args, "biometric_unlock_face_retry_ms", 2000)))
+    poll_ms = max(0, int(getattr(args, "biometric_unlock_face_retry_poll_ms", 250)))
+    if retry_ms <= 0:
+        return False
+    deadline = time.monotonic() + (retry_ms / 1000.0)
+    while time.monotonic() < deadline:
+        if poll_ms > 0:
+            time.sleep(poll_ms / 1000.0)
+        if runtime._owner_face_recent_for_unlock():
+            return True
+    return False
 
 
 def authorize_command(
@@ -122,7 +140,7 @@ def authorize_command(
                 detail="speaker_auth_failed",
             )
             return False, err
-        if not runtime._owner_face_recent_for_unlock():
+        if not _owner_face_recent_for_unlock_with_retry(runtime):
             runtime._log_auth_decision(
                 cmd=cmd,
                 source=source,
